@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.emergent.moneyflowpro.vo71su"
+      "bundleIdentifier": "com.nakamino.wallume"
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +18,7 @@
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.emergent.moneyflowpro.vo71su"
+      "package": "com.nakamino.wallume"
     },
     "web": {
       "bundler": "metro",
@@ -39,6 +39,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "563bb58c-7271-4d91-940e-1de79e96b99d"
+      }
     }
   }
 }
