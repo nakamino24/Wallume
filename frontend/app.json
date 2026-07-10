@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "Wallume",
+    "slug": "Wallume",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "scheme": "wallume",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
