@@ -1,0 +1,203 @@
+{
+  "app_name": "Matrix Finance",
+  "personality": "1 iOS-Native Clean with 6 Glass / Luxe DARK surfaces",
+  "personality_one_liner": "A deeply cinematic, minimal, and premium financial command center combining Apple Wallet's frosted elegance with Notion's fast, clean utility.",
+  "color": {
+    "light": {
+      "surface": "#F6F6F6",
+      "onSurface": "#121212",
+      "surfaceSecondary": "#FFFFFF",
+      "onSurfaceSecondary": "#171717",
+      "surfaceTertiary": "#EAEAEA",
+      "onSurfaceTertiary": "#404040",
+      "surfaceInverse": "#121212",
+      "onSurfaceInverse": "#F6F6F6",
+      "brand": "#059669",
+      "brandPrimary": "#10B981",
+      "onBrandPrimary": "#FFFFFF",
+      "brandSecondary": "#34D399",
+      "onBrandSecondary": "#000000",
+      "brandTertiary": "#A7F3D0",
+      "onBrandTertiary": "#064E3B",
+      "success": "#10B981",
+      "onSuccess": "#FFFFFF",
+      "warning": "#F59E0B",
+      "onWarning": "#FFFFFF",
+      "error": "#EF4444",
+      "onError": "#FFFFFF",
+      "info": "#737373",
+      "onInfo": "#FFFFFF",
+      "border": "#E5E5E5",
+      "borderStrong": "#A3A3A3",
+      "divider": "#E5E5E5"
+    },
+    "dark": {
+      "surface": "#09090B",
+      "onSurface": "#FAFAFA",
+      "surfaceSecondary": "#18181B",
+      "onSurfaceSecondary": "#F4F4F5",
+      "surfaceTertiary": "#27272A",
+      "onSurfaceTertiary": "#D4D4D8",
+      "surfaceInverse": "#FAFAFA",
+      "onSurfaceInverse": "#09090B",
+      "brand": "#059669",
+      "brandPrimary": "#10B981",
+      "onBrandPrimary": "#000000",
+      "brandSecondary": "#047857",
+      "onBrandSecondary": "#FFFFFF",
+      "brandTertiary": "#065F46",
+      "onBrandTertiary": "#D1FAE5",
+      "success": "#34D399",
+      "onSuccess": "#000000",
+      "warning": "#FBBF24",
+      "onWarning": "#000000",
+      "error": "#F87171",
+      "onError": "#000000",
+      "info": "#A1A1AA",
+      "onInfo": "#000000",
+      "border": "#27272A",
+      "borderStrong": "#3F3F46",
+      "divider": "#27272A"
+    }
+  },
+  "typography": {
+    "displayFontFamily": "Space Grotesk",
+    "textFontFamily": "Plus Jakarta Sans",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24,
+      "3xl": 32,
+      "4xl": 48
+    }
+  },
+  "spacing": {
+    "rule": "Generous vertical breathing room. Cards must never be flush to screen edges (always md/lg margin). Empty space is intentional, use strict alignment.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": 1,
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Bottom tab bar over scrolling content",
+      "Sticky headers when scrolling",
+      "Featured Wallet cards with photo backdrops",
+      "Bottom-sheet headers"
+    ],
+    "dont's": [
+      "Every single list row",
+      "Form inputs",
+      "Body text regions",
+      "Anywhere text underneath becomes legible instead of abstract"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Dashboard (Home)",
+      "purpose": "A commanding snapshot of net worth, cash flow, recent transactions, and quick action buttons.",
+      "states": {
+        "loading": "Skeleton UI matching the glass/luxe card dimensions.",
+        "empty": "A clean empty state with 'No transactions yet' and a prominent 'Add Transaction' button.",
+        "error": "Soft error toast with a 'Retry' button in the center."
+      },
+      "layout": "Use a cinematic hero section (Glassmorphism over a subtle gradient) for the Total Net Worth and Cash flow summary. Below the hero, use horizontally scrolling chips (Income/Expense/Transfer) for the transaction list. Keep the primary CTA (Add Transaction) floating and sticky at the bottom."
+    },
+    {
+      "name": "Wallets",
+      "purpose": "Apple Wallet style stacked cards representing Cash, Bank, Credit Card, and E-wallets.",
+      "states": {
+        "loading": "Shimmering stacked card skeletons.",
+        "empty": "Illustration of an empty wallet with 'Add your first account' CTA.",
+        "error": "Error message with an option to refresh account connections."
+      },
+      "layout": "Visually replicate Apple Wallet. Use heavy corner radii (lg), overlapping card layout with subtle top shadows to show depth. Each card should feature a distinct subtle tinted gradient or a blurred noise texture to differentiate accounts. Tapping a card expands it."
+    },
+    {
+      "name": "Plan",
+      "purpose": "Track budgets, saving goals, and structured life events (Wedding, House, Car, Vacation).",
+      "states": {
+        "loading": "Spinner centered vertically.",
+        "empty": "A serene, minimalist scene with a button to 'Create your first plan'.",
+        "error": "Standard error view with retry."
+      },
+      "layout": "Grid-based modular layout. Top section uses progress rings for monthly category budgets. The lower section features large, image-led hero cards for life goals (e.g., a dark sleek car for the Car Planner, minimal architecture for the House Planner) utilizing a gradient-to-dark scrim so text is readable."
+    },
+    {
+      "name": "AI Coach",
+      "purpose": "Claude-powered chat interface providing personalized financial advice.",
+      "states": {
+        "loading": "Subtle typing indicator...",
+        "empty": "Suggested starting prompts in minimal pill buttons.",
+        "error": "Message failed to send indicator."
+      },
+      "layout": "Clean, minimal chat interface akin to Linear/Notion. Bubble-less or very subtle surfaceTertiary bubbles for the AI, and brandPrimary for the user. Sticky text input at the bottom."
+    }
+  ],
+  "images": {
+    "wedding_planner_hero": {
+      "url": "https://images.unsplash.com/photo-1680624528924-7ee5542e4f4d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwxfHx3ZWRkaW5nJTIwYWVzdGhldGljJTIwbWluaW1hbGlzdGljJTIwcGhvdG98ZW58MHx8fHwxNzgzNzI0OTU0fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Minimalistic dark aesthetic woman in white dress"
+    },
+    "house_planner_hero": {
+      "url": "https://images.unsplash.com/photo-1628012209120-d9db7abf7eab?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjh8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBtaW5pbWFsaXN0JTIwYXJjaGl0ZWN0dXJlJTIwaG91c2V8ZW58MHx8fHwxNzgzNzI0OTU0fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Modern minimalist white architecture"
+    },
+    "car_planner_hero": {
+      "url": "https://images.unsplash.com/photo-1485291571150-772bcfc10da5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w7NDQ2NDN8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBjYXIlMjBzbGVlayUyMGRhcmt8ZW58MHx8fHwxNzgzNzI0OTU0fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Sleek dark luxury car side profile"
+    },
+    "vacation_planner_hero": {
+      "url": "https://images.unsplash.com/photo-1541417904950-b855846fe074?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwdHJvcGljYWwlMjB2YWNhdGlvbiUyMGFlc3RoZXRpY3xlbnwwfHx8fDE3ODM3MjQ5NTR8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Minimalist aerial beach and green palms"
+    },
+    "empty_wallet_state": {
+      "url": "https://images.unsplash.com/photo-1614260938313-a7fc1a7ad0d2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTF8MHwxfHNlYXJjaHwxfHxlbXB0eSUyMHdhbGxldCUyMGlsbHVzdHJhdGlvbiUyMG1pbmltYWx8ZW58MHx8fHwxNzgzNzI0OTU0fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Minimalist empty wallet hands holding"
+    }
+  },
+  "haptics": {
+    "tab_press": "light",
+    "button_primary_press": "medium",
+    "wallet_card_expand": "medium",
+    "filter_chip_select": "light",
+    "ai_coach_send_message": "light",
+    "transaction_add_success": "success"
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the color guidelines. Indigo, Violet, Purple, and all forms of Blue are strictly banned. Use the provided Emerald/Moss green accent against the deep charcoal/black base.",
+    "Emphasize the 'Glass / Luxe DARK' and 'iOS-Native Clean' hybrid aesthetic. Ensure that frosted glass elements are overlaid correctly over scrolling content or images, applying the gradient scrim pattern required for image text readability.",
+    "Implement the 'Apple Wallet' layout accurately in the Wallets tab: stack cards elegantly with generous lg radii.",
+    "For typography, use Space Grotesk for primary balances, numbers, and key display elements. Use Plus Jakarta Sans for the remainder of the UI labels, buttons, and body text. Do not bold fonts past weight 500.",
+    "Ensure safe area is respected on all screen roots, and touch targets are a minimum of 44x44pt.",
+    "Apply the required loading, empty, and error states for each screen.",
+    "Use Phosphor icons with consistent weights."
+  ]
+}
