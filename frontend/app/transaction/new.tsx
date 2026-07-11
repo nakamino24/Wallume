@@ -1,0 +1,161 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+
+import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAuth } from '@/src/auth/AuthProvider';
+import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
+import { api } from '@/src/api/client';
+import { Screen, H1, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
+
+const CATEGORIES = {
+  income: ['Salary', 'Freelance', 'Investment', 'Business', 'Gift', 'Other'],
+  expense: ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Rent', 'Groceries', 'Other'],
+  transfer: ['Transfer'],
+};
+
+export default function NewTransaction() {
+  const { colors } = useTheme();
+  const { user } = useAuth();
+  const router = useRouter();
+  const params = useLocalSearchParams<{ type?: string }>();
+  const [type, setType] = useState<'income' | 'expense' | 'transfer'>((params.type as any) || 'expense');
+  const [amount, setAmount] = useState('');
+  const [category, setCategory] = useState('Food');
+  const [note, setNote] = useState('');
+  const [wallets, setWallets] = useState<any[]>([]);
+  const [walletId, setWalletId] = useState('');
+  const [toWalletId, setToWalletId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+
+  const load = useCallback(async () => {
+    const r = await api.wallets();
+    setWallets(r.wallets || []);
+    if (r.wallets?.[0]) setWalletId(r.wallets[0].id);
+    if (r.wallets?.[1]) setToWalletId(r.wallets[1].id);
+  }, []);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  useEffect(() => {
+    setCategory(CATEGORIES[type][0]);
+  }, [type]);
+
+  const submit = async () => {
+    setErr('');
+    const amt = parseFloat(amount);
+    if (!amt || amt <= 0) { setErr('Enter a valid amount'); return; }
+    if (!walletId) { setErr('Select a wallet'); return; }
+    if (type === 'transfer' && (!toWalletId || toWalletId === walletId)) { setErr('Select a different destination wallet'); return; }
+    setLoading(true);
+    try {
+      await api.createTransaction({
+        wallet_id: walletId,
+        to_wallet_id: type === 'transfer' ? toWalletId : undefined,
+        type, amount: amt, category, note,
+      });
+      router.back();
+    } catch (e: any) { setErr(e.message); }
+    finally { setLoading(false); }
+  };
+
+  const cur = user?.currency || 'USD';
+
+  return (
+    <Screen>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+            <TouchableOpacity testID="new-tx-back" onPress={() => router.back()} style={{ padding: 4 }}>
+              <Ionicons name="close" size={24} color={colors.onSurface} />
+            </TouchableOpacity>
+            <H2 style={{ marginLeft: spacing.md }}>New transaction</H2>
+          </View>
+
+          <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
+            {/* Type selector */}
+            <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.pill, padding: 4, marginBottom: spacing.xl }}>
+              {(['expense', 'income', 'transfer'] as const).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  testID={`type-${t}`}
+                  onPress={() => setType(t)}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: radius.pill,
+                    alignItems: 'center',
+                    backgroundColor: type === t
+                      ? (t === 'income' ? colors.success : t === 'expense' ? colors.error : colors.brandPrimary)
+                      : 'transparent',
+                  }}
+                >
+                  <Body style={{
+                    color: type === t ? '#fff' : colors.onSurface2,
+                    fontFamily: font.textBold,
+                    textTransform: 'capitalize',
+                  }}>{t}</Body>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Amount */}
+            <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
+              <Label>Amount</Label>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: spacing.sm }}>
+                <Body style={{ fontSize: 24, marginRight: 4, fontFamily: font.displayBold }}>{currencySymbol(cur)}</Body>
+                <Input
+                  testID="tx-amount"
+                  keyboardType="decimal-pad"
+                  value={amount}
+                  onChangeText={setAmount}
+                  placeholder="0"
+                  style={{ fontSize: 44, fontFamily: font.displayBold, textAlign: 'center', backgroundColor: 'transparent', borderWidth: 0, minWidth: 160, paddingVertical: 4 }}
+                />
+              </View>
+            </View>
+
+            {/* Category */}
+            {type !== 'transfer' && (
+              <>
+                <Label>Category</Label>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+                  {CATEGORIES[type].map((c) => (
+                    <Chip key={c} testID={`cat-${c}`} label={c} active={category === c} onPress={() => setCategory(c)} />
+                  ))}
+                </ScrollView>
+              </>
+            )}
+
+            {/* Wallet */}
+            <Label style={{ marginTop: spacing.md }}>{type === 'transfer' ? 'From' : 'Wallet'}</Label>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+              {wallets.map((w) => (
+                <Chip key={w.id} testID={`wallet-from-${w.id}`} label={w.name} active={walletId === w.id} onPress={() => setWalletId(w.id)} />
+              ))}
+            </ScrollView>
+
+            {type === 'transfer' && (
+              <>
+                <Label style={{ marginTop: spacing.md }}>To</Label>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+                  {wallets.map((w) => (
+                    <Chip key={w.id} testID={`wallet-to-${w.id}`} label={w.name} active={toWalletId === w.id} onPress={() => setToWalletId(w.id)} />
+                  ))}
+                </ScrollView>
+              </>
+            )}
+
+            <Input testID="tx-note" label="Note (optional)" value={note} onChangeText={setNote} placeholder="Coffee, groceries…" />
+
+            {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
+
+            <Button testID="tx-save" label="Save transaction" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </Screen>
+  );
+}
