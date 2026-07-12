@@ -20,7 +20,7 @@ import jwt
 import httpx
 import json as _json
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
+# from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -28,7 +28,8 @@ load_dotenv(ROOT_DIR / ".env")
 MONGO_URL = os.environ["MONGO_URL"]
 DB_NAME = os.environ["DB_NAME"]
 JWT_SECRET = os.environ["JWT_SECRET"]
-EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
+# EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
@@ -78,7 +79,7 @@ async def get_user_from_token(authorization: Optional[str]) -> Dict[str, Any]:
             return user
     except jwt.PyJWTError:
         pass
-    # fall back to Emergent session token
+    # fall back to session token
     session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
     if not session:
         raise HTTPException(401, "Invalid or expired token")
@@ -235,49 +236,10 @@ async def login(payload: LoginIn):
     return {"token": issue_jwt(user["user_id"]), "user": _clean_user(user)}
 
 
-@api.post("/auth/emergent-session")
-async def emergent_session(payload: EmergentSessionIn):
-    """Exchange an Emergent session_token for a persisted app session (used with Google OAuth)."""
-    async with httpx.AsyncClient(timeout=15.0) as hc:
-        r = await hc.get(
-            "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-            headers={"X-Session-ID": payload.session_token},
-        )
-    if r.status_code != 200:
-        raise HTTPException(401, "Invalid Emergent session")
-    data = r.json()
-    email = (data.get("email") or "").lower()
-    name = data.get("name") or email.split("@")[0]
-    picture = data.get("picture")
-    session_token = data.get("session_token") or payload.session_token
-
-    user = await db.users.find_one({"email": email}, {"_id": 0})
-    if not user:
-        user_id = new_id("user")
-        user = {
-            "user_id": user_id,
-            "email": email,
-            "name": name,
-            "picture": picture,
-            "provider": "google",
-            "currency": "USD",
-            "theme": "dark",
-            "created_at": now_utc(),
-        }
-        await db.users.insert_one(user)
-        await seed_starter_data(user_id)
-    else:
-        await db.users.update_one({"user_id": user["user_id"]},
-                                  {"$set": {"picture": picture or user.get("picture"), "name": name}})
-
-    await db.user_sessions.insert_one({
-        "session_token": session_token,
-        "user_id": user["user_id"],
-        "created_at": now_utc(),
-        "expires_at": now_utc() + timedelta(days=7),
-    })
-    user.pop("password_hash", None)
-    return {"token": session_token, "user": _clean_user(user)}
+# Emergent Google OAuth endpoint disabled — no emergentintegrations package
+# @api.post("/auth/emergent-session")
+# async def emergent_session(payload: EmergentSessionIn):
+#     ...
 
 
 @api.get("/auth/me")
@@ -368,7 +330,6 @@ async def create_transaction(payload: TransactionIn, authorization: Optional[str
         "date": tx_date,
         "created_at": now_utc(),
     }
-    # adjust wallet balances
     w = await db.wallets.find_one({"id": payload.wallet_id, "user_id": u["user_id"]}, {"_id": 0})
     if not w:
         raise HTTPException(400, "Wallet not found")
@@ -396,7 +357,6 @@ async def delete_transaction(tx_id: str, authorization: Optional[str] = Header(N
     tx = await db.transactions.find_one({"id": tx_id, "user_id": u["user_id"]}, {"_id": 0})
     if not tx:
         raise HTTPException(404, "Not found")
-    # reverse balance
     if tx["type"] == "income":
         await db.wallets.update_one({"id": tx["wallet_id"], "user_id": u["user_id"]},
                                     {"$inc": {"balance": -tx["amount"]}})
@@ -418,7 +378,6 @@ async def delete_transaction(tx_id: str, authorization: Optional[str] = Header(N
 async def list_budgets(authorization: Optional[str] = Header(None)):
     u = await get_user_from_token(authorization)
     items = await db.budgets.find({"user_id": u["user_id"]}, {"_id": 0}).to_list(200)
-    # attach spent for current month
     month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
     txs = await db.transactions.find(
         {"user_id": u["user_id"], "type": "expense", "date": {"$gte": month_start}},
@@ -480,7 +439,7 @@ async def delete_goal(goal_id: str, authorization: Optional[str] = Header(None))
     return {"ok": True}
 
 
-# ------------------------- plans (wedding/house/car/vacation) --------
+# ------------------------- plans -------------------------------------
 @api.get("/plans")
 async def list_plans(authorization: Optional[str] = Header(None)):
     u = await get_user_from_token(authorization)
@@ -614,7 +573,6 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
     asset_total = sum(float(a.get("value", 0.0)) for a in assets)
     net_worth = wallet_total + inv_total + asset_total - debt_total
 
-    # month cash flow
     month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
     month_txs = await db.transactions.find(
         {"user_id": uid, "date": {"$gte": month_start}},
@@ -627,7 +585,6 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
     debt_ratio = round((debt_total / (wallet_total + inv_total + asset_total) * 100)
                        if (wallet_total + inv_total + asset_total) > 0 else 0.0, 1)
 
-    # health score simple heuristic 0-100
     score = 50
     if saving_rate >= 20: score += 25
     elif saving_rate >= 10: score += 15
@@ -640,7 +597,6 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
     if len(assets) > 0: score += 5
     score = max(0, min(100, score))
 
-    # category breakdown (expense)
     cat: Dict[str, float] = {}
     for t in month_txs:
         if t["type"] == "expense":
@@ -648,17 +604,14 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
     category_breakdown = [{"category": k, "amount": round(v, 2)} for k, v in
                           sorted(cat.items(), key=lambda x: -x[1])]
 
-    # 6-month trend
     trend = []
     for i in range(5, -1, -1):
         d = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        # move back i months
         y, m = d.year, d.month - i
         while m <= 0:
             m += 12
             y -= 1
         start = datetime(y, m, 1, tzinfo=timezone.utc)
-        # end = first of next month
         ny, nm = (y + 1, 1) if m == 12 else (y, m + 1)
         end = datetime(ny, nm, 1, tzinfo=timezone.utc)
         txs = await db.transactions.find(
@@ -692,7 +645,7 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
     }
 
 
-# ---------------------------- AI coach -------------------------------
+# ---------------------------- AI coach (Anthropic direct) ------------
 COACH_SYSTEM = (
     "You are Matrix Finance Coach, a warm, concise, and expert personal finance advisor. "
     "Give practical, numbers-first advice. Keep answers short (3-6 sentences) unless the user asks for detail. "
@@ -704,16 +657,14 @@ COACH_SYSTEM = (
 @api.post("/coach/chat")
 async def coach_chat(payload: ChatIn, authorization: Optional[str] = Header(None)):
     u = await get_user_from_token(authorization)
-    if not EMERGENT_LLM_KEY:
-        raise HTTPException(500, "LLM key not configured")
+    if not ANTHROPIC_API_KEY:
+        raise HTTPException(500, "Anthropic API key not configured")
 
-    # persist user message
     await db.chat_messages.insert_one({
         "id": new_id("msg"), "user_id": u["user_id"], "session_id": payload.session_id,
         "role": "user", "text": payload.message, "created_at": now_utc(),
     })
 
-    # build context from analytics
     try:
         ctx_resp = await analytics_summary(authorization)
         ctx = (f"[USER CONTEXT] name={u.get('name')} currency={u.get('currency','USD')} "
@@ -723,25 +674,45 @@ async def coach_chat(payload: ChatIn, authorization: Optional[str] = Header(None
     except Exception:
         ctx = ""
 
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=f"{u['user_id']}:{payload.session_id}",
-        system_message=COACH_SYSTEM + ("\n" + ctx if ctx else ""),
-    ).with_model("anthropic", "claude-sonnet-4-6")
+    system_msg = COACH_SYSTEM + ("\n" + ctx if ctx else "")
 
     async def gen():
         acc = ""
         try:
-            async for ev in chat.stream_message(UserMessage(text=payload.message)):
-                if isinstance(ev, TextDelta):
-                    acc += ev.content
-                    yield f"data: {_json.dumps({'delta': ev.content})}\n\n"
-                elif isinstance(ev, StreamDone):
-                    break
+            async with httpx.AsyncClient(timeout=60.0) as hc:
+                async with hc.stream(
+                    "POST",
+                    "https://api.anthropic.com/v1/messages",
+                    headers={
+                        "x-api-key": ANTHROPIC_API_KEY,
+                        "anthropic-version": "2023-06-01",
+                        "content-type": "application/json",
+                    },
+                    json={
+                        "model": "claude-sonnet-4-6",
+                        "max_tokens": 1024,
+                        "system": system_msg,
+                        "stream": True,
+                        "messages": [{"role": "user", "content": payload.message}],
+                    },
+                ) as resp:
+                    async for line in resp.aiter_lines():
+                        if line.startswith("data: "):
+                            data = line[6:]
+                            if data == "[DONE]":
+                                break
+                            try:
+                                ev = _json.loads(data)
+                                if ev.get("type") == "content_block_delta":
+                                    delta = ev["delta"].get("text", "")
+                                    acc += delta
+                                    yield f"data: {_json.dumps({'delta': delta})}\n\n"
+                            except Exception:
+                                pass
         except Exception as e:
             log.exception("coach stream error")
             yield f"data: {_json.dumps({'error': str(e)})}\n\n"
-        # persist final assistant message
+
         try:
             await db.chat_messages.insert_one({
                 "id": new_id("msg"), "user_id": u["user_id"], "session_id": payload.session_id,
@@ -769,7 +740,6 @@ async def coach_history(session_id: str, authorization: Optional[str] = Header(N
 
 # --------------------------- seed helper -----------------------------
 async def seed_starter_data(user_id: str):
-    """Seed a new user with sample wallets & starter budget categories."""
     wallets = [
         {"id": new_id("wal"), "user_id": user_id, "name": "Cash", "type": "cash",
          "balance": 250.0, "currency": "USD", "color": "#10B981", "icon": "wallet", "created_at": now_utc()},
@@ -813,3 +783,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+ 

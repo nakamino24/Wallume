@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Wallume",
-    "slug": "Wallume",
+    "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -32,7 +32,7 @@
         {
           "image": "./assets/images/splash-image.png",
           "imageWidth": 200,
-          "resizeMode": "contain",
+          "resizeMode": "cover",
           "backgroundColor": "#000000"
         }
       ]
