@@ -263,6 +263,8 @@ async def update_me(body: Dict[str, Any], authorization: Optional[str] = Header(
     if allowed:
         await db.users.update_one({"user_id": user["user_id"]}, {"$set": allowed})
     updated = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "password_hash": 0})
+    if not updated:
+        raise HTTPException(404, "User not found")
     return {"user": _clean_user(updated)}
 
 
