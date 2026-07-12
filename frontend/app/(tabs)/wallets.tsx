@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Alert, StyleSheet, RefreshControl } from 'react-native';
+import { View, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -9,6 +9,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, formatMoneyFull } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, H1, H2, Body, Label, DisplayNumber, Button, EmptyState } from '@/src/components/ui';
+import { confirmAction } from '@/src/utils/confirm';
 
 const WALLET_META: Record<string, { icon: any; gradient: [string, string] }> = {
   cash:        { icon: 'cash-outline',         gradient: ['#10B981', '#064E3B'] },
@@ -115,10 +116,12 @@ function WalletCard({ wallet, currency, onLongPress, onPress }: any) {
 }
 
 function confirmDelete(w: any, reload: () => void) {
-  Alert.alert('Delete wallet', `Delete "${w.name}" and its transactions?`, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Delete', style: 'destructive', onPress: async () => { await api.deleteWallet(w.id); reload(); } },
-  ]);
+  confirmAction(
+    'Delete wallet',
+    `Delete "${w.name}" and its transactions?`,
+    async () => { await api.deleteWallet(w.id); reload(); },
+    { confirmLabel: 'Delete', destructive: true },
+  );
 }
 
 const styles = StyleSheet.create({

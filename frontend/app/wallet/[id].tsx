@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, formatMoneyFull } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip, Card } from '@/src/components/ui';
+import { confirmAction } from '@/src/utils/confirm';
 
 const TYPES = [
   { id: 'cash', label: 'Cash' },
@@ -47,12 +48,15 @@ export default function EditWallet() {
   const submit = async () => {
     setErr('');
     if (!name.trim()) { setErr('Enter a wallet name'); return; }
+    if (balance.trim() === '') { setErr('Enter a balance (use 0 for empty)'); return; }
+    const parsed = parseFloat(balance);
+    if (Number.isNaN(parsed)) { setErr('Balance must be a number'); return; }
     setLoading(true);
     try {
       await api.updateWallet(id!, {
         name: name.trim(),
         type,
-        balance: parseFloat(balance) || 0,
+        balance: parsed,
       });
       router.back();
     } catch (e: any) { setErr(e.message); }
@@ -60,13 +64,12 @@ export default function EditWallet() {
   };
 
   const remove = () => {
-    Alert.alert('Delete wallet?', 'This also deletes all transactions in this wallet.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-        await api.deleteWallet(id!);
-        router.back();
-      } },
-    ]);
+    confirmAction(
+      'Delete wallet?',
+      'This also deletes all transactions in this wallet.',
+      async () => { await api.deleteWallet(id!); router.back(); },
+      { confirmLabel: 'Delete', destructive: true },
+    );
   };
 
   if (!wallet) {
