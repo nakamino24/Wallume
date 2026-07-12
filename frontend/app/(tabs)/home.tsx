@@ -185,11 +185,13 @@ function QuickAction({ icon, label, color, onPress, testID }: any) {
   const { colors } = useTheme();
   return (
     <TouchableOpacity testID={testID} onPress={onPress} activeOpacity={0.85} style={{ flex: 1 }}>
-      <View style={{ backgroundColor: colors.surface2, borderRadius: radius.lg, padding: spacing.md, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}>
-        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: color + '22', alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ backgroundColor: colors.surface2, borderRadius: radius.lg, paddingVertical: spacing.md, paddingHorizontal: 6, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}>
+        <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: color + '22', alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name={icon} size={18} color={color} />
         </View>
-        <Body style={{ marginTop: 6, fontFamily: font.textMedium }}>{label}</Body>
+        <Body numberOfLines={1} adjustsFontSizeToFit style={{ marginTop: 6, fontFamily: font.textMedium, fontSize: 12, textAlign: 'center' }}>
+          {label}
+        </Body>
       </View>
     </TouchableOpacity>
   );
@@ -221,7 +223,7 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: spacing.xl,
-    bottom: 100,
+    bottom: 24,
     width: 56, height: 56, borderRadius: 28,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 8,

@@ -1,0 +1,60 @@
+{
+  "summary": "Iteration 2 fix verification: (1) Home tab quick-action tiles Income/Expense/Transfer/Reports render on a single line — VERIFIED (no wrap/broken chars). (2) FAB moved to bottom:24 sits ~24px above tab bar — VERIFIED positionally (fab bbox y=519-575, viewport 375x667, tab bar occupies bottom ~67px), no longer visually cluttering the Recent section title area. (3) Wallet CRUD: tapping a wallet card navigates to /wallet/[id] Edit screen; screen renders Current balance card, prefilled Name / Type chips / Balance, trash icon in header and 'Save changes' button — VERIFIED. Editing name (Main Bank -> Main Bank Updated) and balance ($3200 -> $5000) then Save navigates back and the Wallets card reflects new values (total updated $3450 -> $5250). (4) Backend PATCH /api/wallets/{id} still works — 3 new pytest cases pass (balance change, name+type change, unauth guard). Existing 31 backend tests still green. LIMITATION: Delete confirmation via Alert.alert cannot be exercised on the web preview because react-native-web's Alert.alert with multiple buttons is effectively a no-op (no dialog fires and no button callback runs). DELETE /api/wallets/{id} endpoint itself is verified passing in the backend suite. On native (iOS/Android) Alert.alert works, but for testability/parity the main agent may want to replace Alert.alert with a custom in-app Modal.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "wallets.tsx confirmDelete + wallet/[id].tsx remove()",
+        "issue": "Uses React Native Alert.alert with multiple buttons which is a no-op on react-native-web (used by Expo web preview). Delete confirmation never appears and DELETE API is never called from web preview. Works on native. Reference: /app/frontend/app/(tabs)/wallets.tsx:117-122 and /app/frontend/app/wallet/[id].tsx:62-70.",
+        "testID": "edit-wallet-delete / wallet-card-* (long press)",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Home",
+        "issues": [
+          "FAB (bottom:24, right:xl) can still visually overlap the horizontally-scrollable filter chip row when the Recent section is at the top of the viewport (fresh account with 0 transactions). Consider bottom padding on the last content block or moving FAB up ~12px when at empty state. Non-blocking, mostly cosmetic on an empty ledger."
+        ]
+      }
+    ],
+    "react_native_issues": [
+      {
+        "component": "Alert.alert (react-native-web polyfill)",
+        "issue": "Alert.alert with 2+ buttons is a no-op on web. Recommend a custom Modal for delete-confirm to maintain web parity. Reference: /app/frontend/app/wallet/[id].tsx:62 and /app/frontend/app/(tabs)/wallets.tsx:117"
+      },
+      {
+        "component": "expo-av / shadow* / props.pointerEvents",
+        "issue": "Console warnings observed: 'shadow* style props are deprecated. Use \"boxShadow\"' and 'props.pointerEvents is deprecated. Use style.pointerEvents'. These come from RN 0.76+ deprecations. Not blocking but should be addressed. Reference: multiple UI components emit these."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_backend_api.py",
+    "/app/backend/tests/test_wallet_patch.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Replace Alert.alert delete-confirmation in /app/frontend/app/wallet/[id].tsx (remove()) and /app/frontend/app/(tabs)/wallets.tsx (confirmDelete()) with a cross-platform custom Modal so delete flows are testable and work on Expo web preview.",
+    "(Optional/cosmetic) Add extra bottom padding or hide FAB when Recent section is empty to avoid the FAB visually overlaying the filter chip row on empty ledgers.",
+    "(Optional) Migrate shadow* styles to boxShadow and pointerEvents prop to style.pointerEvents to silence RN deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "Edit Wallet screen loads wallet by calling api.wallets() and searching client-side. This is fine for small lists but consider GET /api/wallets/{id} for O(1) lookup.",
+    "Balance input parses parseFloat(balance) || 0 — an empty string silently becomes 0 which will wipe out balance if a user clears the field. Add a guard or use current balance as default when empty.",
+    "wallets.tsx long-press delete confirmation duplicates logic in EditWallet.remove(). Consider extracting to a shared helper."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_wallet_patch.py (created)"
+  ],
+  "success_rate": {"backend": "100% (34/34 including 3 new PATCH tests)", "frontend": "~85% (UI fixes verified, edit/save CRUD verified; delete verified only at API level due to react-native-web Alert limitation)"},
+  "seed_data_creation": "Fresh signup users test+<epoch>@matrix.dev via /api/auth/signup, which auto-seeds Cash ($250) and Main Bank ($3200) wallets. Wallet edits/deletes performed against these are ephemeral per test user.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Wallet CRUD tap-to-edit flow works end-to-end for read/update. Delete flow requires custom Modal to be testable on web; backend DELETE is fine. Home tab UI fixes (single-line labels, FAB above tab bar) both verified. Screenshots at /tmp/03_home.png, /tmp/06_edit_wallet.png, /tmp/07_after_save.png.",
+  "rca_of_issue": "The delete confirmation not firing on web preview is due to react-native-web's Alert.alert only supporting a single-button alert; with multiple buttons it becomes a no-op (documented behavior). Native builds are unaffected. Recommendation: implement a cross-platform confirm Modal."
+}

@@ -53,7 +53,7 @@ export default function Wallets() {
           <View style={{ padding: spacing.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View>
               <H1>Wallets</H1>
-              <Body muted style={{ marginTop: 4 }}>{wallets.length} accounts · {formatMoneyFull(total, cur)}</Body>
+              <Body muted style={{ marginTop: 4 }}>Tap to edit · {wallets.length} accounts · {formatMoneyFull(total, cur)}</Body>
             </View>
             <TouchableOpacity testID="wallets-add-btn" onPress={() => router.push('/wallet/new')}
               style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
@@ -73,6 +73,7 @@ export default function Wallets() {
             <View style={{ paddingHorizontal: spacing.xl, gap: spacing.md }}>
               {wallets.map((w) => (
                 <WalletCard key={w.id} wallet={w} currency={cur}
+                  onPress={() => router.push({ pathname: '/wallet/[id]', params: { id: w.id } })}
                   onLongPress={() => confirmDelete(w, load)}
                 />
               ))}
@@ -84,11 +85,12 @@ export default function Wallets() {
   );
 }
 
-function WalletCard({ wallet, currency, onLongPress }: any) {
+function WalletCard({ wallet, currency, onLongPress, onPress }: any) {
   const meta = WALLET_META[wallet.type] || WALLET_META.cash;
   return (
     <TouchableOpacity
       testID={`wallet-card-${wallet.id}`}
+      onPress={onPress}
       onLongPress={onLongPress}
       activeOpacity={0.9}
       style={[styles.card, { backgroundColor: meta.gradient[1] }]}
