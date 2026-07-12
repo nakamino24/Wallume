@@ -19,6 +19,7 @@ import bcrypt
 import jwt
 import httpx
 import json as _json
+import certifi
 
 # from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
 
@@ -31,7 +32,11 @@ JWT_SECRET = os.environ["JWT_SECRET"]
 # EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
-client = AsyncIOMotorClient(MONGO_URL)
+client = AsyncIOMotorClient(
+    MONGO_URL,
+    serverSelectionTimeoutMS=5000,
+    tlsCAFile=certifi.where(),
+)
 db = client[DB_NAME]
 
 app = FastAPI(title="Matrix Finance")
