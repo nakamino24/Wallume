@@ -30,7 +30,7 @@ MONGO_URL = os.environ["MONGO_URL"]
 DB_NAME = os.environ["DB_NAME"]
 JWT_SECRET = os.environ["JWT_SECRET"]
 # EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
 client = AsyncIOMotorClient(
     MONGO_URL,
@@ -716,8 +716,8 @@ COACH_SYSTEM = (
 @api.post("/coach/chat")
 async def coach_chat(payload: ChatIn, authorization: Optional[str] = Header(None)):
     u = await get_user_from_token(authorization)
-    if not ANTHROPIC_API_KEY:
-        raise HTTPException(500, "Anthropic API key not configured")
+    if not GROQ_API_KEY:
+        raise HTTPException(500, "Groq API key not configured")
 
     await db.chat_messages.insert_one({
         "id": new_id("msg"), "user_id": u["user_id"], "session_id": payload.session_id,
@@ -741,18 +741,19 @@ async def coach_chat(payload: ChatIn, authorization: Optional[str] = Header(None
             async with httpx.AsyncClient(timeout=60.0) as hc:
                 async with hc.stream(
                     "POST",
-                    "https://api.anthropic.com/v1/messages",
+                    "https://api.groq.com/openai/v1/chat/completions",
                     headers={
-                        "x-api-key": ANTHROPIC_API_KEY,
-                        "anthropic-version": "2023-06-01",
+                        "Authorization": f"Bearer {GROQ_API_KEY}",
                         "content-type": "application/json",
                     },
                     json={
-                        "model": "claude-sonnet-4-6",
+                        "model": "llama-3.3-70b-versatile",
                         "max_tokens": 1024,
-                        "system": system_msg,
                         "stream": True,
-                        "messages": [{"role": "user", "content": payload.message}],
+                        "messages": [
+                            {"role": "system", "content": system_msg},
+                            {"role": "user", "content": payload.message},
+                        ],
                     },
                 ) as resp:
                     async for line in resp.aiter_lines():
@@ -762,8 +763,8 @@ async def coach_chat(payload: ChatIn, authorization: Optional[str] = Header(None
                                 break
                             try:
                                 ev = _json.loads(data)
-                                if ev.get("type") == "content_block_delta":
-                                    delta = ev["delta"].get("text", "")
+                                delta = ev["choices"][0]["delta"].get("content", "")
+                                if delta:
                                     acc += delta
                                     yield f"data: {_json.dumps({'delta': delta})}\n\n"
                             except Exception:
