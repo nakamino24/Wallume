@@ -52,6 +52,7 @@ export const api = {
 
   transactions: (type?: string) => req(`/transactions${type ? `?type=${type}` : ''}`),
   createTransaction: (body: any) => req('/transactions', { method: 'POST', body: JSON.stringify(body) }),
+  updateTransaction: (id: string, body: any) => req(`/transactions/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteTransaction: (id: string) => req(`/transactions/${id}`, { method: 'DELETE' }),
 
   budgets: () => req('/budgets'),

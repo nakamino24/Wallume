@@ -70,7 +70,23 @@ export default function Transactions() {
             const d = new Date(t.date);
             const label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
             return (
-              <TouchableOpacity key={t.id} activeOpacity={0.85} onLongPress={() => remove(t)}>
+              <TouchableOpacity
+                key={t.id}
+                activeOpacity={0.85}
+                onPress={() => router.push({
+                  pathname: '/transaction/[id]',
+                  params: {
+                    id: t.id,
+                    wallet_id: t.wallet_id,
+                    to_wallet_id: t.to_wallet_id || '',
+                    type: t.type,
+                    amount: String(t.amount),
+                    category: t.category,
+                    note: t.note || '',
+                  },
+                })}
+                onLongPress={() => remove(t)}
+              >
                 <Card style={{ padding: spacing.md }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: color + '22', alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
