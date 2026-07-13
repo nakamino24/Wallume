@@ -358,6 +358,58 @@ async def create_transaction(payload: TransactionIn, authorization: Optional[str
     return {"transaction": doc}
 
 
+@api.patch("/transactions/{tx_id}")
+async def update_transaction(tx_id: str, payload: Dict[str, Any], authorization: Optional[str] = Header(None)):
+    u = await get_user_from_token(authorization)
+    tx = await db.transactions.find_one({"id": tx_id, "user_id": u["user_id"]}, {"_id": 0})
+    if not tx:
+        raise HTTPException(404, "Not found")
+
+    allowed = {k: v for k, v in payload.items()
+               if k in {"wallet_id", "to_wallet_id", "type", "amount", "category", "note", "date"}}
+    if not allowed:
+        return {"transaction": tx}
+
+    merged = {**tx, **allowed}
+    if merged["type"] == "transfer" and not merged.get("to_wallet_id"):
+        raise HTTPException(400, "to_wallet_id required for transfer")
+
+    new_wallet = await db.wallets.find_one({"id": merged["wallet_id"], "user_id": u["user_id"]}, {"_id": 0})
+    if not new_wallet:
+        raise HTTPException(400, "Wallet not found")
+
+    # --- reverse the old transaction's effect on wallet balances ---
+    if tx["type"] == "income":
+        await db.wallets.update_one({"id": tx["wallet_id"], "user_id": u["user_id"]},
+                                    {"$inc": {"balance": -tx["amount"]}})
+    elif tx["type"] == "expense":
+        await db.wallets.update_one({"id": tx["wallet_id"], "user_id": u["user_id"]},
+                                    {"$inc": {"balance": tx["amount"]}})
+    elif tx["type"] == "transfer":
+        await db.wallets.update_one({"id": tx["wallet_id"], "user_id": u["user_id"]},
+                                    {"$inc": {"balance": tx["amount"]}})
+        if tx.get("to_wallet_id"):
+            await db.wallets.update_one({"id": tx["to_wallet_id"], "user_id": u["user_id"]},
+                                        {"$inc": {"balance": -tx["amount"]}})
+
+    # --- apply the updated transaction's effect on wallet balances ---
+    if merged["type"] == "income":
+        await db.wallets.update_one({"id": merged["wallet_id"], "user_id": u["user_id"]},
+                                    {"$inc": {"balance": merged["amount"]}})
+    elif merged["type"] == "expense":
+        await db.wallets.update_one({"id": merged["wallet_id"], "user_id": u["user_id"]},
+                                    {"$inc": {"balance": -merged["amount"]}})
+    elif merged["type"] == "transfer":
+        await db.wallets.update_one({"id": merged["wallet_id"], "user_id": u["user_id"]},
+                                    {"$inc": {"balance": -merged["amount"]}})
+        await db.wallets.update_one({"id": merged["to_wallet_id"], "user_id": u["user_id"]},
+                                    {"$inc": {"balance": merged["amount"]}})
+
+    await db.transactions.update_one({"id": tx_id, "user_id": u["user_id"]}, {"$set": allowed})
+    updated = await db.transactions.find_one({"id": tx_id, "user_id": u["user_id"]}, {"_id": 0})
+    return {"transaction": updated}
+
+
 @api.delete("/transactions/{tx_id}")
 async def delete_transaction(tx_id: str, authorization: Optional[str] = Header(None)):
     u = await get_user_from_token(authorization)
@@ -793,4 +845,3 @@ app.add_middleware(
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)
- 
