@@ -206,6 +206,18 @@ class AssetIn(BaseModel):
     kind: Literal["real_estate", "vehicle", "gadget", "cash", "receivable", "other"] = "other"
 
 
+class RecurringIn(BaseModel):
+    name: str
+    amount: float
+    type: Literal["income", "expense"] = "expense"
+    category: str = "Bills"
+    wallet_id: str
+    frequency: Literal["weekly", "monthly", "yearly"] = "monthly"
+    next_date: str  # ISO date of the next occurrence
+    note: Optional[str] = ""
+    active: bool = True
+
+
 class ChatIn(BaseModel):
     session_id: str
     message: str
@@ -474,6 +486,97 @@ async def delete_budget(budget_id: str, authorization: Optional[str] = Header(No
     u = await get_user_from_token(authorization)
     await db.budgets.delete_one({"id": budget_id, "user_id": u["user_id"]})
     return {"ok": True}
+
+
+def _advance_date(iso_date: str, frequency: str) -> str:
+    d = datetime.fromisoformat(iso_date.replace("Z", "+00:00")) if "T" in iso_date else datetime.fromisoformat(iso_date)
+    if frequency == "weekly":
+        d = d + timedelta(days=7)
+    elif frequency == "yearly":
+        try:
+            d = d.replace(year=d.year + 1)
+        except ValueError:
+            d = d + timedelta(days=365)
+    else:  # monthly
+        month = d.month + 1
+        year = d.year + (1 if month > 12 else 0)
+        month = 1 if month > 12 else month
+        day = min(d.day, 28)  # avoid month-length overflow (safe default)
+        d = d.replace(year=year, month=month, day=day)
+    return d.isoformat()
+
+
+# ------------------------- recurring (bills & subscriptions) ---------
+@api.get("/recurring")
+async def list_recurring(authorization: Optional[str] = Header(None)):
+    u = await get_user_from_token(authorization)
+    items = await db.recurring.find({"user_id": u["user_id"]}, {"_id": 0}).sort("next_date", 1).to_list(500)
+    today = now_utc().date()
+    for r in items:
+        try:
+            nd = datetime.fromisoformat(r["next_date"].replace("Z", "+00:00")).date()
+            r["days_until"] = (nd - today).days
+        except Exception:
+            r["days_until"] = None
+    return {"recurring": items}
+
+
+@api.post("/recurring")
+async def create_recurring(payload: RecurringIn, authorization: Optional[str] = Header(None)):
+    u = await get_user_from_token(authorization)
+    doc = {"id": new_id("rec"), "user_id": u["user_id"], **payload.dict(), "created_at": now_utc()}
+    await db.recurring.insert_one(doc)
+    doc.pop("_id", None)
+    return {"recurring": doc}
+
+
+@api.patch("/recurring/{rec_id}")
+async def update_recurring(rec_id: str, body: Dict[str, Any], authorization: Optional[str] = Header(None)):
+    u = await get_user_from_token(authorization)
+    allowed_keys = {"name", "amount", "type", "category", "wallet_id", "frequency", "next_date", "note", "active"}
+    allowed = {k: v for k, v in body.items() if k in allowed_keys}
+    if allowed:
+        await db.recurring.update_one({"id": rec_id, "user_id": u["user_id"]}, {"$set": allowed})
+    r = await db.recurring.find_one({"id": rec_id, "user_id": u["user_id"]}, {"_id": 0})
+    if not r:
+        raise HTTPException(404, "Not found")
+    return {"recurring": r}
+
+
+@api.delete("/recurring/{rec_id}")
+async def delete_recurring(rec_id: str, authorization: Optional[str] = Header(None)):
+    u = await get_user_from_token(authorization)
+    await db.recurring.delete_one({"id": rec_id, "user_id": u["user_id"]})
+    return {"ok": True}
+
+
+@api.post("/recurring/{rec_id}/mark_paid")
+async def mark_recurring_paid(rec_id: str, authorization: Optional[str] = Header(None)):
+    """Log the actual transaction for this cycle, update the wallet balance,
+    and advance next_date to the following occurrence — all in one tap."""
+    u = await get_user_from_token(authorization)
+    r = await db.recurring.find_one({"id": rec_id, "user_id": u["user_id"]}, {"_id": 0})
+    if not r:
+        raise HTTPException(404, "Not found")
+
+    wallet = await db.wallets.find_one({"id": r["wallet_id"], "user_id": u["user_id"]}, {"_id": 0})
+    if not wallet:
+        raise HTTPException(400, "Wallet not found")
+
+    tx_doc = {
+        "id": new_id("tx"), "user_id": u["user_id"], "wallet_id": r["wallet_id"],
+        "to_wallet_id": None, "type": r["type"], "amount": r["amount"], "category": r["category"],
+        "note": r.get("note") or f"{r['name']} (recurring)", "date": now_utc().isoformat(),
+        "created_at": now_utc(),
+    }
+    await db.transactions.insert_one(tx_doc)
+    delta = r["amount"] if r["type"] == "income" else -r["amount"]
+    await db.wallets.update_one({"id": r["wallet_id"], "user_id": u["user_id"]}, {"$inc": {"balance": delta}})
+
+    next_date = _advance_date(r["next_date"], r["frequency"])
+    await db.recurring.update_one({"id": rec_id, "user_id": u["user_id"]}, {"$set": {"next_date": next_date}})
+    updated = await db.recurring.find_one({"id": rec_id, "user_id": u["user_id"]}, {"_id": 0})
+    return {"recurring": updated, "transaction": {k: v for k, v in tx_doc.items() if k != "_id"}}
 
 
 # ------------------------- goals -------------------------------------
@@ -850,7 +953,7 @@ async def startup():
     await db.user_sessions.create_index("session_token", unique=True)
     await db.user_sessions.create_index("expires_at", expireAfterSeconds=0)
     for coll in ("wallets", "transactions", "budgets", "goals", "plans",
-                 "debts", "investments", "assets", "chat_messages"):
+                 "debts", "investments", "assets", "chat_messages", "recurring"):
         await db[coll].create_index("user_id")
     log.info("Matrix Finance backend ready")
 
