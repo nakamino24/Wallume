@@ -184,10 +184,20 @@ class DebtIn(BaseModel):
 class InvestmentIn(BaseModel):
     name: str
     ticker: Optional[str] = None
-    kind: Literal["stock", "crypto", "gold", "mutual_fund", "etf", "bond", "other"] = "stock"
+    kind: Literal["stock", "etf", "mutual_fund", "bond", "crypto", "gold", "cash", "other"] = "stock"
     quantity: float = 0.0
     avg_cost: float = 0.0
     current_price: float = 0.0
+    # Bond-specific (face_value/coupon_rate are informational; purchase_price/current_value
+    # drive the value shown, mirrored into avg_cost/current_price so totals elsewhere still work)
+    face_value: Optional[float] = None
+    coupon_rate: Optional[float] = None
+    purchase_price: Optional[float] = None
+    current_value: Optional[float] = None
+    # Supporting info
+    broker: Optional[str] = None
+    purchase_date: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class AssetIn(BaseModel):
@@ -586,6 +596,21 @@ async def create_investment(payload: InvestmentIn, authorization: Optional[str] 
     return {"investment": doc}
 
 
+@api.patch("/investments/{inv_id}")
+async def update_investment(inv_id: str, body: Dict[str, Any], authorization: Optional[str] = Header(None)):
+    u = await get_user_from_token(authorization)
+    allowed_keys = {"name", "ticker", "kind", "quantity", "avg_cost", "current_price",
+                    "face_value", "coupon_rate", "purchase_price", "current_value",
+                    "broker", "purchase_date", "notes"}
+    allowed = {k: v for k, v in body.items() if k in allowed_keys}
+    if allowed:
+        await db.investments.update_one({"id": inv_id, "user_id": u["user_id"]}, {"$set": allowed})
+    inv = await db.investments.find_one({"id": inv_id, "user_id": u["user_id"]}, {"_id": 0})
+    if not inv:
+        raise HTTPException(404, "Not found")
+    return {"investment": inv}
+
+
 @api.delete("/investments/{inv_id}")
 async def delete_investment(inv_id: str, authorization: Optional[str] = Header(None)):
     u = await get_user_from_token(authorization)
@@ -846,3 +871,4 @@ app.add_middleware(
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)
+ 
