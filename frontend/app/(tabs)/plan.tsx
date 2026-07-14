@@ -68,6 +68,7 @@ export default function PlanScreen() {
           {(['budgets', 'goals', 'plans', 'debts', 'assets'] as Section[]).map((s) => (
             <Chip key={s} testID={`plan-chip-${s}`} label={s[0].toUpperCase() + s.slice(1)} active={section === s} onPress={() => setSection(s)} />
           ))}
+          <Chip testID="plan-chip-bills" label="Bills" onPress={() => router.push('/recurring')} />
         </ScrollView>
 
         <ScrollView

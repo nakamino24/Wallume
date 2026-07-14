@@ -22,14 +22,16 @@ export default function Home() {
   const router = useRouter();
   const [summary, setSummary] = useState<any>(null);
   const [txs, setTxs] = useState<any[]>([]);
+  const [upcoming, setUpcoming] = useState<any[]>([]);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [s, t] = await Promise.all([api.summary(), api.transactions()]);
+      const [s, t, r] = await Promise.all([api.summary(), api.transactions(), api.recurring().catch(() => ({ recurring: [] }))]);
       setSummary(s);
       setTxs(t.transactions || []);
+      setUpcoming((r.recurring || []).filter((x: any) => x.active).slice(0, 3));
     } catch (e) {
       // ignore
     }
@@ -121,6 +123,39 @@ export default function Home() {
               </View>
             </Card>
           </View>
+
+          {/* Upcoming bills & subscriptions */}
+          {upcoming.length > 0 && (
+            <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.xl }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+                <H2>Upcoming</H2>
+                <TouchableOpacity testID="home-recurring-see-all" onPress={() => router.push('/recurring')}>
+                  <Body style={{ color: colors.brandPrimary, fontFamily: font.textBold }}>See all</Body>
+                </TouchableOpacity>
+              </View>
+              <Card style={{ padding: 0 }}>
+                {upcoming.map((r, idx) => {
+                  const overdue = r.days_until !== null && r.days_until < 0;
+                  const dueSoon = r.days_until !== null && r.days_until >= 0 && r.days_until <= 3;
+                  const dueColor = overdue ? colors.error : dueSoon ? colors.warning : colors.onSurface2;
+                  const dueText = overdue ? `${Math.abs(r.days_until)}d overdue` : r.days_until === 0 ? 'Due today' : `in ${r.days_until}d`;
+                  return (
+                    <TouchableOpacity key={r.id} testID={`home-recurring-${r.id}`} onPress={() => router.push(`/recurring/${r.id}`)}
+                      style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderBottomWidth: idx === upcoming.length - 1 ? 0 : 1, borderBottomColor: colors.border }}>
+                      <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: dueColor + '22', alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
+                        <Ionicons name="calendar" size={18} color={dueColor} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Body style={{ fontFamily: font.textMedium }}>{r.name}</Body>
+                        <Body style={{ fontSize: 12, marginTop: 2, color: dueColor }}>{dueText}</Body>
+                      </View>
+                      <Body style={{ fontFamily: font.displayBold }}>{formatMoney(r.amount, cur)}</Body>
+                    </TouchableOpacity>
+                  );
+                })}
+              </Card>
+            </View>
+          )}
 
           {/* Filter chips */}
           <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
