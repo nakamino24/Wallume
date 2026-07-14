@@ -10,6 +10,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, formatMoney, formatMoneyFull, images } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, DisplayNumber, ProgressRing, ProgressBar, EmptyState, Chip } from '@/src/components/ui';
+import { computeInvestmentMetrics, kindLabel, quantitySummary } from '@/src/lib/investmentKinds';
 
 type Section = 'budgets' | 'goals' | 'plans' | 'debts' | 'assets';
 
@@ -290,6 +291,7 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
 /* --------------------- ASSETS + INVESTMENTS --------------------- */
 function AssetsSection({ assets, investments, currency, onAddAsset, onAddInv, onReload }: any) {
   const { colors } = useTheme();
+  const router = useRouter();
   return (
     <>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -302,16 +304,14 @@ function AssetsSection({ assets, investments, currency, onAddAsset, onAddInv, on
       {investments.length === 0 ? (
         <EmptyState testID="inv-empty" title="No investments" subtitle="Track stocks, crypto, gold and funds." actionLabel="Add investment" onAction={onAddInv} />
       ) : investments.map((iv: any) => {
-        const value = (iv.quantity || 0) * (iv.current_price || 0);
-        const cost = (iv.quantity || 0) * (iv.avg_cost || 0);
-        const pl = value - cost;
+        const { value, pl } = computeInvestmentMetrics(iv);
         const plColor = pl >= 0 ? colors.success : colors.error;
         return (
-          <Card key={iv.id} onPress={() => confirmDialog('Delete investment?', async () => { await api.deleteInvestment(iv.id); onReload(); })}>
+          <Card key={iv.id} testID={`inv-card-${iv.id}`} onPress={() => router.push(`/investment/${iv.id}`)}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <View style={{ flex: 1 }}>
                 <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{iv.name} {iv.ticker ? `· ${iv.ticker}` : ''}</Body>
-                <Body muted style={{ marginTop: 2 }}>{iv.kind} · {iv.quantity} units</Body>
+                <Body muted style={{ marginTop: 2 }}>{kindLabel(iv.kind)} · {quantitySummary(iv)}</Body>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Body style={{ fontFamily: font.displayBold }}>{formatMoney(value, currency)}</Body>

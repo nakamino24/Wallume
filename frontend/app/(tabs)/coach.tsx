@@ -64,7 +64,20 @@ export default function Coach() {
       });
       if (!res.ok || !res.body) {
         const errTxt = await res.text().catch(() => '');
-        throw new Error(errTxt || `HTTP ${res.status}`);
+        // If the body already looks like our SSE stream (e.g. the connection was
+        // cut mid-stream by a provider rate limit), salvage any partial answer
+        // instead of dumping raw "data: {...}" lines to the user.
+        if (errTxt.includes('"delta"')) {
+          const salvaged = errTxt
+            .split('\n')
+            .filter((l) => l.startsWith('data:'))
+            .map((l) => { try { return JSON.parse(l.replace(/^data:\s*/, '')).delta || ''; } catch { return ''; } })
+            .join('');
+          throw new Error(salvaged || 'The AI service hit a rate limit — please wait a few seconds and try again.');
+        }
+        let detail = errTxt;
+        try { detail = JSON.parse(errTxt).detail || errTxt; } catch {}
+        throw new Error(detail || `HTTP ${res.status}`);
       }
       const reader = (res.body as any).getReader?.();
       const decoder = new TextDecoder('utf-8');

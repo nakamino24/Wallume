@@ -76,6 +76,7 @@ export const api = {
 
   investments: () => req('/investments'),
   createInvestment: (body: any) => req('/investments', { method: 'POST', body: JSON.stringify(body) }),
+  updateInvestment: (id: string, body: any) => req(`/investments/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteInvestment: (id: string) => req(`/investments/${id}`, { method: 'DELETE' }),
 
   assets: () => req('/assets'),

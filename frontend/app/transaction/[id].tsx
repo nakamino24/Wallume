@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
@@ -42,6 +42,7 @@ export default function EditTransaction() {
   const [toWalletId, setToWalletId] = useState(params.to_wallet_id || '');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  const scrollRef = useRef<ScrollView>(null);
 
   const load = useCallback(async () => {
     const r = await api.wallets();
@@ -72,7 +73,7 @@ export default function EditTransaction() {
   return (
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
             <TouchableOpacity testID="edit-tx-back" onPress={() => router.back()} style={{ padding: 4 }}>
               <Ionicons name="close" size={24} color={colors.onSurface} />
@@ -80,7 +81,7 @@ export default function EditTransaction() {
             <H2 style={{ marginLeft: spacing.md }}>Edit transaction</H2>
           </View>
 
-          <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
+          <ScrollView ref={scrollRef} contentContainerStyle={{ padding: spacing.xl, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
             {/* Type selector */}
             <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.pill, padding: 4, marginBottom: spacing.xl }}>
               {(['expense', 'income', 'transfer'] as const).map((t) => (
@@ -157,7 +158,8 @@ export default function EditTransaction() {
               </>
             )}
 
-            <Input testID="edit-tx-note" label="Note (optional)" value={note} onChangeText={setNote} placeholder="Coffee, groceries…" />
+            <Input testID="edit-tx-note" label="Note (optional)" value={note} onChangeText={setNote} placeholder="Coffee, groceries…"
+              onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)} />
 
             {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
 
