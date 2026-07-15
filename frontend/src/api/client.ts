@@ -1,11 +1,27 @@
 import { storage } from '@/src/utils/storage';
 
-const BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
+const FALLBACK_BASE = 'https://victorious-enthusiasm-production.up.railway.app';
+const BASE = process.env.EXPO_PUBLIC_BACKEND_URL || FALLBACK_BASE;
 const TOKEN_KEY = 'mf.token';
+
+function normalizeToken(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      return typeof parsed === 'string' && parsed.trim() ? parsed.trim() : null;
+    } catch {
+      return trimmed.slice(1, -1);
+    }
+  }
+  return trimmed;
+}
 
 export async function getToken(): Promise<string | null> {
   const v = await storage.secureGet<string | null>(TOKEN_KEY, null);
-  return typeof v === 'string' && v.length > 0 ? v : null;
+  return normalizeToken(v);
 }
 export async function setToken(t: string | null) {
   if (t) await storage.secureSet(TOKEN_KEY, t);
@@ -19,7 +35,8 @@ async function req(path: string, opts: RequestInit = {}) {
     ...(opts.headers as Record<string, string> || {}),
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${BASE}/api${path}`, { ...opts, headers });
+  const url = `${BASE.replace(/\/$/, '')}/api${path}`;
+  const res = await fetch(url, { ...opts, headers });
   if (!res.ok) {
     let msg = `Request failed (${res.status})`;
     try {
@@ -82,6 +99,12 @@ export const api = {
   assets: () => req('/assets'),
   createAsset: (body: any) => req('/assets', { method: 'POST', body: JSON.stringify(body) }),
   deleteAsset: (id: string) => req(`/assets/${id}`, { method: 'DELETE' }),
+
+  recurring: () => req('/recurring'),
+  createRecurring: (body: any) => req('/recurring', { method: 'POST', body: JSON.stringify(body) }),
+  updateRecurring: (id: string, body: any) => req(`/recurring/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteRecurring: (id: string) => req(`/recurring/${id}`, { method: 'DELETE' }),
+  markRecurringPaid: (id: string) => req(`/recurring/${id}/mark-paid`, { method: 'POST' }),
 
   summary: () => req('/analytics/summary'),
 

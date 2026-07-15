@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ViewStyle, TextStyle, StyleProp } from 'react-native';
+import type { TextProps } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, radius, font } from '@/src/theme/tokens';
 import Svg, { Circle } from 'react-native-svg';
@@ -51,9 +52,9 @@ export function H2({ children, style }: { children: React.ReactNode; style?: Sty
   const { colors } = useTheme();
   return <Text style={[{ color: colors.onSurface, fontFamily: font.displayBold, fontSize: 20 }, style]}>{children}</Text>;
 }
-export function Body({ children, style, muted, testID }: { children: React.ReactNode; style?: StyleProp<TextStyle>; muted?: boolean; testID?: string }) {
+export function Body({ children, style, muted, testID, ...rest }: TextProps & { children: React.ReactNode; style?: StyleProp<TextStyle>; muted?: boolean; testID?: string }) {
   const { colors } = useTheme();
-  return <Text testID={testID} style={[{ color: muted ? colors.muted : colors.onSurface2, fontFamily: font.text, fontSize: 14 }, style]}>{children}</Text>;
+  return <Text testID={testID} style={[{ color: muted ? colors.muted : colors.onSurface2, fontFamily: font.text, fontSize: 14 }, style]} {...rest}>{children}</Text>;
 }
 export function Label({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
   const { colors } = useTheme();

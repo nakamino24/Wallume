@@ -58,60 +58,63 @@ export default function Coach() {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-          Accept: 'text/event-stream',
+          Accept: 'application/json, text/plain, text/event-stream',
         },
         body: JSON.stringify({ session_id: SESSION_ID, message: msg }),
       });
-      if (!res.ok || !res.body) {
+
+      if (!res.ok) {
         const errTxt = await res.text().catch(() => '');
-        // If the body already looks like our SSE stream (e.g. the connection was
-        // cut mid-stream by a provider rate limit), salvage any partial answer
-        // instead of dumping raw "data: {...}" lines to the user.
-        if (errTxt.includes('"delta"')) {
-          const salvaged = errTxt
-            .split('\n')
-            .filter((l) => l.startsWith('data:'))
-            .map((l) => { try { return JSON.parse(l.replace(/^data:\s*/, '')).delta || ''; } catch { return ''; } })
-            .join('');
-          throw new Error(salvaged || 'The AI service hit a rate limit — please wait a few seconds and try again.');
-        }
         let detail = errTxt;
         try { detail = JSON.parse(errTxt).detail || errTxt; } catch {}
         throw new Error(detail || `HTTP ${res.status}`);
       }
-      const reader = (res.body as any).getReader?.();
-      const decoder = new TextDecoder('utf-8');
-      let buf = '';
-      let acc = '';
-      const flush = () => {
-        setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: acc, pending: false } : mm));
-      };
-      if (reader) {
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buf += decoder.decode(value, { stream: true });
-          const parts = buf.split('\n\n');
-          buf = parts.pop() || '';
-          for (const chunk of parts) {
-            const line = chunk.split('\n').find((l) => l.startsWith('data:'));
-            if (!line) continue;
-            const payload = line.replace(/^data:\s*/, '');
-            if (payload === '[DONE]') continue;
-            try {
-              const obj = JSON.parse(payload);
-              if (obj.delta) { acc += obj.delta; flush(); }
-              if (obj.error) { acc += `\n\n[error] ${obj.error}`; flush(); }
-            } catch {}
+
+      const rawText = await res.text().catch(() => '');
+      if (!rawText) {
+        setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: 'The AI service returned an empty response.', pending: false } : mm));
+        return;
+      }
+
+      const parsed = (() => {
+        try {
+          const obj = JSON.parse(rawText);
+          if (typeof obj === 'string') return obj;
+          if (typeof obj?.message === 'string') return obj.message;
+          if (typeof obj?.content === 'string') return obj.content;
+          if (typeof obj?.text === 'string') return obj.text;
+          if (typeof obj?.reply === 'string') return obj.reply;
+          if (typeof obj?.answer === 'string') return obj.answer;
+          if (typeof obj?.response === 'string') return obj.response;
+          if (typeof obj?.output === 'string') return obj.output;
+          if (obj?.choices?.[0]?.message?.content) return obj.choices[0].message.content;
+          if (obj?.choices?.[0]?.text) return obj.choices[0].text;
+          if (typeof obj?.detail === 'string') return obj.detail;
+          return '';
+        } catch {
+          const normalized = rawText.replace(/^data:\s*/i, '').trim();
+          if (!normalized) return rawText;
+          try {
+            const obj2 = JSON.parse(normalized);
+            if (typeof obj2 === 'string') return obj2;
+            if (typeof obj2?.message === 'string') return obj2.message;
+            if (typeof obj2?.content === 'string') return obj2.content;
+            if (typeof obj2?.text === 'string') return obj2.text;
+            if (typeof obj2?.reply === 'string') return obj2.reply;
+            if (typeof obj2?.answer === 'string') return obj2.answer;
+            if (typeof obj2?.response === 'string') return obj2.response;
+            if (typeof obj2?.output === 'string') return obj2.output;
+            if (obj2?.choices?.[0]?.message?.content) return obj2.choices[0].message.content;
+            if (obj2?.choices?.[0]?.text) return obj2.choices[0].text;
+            return '';
+          } catch {
+            return normalized.replace(/^\[DONE\]\s*$/i, '').trim();
           }
         }
-      } else {
-        const text = await res.text();
-        acc = text; flush();
-      }
-      if (!acc) {
-        setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: 'No response.', pending: false } : mm));
-      }
+      })();
+
+      const finalText = parsed || rawText;
+      setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: finalText.trim(), pending: false } : mm));
     } catch (e: any) {
       setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: `Sorry, I couldn't respond: ${e.message}`, pending: false } : mm));
     } finally {

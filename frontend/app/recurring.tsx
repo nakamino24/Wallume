@@ -22,7 +22,14 @@ export default function Recurring() {
   const load = useCallback(async () => {
     try {
       const r = await api.recurring();
-      setItems(r.recurring || []);
+      const nextItems = Array.isArray(r?.recurring)
+        ? r.recurring
+        : Array.isArray(r?.items)
+          ? r.items
+          : Array.isArray(r)
+            ? r
+            : [];
+      setItems(nextItems);
     } catch {}
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));

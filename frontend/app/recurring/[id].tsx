@@ -24,7 +24,14 @@ export default function RecurringDetail() {
 
   const load = useCallback(async () => {
     const r = await api.recurring();
-    setItem((r.recurring || []).find((x: any) => x.id === id) || null);
+    const list = Array.isArray(r?.recurring)
+      ? r.recurring
+      : Array.isArray(r?.items)
+        ? r.items
+        : Array.isArray(r)
+          ? r
+          : [];
+    setItem(list.find((x: any) => x.id === id) || null);
   }, [id]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 

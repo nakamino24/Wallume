@@ -8,21 +8,30 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, formatMoneyFull } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, H1, H2, Body, Label, DisplayNumber, Button, EmptyState } from '@/src/components/ui';
+import { Screen, H1, Body, DisplayNumber, EmptyState } from '@/src/components/ui';
 import { confirmAction } from '@/src/utils/confirm';
 
-const WALLET_META: Record<string, { icon: any; gradient: [string, string] }> = {
-  cash:        { icon: 'cash-outline',         gradient: ['#10B981', '#064E3B'] },
-  bank:        { icon: 'business-outline',     gradient: ['#18181B', '#3F3F46'] },
-  credit_card: { icon: 'card-outline',         gradient: ['#F87171', '#7F1D1D'] },
-  e_wallet:    { icon: 'phone-portrait-outline', gradient: ['#FBBF24', '#78350F'] },
-  savings:     { icon: 'lock-closed-outline',  gradient: ['#34D399', '#065F46'] },
-  investment:  { icon: 'trending-up-outline',  gradient: ['#A7F3D0', '#059669'] },
+const WALLET_META: Record<string, { icon: any; tint: string }> = {
+  cash: { icon: 'cash-outline', tint: '#10B981' },
+  bank: { icon: 'business-outline', tint: '#3B82F6' },
+  credit_card: { icon: 'card-outline', tint: '#F59E0B' },
+  e_wallet: { icon: 'phone-portrait-outline', tint: '#8B5CF6' },
+  savings: { icon: 'lock-closed-outline', tint: '#14B8A6' },
+  investment: { icon: 'trending-up-outline', tint: '#22C55E' },
 };
 
 const TYPE_LABEL: Record<string, string> = {
   cash: 'Cash', bank: 'Bank', credit_card: 'Credit Card',
   e_wallet: 'E-Wallet', savings: 'Savings', investment: 'Investment',
+};
+
+const POCKET_HINTS: Record<string, string> = {
+  bank: 'Pocket',
+  savings: 'Pocket',
+  e_wallet: 'Service',
+  cash: 'Vault',
+  credit_card: 'Card',
+  investment: 'Bucket',
 };
 
 export default function Wallets() {
@@ -51,15 +60,29 @@ export default function Wallets() {
           contentContainerStyle={{ paddingBottom: 120 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
         >
-          <View style={{ padding: spacing.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View>
+          <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
               <H1>Wallets</H1>
-              <Body muted style={{ marginTop: 4 }}>Tap to edit · {wallets.length} accounts · {formatMoneyFull(total, cur)}</Body>
+              <Body muted style={{ marginTop: 4 }}>Manage your accounts at a glance</Body>
             </View>
             <TouchableOpacity testID="wallets-add-btn" onPress={() => router.push('/wallet/new')}
-              style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="add" size={22} color={colors.onBrand} />
             </TouchableOpacity>
+          </View>
+
+          <View style={{ paddingHorizontal: spacing.xl, marginBottom: spacing.md }}>
+            <View style={[styles.summary, { backgroundColor: colors.surface2, borderColor: colors.border }]}> 
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flex: 1 }}>
+                  <Body muted style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8 }}>Total balance</Body>
+                  <DisplayNumber size={24} style={{ marginTop: 6 }}>{formatMoneyFull(total, cur)}</DisplayNumber>
+                </View>
+                <View style={[styles.pill, { backgroundColor: colors.brandSoft }]}> 
+                  <Body style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 12 }}>{wallets.length} accounts</Body>
+                </View>
+              </View>
+            </View>
           </View>
 
           {wallets.length === 0 ? (
@@ -88,26 +111,35 @@ export default function Wallets() {
 
 function WalletCard({ wallet, currency, onLongPress, onPress }: any) {
   const meta = WALLET_META[wallet.type] || WALLET_META.cash;
+  const { colors } = useTheme();
+
+  const pocketLabel = POCKET_HINTS[wallet.type] || 'Account';
   return (
     <TouchableOpacity
       testID={`wallet-card-${wallet.id}`}
       onPress={onPress}
       onLongPress={onLongPress}
       activeOpacity={0.9}
-      style={[styles.card, { backgroundColor: meta.gradient[1] }]}
+      style={[styles.card, { backgroundColor: colors.surface2, borderColor: colors.border }]}
     >
-      <View style={[styles.cardTop, { backgroundColor: meta.gradient[0] + '55' }]} />
-      <View style={styles.cardHeader}>
-        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#ffffff22', alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name={meta.icon} size={20} color="#fff" />
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <View style={[styles.iconBadge, { backgroundColor: meta.tint + '18' }]}>
+            <Ionicons name={meta.icon} size={18} color={meta.tint} />
+          </View>
+          <View style={{ marginLeft: spacing.md, flex: 1 }}>
+            <Body style={{ fontFamily: font.textBold }}>{wallet.name}</Body>
+            <Body muted style={{ marginTop: 2, fontSize: 12 }}>{TYPE_LABEL[wallet.type] || wallet.type}</Body>
+          </View>
         </View>
-        <Body style={{ color: '#ffffffcc', fontFamily: font.textMedium, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8 }}>
-          {TYPE_LABEL[wallet.type] || wallet.type}
-        </Body>
+        <View style={[styles.pill, { backgroundColor: meta.tint + '14' }]}> 
+          <Body style={{ color: meta.tint, fontFamily: font.textBold, fontSize: 11 }}>{pocketLabel}</Body>
+        </View>
       </View>
-      <View style={styles.cardBody}>
-        <Body style={{ color: '#ffffffaa', fontFamily: font.textMedium }}>{wallet.name}</Body>
-        <DisplayNumber size={30} color="#fff" style={{ marginTop: 6 }}>
+
+      <View style={{ marginTop: spacing.md }}>
+        <Body muted style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7 }}>Balance</Body>
+        <DisplayNumber size={22} style={{ marginTop: 4 }}>
           {formatMoneyFull(wallet.balance || 0, wallet.currency || currency)}
         </DisplayNumber>
       </View>
@@ -125,14 +157,27 @@ function confirmDelete(w: any, reload: () => void) {
 }
 
 const styles = StyleSheet.create({
+  summary: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  pill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+  },
   card: {
     borderRadius: radius.lg,
-    height: 180,
-    padding: spacing.xl,
-    justifyContent: 'space-between',
-    overflow: 'hidden',
+    borderWidth: 1,
+    padding: spacing.lg,
   },
-  cardTop: { position: 'absolute', top: 0, left: 0, right: 0, height: 90 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardBody: {},
+  iconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

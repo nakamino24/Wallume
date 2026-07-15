@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, FlatList } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -8,12 +8,21 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, formatMoneyFull, formatMoney } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H1, H2, Body, Label, DisplayNumber, ProgressRing, ProgressBar, Chip, EmptyState, IconBadge } from '@/src/components/ui';
+import { storage } from '@/src/utils/storage';
+import { Screen, Card, H1, H2, Body, Label, DisplayNumber, ProgressRing, Chip, EmptyState } from '@/src/components/ui';
 
 const CATEGORY_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
   Entertainment: 'film', Bills: 'receipt', Health: 'medkit',
   Rent: 'home', Salary: 'cash', Other: 'ellipsis-horizontal',
+};
+const HOME_CACHE_KEY = 'mf.home.cache.v1';
+
+type HomeCachePayload = {
+  summary: any;
+  txs: any[];
+  wallets: any[];
+  updatedAt: number;
 };
 
 export default function Home() {
@@ -22,27 +31,102 @@ export default function Home() {
   const router = useRouter();
   const [summary, setSummary] = useState<any>(null);
   const [txs, setTxs] = useState<any[]>([]);
+  const [wallets, setWallets] = useState<any[]>([]);
   const [upcoming, setUpcoming] = useState<any[]>([]);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (useCache = true) => {
+    if (useCache) {
+      const cached = await storage.getItem<HomeCachePayload | null>(HOME_CACHE_KEY, null);
+      if (cached) {
+        setSummary(cached.summary ?? null);
+        setTxs(cached.txs ?? []);
+        setWallets(cached.wallets ?? []);
+        setUpcoming([]);
+        setLastSyncedAt(cached.updatedAt ?? null);
+      }
+    }
+
     try {
-      const [s, t, r] = await Promise.all([api.summary(), api.transactions(), api.recurring().catch(() => ({ recurring: [] }))]);
-      setSummary(s);
-      setTxs(t.transactions || []);
-      setUpcoming((r.recurring || []).filter((x: any) => x.active).slice(0, 3));
-    } catch (e) {
-      // ignore
+      const [summaryResult, txResult, walletResult] = await Promise.allSettled([
+        api.summary().catch(() => null),
+        api.transactions().catch(() => ({ transactions: [] })),
+        api.wallets().catch(() => ({ wallets: [] })),
+      ]);
+
+      const nextSummary = summaryResult.status === 'fulfilled' ? summaryResult.value : null;
+      const nextTxs = txResult.status === 'fulfilled' ? (txResult.value?.transactions || []) : [];
+      const nextWallets = walletResult.status === 'fulfilled' ? (walletResult.value?.wallets || []) : [];
+      const updatedAt = Date.now();
+
+      setSummary(nextSummary);
+      setTxs(nextTxs);
+      setWallets(nextWallets);
+      setUpcoming([]);
+      setLastSyncedAt(updatedAt);
+      await storage.setItem(HOME_CACHE_KEY, { summary: nextSummary, txs: nextTxs, wallets: nextWallets, updatedAt });
+    } catch {
+      // keep cached state intact if network fails
     }
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const onRefresh = useCallback(async () => { setRefreshing(true); await load(); setRefreshing(false); }, [load]);
+  const onRefresh = useCallback(async () => { setRefreshing(true); await load(true); setRefreshing(false); }, [load]);
 
   const cur = user?.currency || 'USD';
   const shownTxs = filter === 'all' ? txs : txs.filter((t) => t.type === filter);
+  const walletBalance = wallets.reduce((sum: number, wallet: any) => sum + (Number(wallet.balance) || 0), 0);
+  const monthIncome = txs.reduce((sum: number, tx: any) => sum + ((tx.type === 'income' && Number(tx.amount)) || 0), 0);
+  const monthExpense = txs.reduce((sum: number, tx: any) => sum + ((tx.type === 'expense' && Number(tx.amount)) || 0), 0);
+  const derivedSummary = {
+    net_worth: summary?.net_worth ?? walletBalance,
+    month_income: summary?.month_income ?? monthIncome,
+    month_expense: summary?.month_expense ?? monthExpense,
+    cash_flow: summary?.cash_flow ?? (monthIncome - monthExpense),
+    health_score: summary?.health_score ?? 0,
+    saving_rate: summary?.saving_rate ?? 0,
+    debt_ratio: summary?.debt_ratio ?? 0,
+  };
+
+  const insights = useMemo(() => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const monthTxs = txs.filter((tx: any) => {
+      const d = new Date(tx.date);
+      return !Number.isNaN(d.getTime()) && d >= monthStart && d <= monthEnd;
+    });
+    const expenses = monthTxs.filter((tx: any) => tx.type === 'expense');
+    const categoryTotals = expenses.reduce((acc: Record<string, number>, tx: any) => {
+      const key = tx.category || 'Other';
+      acc[key] = (acc[key] || 0) + (Number(tx.amount) || 0);
+      return acc;
+    }, {});
+    const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
+    const largestExpense = expenses.reduce((best: any, tx: any) => {
+      const amt = Number(tx.amount) || 0;
+      return !best || amt > Number(best.amount) ? tx : best;
+    }, null as any);
+    const savingsRate = derivedSummary.month_income > 0
+      ? Math.max(0, Math.round(((derivedSummary.month_income - derivedSummary.month_expense) / derivedSummary.month_income) * 100))
+      : 0;
+    const tip = savingsRate >= 20
+      ? 'You are building a healthy cash buffer.'
+      : derivedSummary.month_expense > 0
+        ? 'Trim one recurring expense to improve cash flow.'
+        : 'Add a transaction to unlock personalized insights.';
+
+    return {
+      topCategory: topCategory ? topCategory[0] : 'No expenses',
+      topCategoryValue: topCategory ? topCategory[1] : 0,
+      largestExpense,
+      savingsRate,
+      tip,
+    };
+  }, [derivedSummary.month_expense, derivedSummary.month_income, txs]);
 
   return (
     <Screen>
@@ -69,25 +153,25 @@ export default function Home() {
             <Card style={{ padding: spacing.xl, backgroundColor: colors.inverse }}>
               <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Net worth</Label>
               <DisplayNumber size={40} color={colors.onInverse} style={{ marginTop: 6 }}>
-                {formatMoneyFull(summary?.net_worth ?? 0, cur)}
+                {formatMoneyFull(derivedSummary.net_worth, cur)}
               </DisplayNumber>
               <View style={{ flexDirection: 'row', marginTop: spacing.lg, gap: spacing.xl }}>
                 <View>
                   <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Income (mo)</Label>
                   <Body style={{ color: colors.success, fontFamily: font.displayBold, fontSize: 16, marginTop: 2 }}>
-                    +{formatMoney(summary?.month_income ?? 0, cur)}
+                    +{formatMoney(derivedSummary.month_income, cur)}
                   </Body>
                 </View>
                 <View>
                   <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Expense (mo)</Label>
                   <Body style={{ color: colors.error, fontFamily: font.displayBold, fontSize: 16, marginTop: 2 }}>
-                    -{formatMoney(summary?.month_expense ?? 0, cur)}
+                    -{formatMoney(derivedSummary.month_expense, cur)}
                   </Body>
                 </View>
                 <View>
                   <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Cash flow</Label>
                   <Body style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 16, marginTop: 2 }}>
-                    {formatMoney(summary?.cash_flow ?? 0, cur)}
+                    {formatMoney(derivedSummary.cash_flow, cur)}
                   </Body>
                 </View>
               </View>
@@ -106,18 +190,41 @@ export default function Home() {
               onPress={() => router.push('/reports')} />
           </View>
 
+          {/* Smart insights */}
+          <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.xl }}>
+            <Card>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+                <H2>Smart insights</H2>
+                <Body muted>{lastSyncedAt ? `Updated ${formatTimeAgo(lastSyncedAt)}` : 'Cached'}</Body>
+              </View>
+              <View style={{ gap: spacing.sm }}>
+                <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+                  <InsightPill label="Savings rate" value={`${insights.savingsRate}%`} color={colors.success} />
+                  <InsightPill label="Top category" value={insights.topCategory} color={colors.warning} />
+                </View>
+                <View style={{ backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md }}>
+                  <Body style={{ fontFamily: font.textBold }}>This month’s focus</Body>
+                  <Body muted style={{ marginTop: 4 }}>
+                    {insights.largestExpense ? `${insights.largestExpense.category}: ${formatMoney(insights.largestExpense.amount, cur)}` : 'No major expense yet.'}
+                  </Body>
+                  <Body muted style={{ marginTop: 6 }}>{insights.tip}</Body>
+                </View>
+              </View>
+            </Card>
+          </View>
+
           {/* Health score */}
           <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.xl }}>
             <Card>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.lg }}>
-                <ProgressRing progress={(summary?.health_score ?? 0) / 100} size={78} stroke={10}>
-                  <DisplayNumber size={22}>{summary?.health_score ?? 0}</DisplayNumber>
+                <ProgressRing progress={(derivedSummary.health_score ?? 0) / 100} size={78} stroke={10}>
+                  <DisplayNumber size={22}>{derivedSummary.health_score ?? 0}</DisplayNumber>
                 </ProgressRing>
                 <View style={{ flex: 1 }}>
                   <Label>Financial Health Score</Label>
-                  <H2 style={{ marginTop: 4 }}>{healthLabel(summary?.health_score ?? 0)}</H2>
+                  <H2 style={{ marginTop: 4 }}>{healthLabel(derivedSummary.health_score ?? 0)}</H2>
                   <Body muted style={{ marginTop: 4 }}>
-                    Saving {summary?.saving_rate ?? 0}% · Debt ratio {summary?.debt_ratio ?? 0}%
+                    Saving {derivedSummary.saving_rate ?? 0}% · Debt ratio {derivedSummary.debt_ratio ?? 0}%
                   </Body>
                 </View>
               </View>
@@ -176,7 +283,7 @@ export default function Home() {
 
           {/* Transactions */}
           <View style={{ paddingHorizontal: spacing.xl }}>
-            {shownTxs.length === 0 ? (
+            {shownTxs.length === 0 && wallets.length === 0 ? (
               <EmptyState
                 testID="home-tx-empty"
                 title="No transactions yet"
@@ -186,9 +293,16 @@ export default function Home() {
               />
             ) : (
               <Card style={{ padding: 0 }}>
-                {shownTxs.slice(0, 8).map((t, idx) => (
+                {shownTxs.length > 0 ? shownTxs.slice(0, 8).map((t, idx) => (
                   <TxRow key={t.id} tx={t} last={idx === Math.min(shownTxs.length, 8) - 1} currency={cur} />
-                ))}
+                )) : (
+                  <View style={{ padding: spacing.xl }}>
+                    <Body style={{ fontFamily: font.textMedium }}>Wallet balance available</Body>
+                    <Body muted style={{ marginTop: 4 }}>
+                      {formatMoneyFull(walletBalance, cur)} is ready to view from your wallets.
+                    </Body>
+                  </View>
+                )}
               </Card>
             )}
           </View>
@@ -214,6 +328,23 @@ function healthLabel(score: number) {
   if (score >= 40) return 'Okay';
   if (score >= 20) return 'Needs work';
   return 'At risk';
+}
+
+function formatTimeAgo(ts: number) {
+  const diff = Math.max(1, Math.floor((Date.now() - ts) / 60000));
+  if (diff < 60) return `${diff}m ago`;
+  const hrs = Math.floor(diff / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function InsightPill({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <View style={{ flex: 1, minWidth: 132, backgroundColor: color + '14', borderRadius: radius.md, paddingVertical: spacing.md, paddingHorizontal: spacing.md }}>
+      <Body style={{ fontSize: 12, color }} numberOfLines={1}>{label}</Body>
+      <Body style={{ fontFamily: font.displayBold, marginTop: 4 }} numberOfLines={1}>{value}</Body>
+    </View>
+  );
 }
 
 function QuickAction({ icon, label, color, onPress, testID }: any) {
@@ -261,6 +392,7 @@ const styles = StyleSheet.create({
     bottom: 24,
     width: 56, height: 56, borderRadius: 28,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 8,
+    boxShadow: '0px 8px 16px rgba(0, 0, 0, 0.15)',
+    elevation: 8,
   },
 });
