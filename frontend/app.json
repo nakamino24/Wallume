@@ -27,6 +27,7 @@
     },
     "plugins": [
       "expo-router",
+      "react-native-android-widget",
       [
         "expo-splash-screen",
         {
