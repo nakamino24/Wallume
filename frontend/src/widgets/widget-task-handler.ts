@@ -1,6 +1,6 @@
 import React from 'react';
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
-import { NetWorthWidget, type NetWorthWidgetData } from '@/src/widgets/NetWorthWidged';
+import { NetWorthWidget, NetWorthWidgetData } from './NetWorthWidged';
 import { getToken } from '@/src/api/client';
 import { formatMoney } from '@/src/theme/tokens';
 
@@ -39,13 +39,13 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
     case 'WIDGET_ADDED':
     case 'WIDGET_UPDATE':
     case 'WIDGET_RESIZED':
-      props.renderWidget(<NetWorthWidget data={data} />);
+      props.renderWidget(React.createElement(NetWorthWidget, { data }));
       break;
     case 'WIDGET_DELETED':
       // nothing to clean up — we don't persist per-widget state
       break;
     case 'WIDGET_CLICK':
-      props.renderWidget(<NetWorthWidget data={data} />);
+      props.renderWidget(React.createElement(NetWorthWidget, { data }));
       break;
     default:
       break;
