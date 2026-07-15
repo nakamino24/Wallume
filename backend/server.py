@@ -984,18 +984,22 @@ async def coach_chat(payload: ChatIn, authorization: Optional[str] = Header(None
                     "POST",
                     "https://api.groq.com/openai/v1/chat/completions",
                     headers={
-                        "x-api-key": GROQ_API_KEY,
-                        "anthropic-version": "2023-06-01",
+                        "Authorization": f"Bearer {GROQ_API_KEY}",
                         "content-type": "application/json",
                     },
                     json={
-                        "model": "claude-sonnet-4-6",
+                        "model": "llama-3.3-70b-versatile",
                         "max_tokens": 1024,
-                        "system": system_msg,
                         "stream": True,
-                        "messages": [{"role": "user", "content": payload.message}],
+                        "messages": [
+                            {"role": "system", "content": system_msg},
+                            {"role": "user", "content": payload.message},
+                        ],
                     },
                 ) as resp:
+                    if resp.status_code != 200:
+                        err_body = await resp.aread()
+                        raise RuntimeError(f"Groq API error {resp.status_code}: {err_body.decode(errors='ignore')[:300]}")
                     async for line in resp.aiter_lines():
                         if line.startswith("data: "):
                             data = line[6:]
@@ -1003,8 +1007,8 @@ async def coach_chat(payload: ChatIn, authorization: Optional[str] = Header(None
                                 break
                             try:
                                 ev = _json.loads(data)
-                                if ev.get("type") == "content_block_delta":
-                                    delta = ev["delta"].get("text", "")
+                                delta = ev["choices"][0]["delta"].get("content", "")
+                                if delta:
                                     acc += delta
                                     yield f"data: {_json.dumps({'delta': delta})}\n\n"
                             except Exception:
@@ -1086,4 +1090,3 @@ app.add_middleware(
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)
- 
