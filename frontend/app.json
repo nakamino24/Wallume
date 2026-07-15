@@ -27,7 +27,24 @@
     },
     "plugins": [
       "expo-router",
-      "react-native-android-widget",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "NetWorth",
+              "label": "Wallume — Net Worth",
+              "description": "Shows your net worth and this month's cash flow.",
+              "minWidth": "180dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 3,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ],
       [
         "expo-splash-screen",
         {
