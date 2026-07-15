@@ -21,6 +21,28 @@ const SUGGESTIONS = [
 
 const SESSION_ID = 'default';
 
+// Parses one or more "data: {...}" SSE lines out of a raw text blob and
+// concatenates every delta it finds. Ignores [DONE] and malformed lines
+// instead of letting them leak into the chat as literal text.
+function extractDeltasFromSSE(raw: string): { text: string; error?: string } {
+  let acc = '';
+  let error: string | undefined;
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('data:')) continue;
+    const payload = trimmed.slice(5).trim();
+    if (!payload || payload === '[DONE]') continue;
+    try {
+      const ev = JSON.parse(payload);
+      if (typeof ev.delta === 'string') acc += ev.delta;
+      else if (typeof ev.error === 'string') error = ev.error;
+    } catch {
+      // not a JSON event line — ignore rather than dumping it into the chat
+    }
+  }
+  return { text: acc, error };
+}
+
 export default function Coach() {
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -58,7 +80,7 @@ export default function Coach() {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-          Accept: 'application/json, text/plain, text/event-stream',
+          Accept: 'text/event-stream',
         },
         body: JSON.stringify({ session_id: SESSION_ID, message: msg }),
       });
@@ -70,51 +92,46 @@ export default function Coach() {
         throw new Error(detail || `HTTP ${res.status}`);
       }
 
-      const rawText = await res.text().catch(() => '');
-      if (!rawText) {
-        setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: 'The AI service returned an empty response.', pending: false } : mm));
+      // Try real progressive streaming first (works on iOS/most Android + web).
+      // @ts-ignore - React Native's fetch types don't always expose a body reader
+      const reader = res.body?.getReader?.();
+      if (reader) {
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let acc = '';
+        let streamErr: string | undefined;
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop() || '';
+          for (const chunk of parts) {
+            const { text, error } = extractDeltasFromSSE(chunk);
+            if (error) streamErr = error;
+            if (text) {
+              acc += text;
+              setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: acc, pending: false } : mm));
+            }
+          }
+        }
+        if (!acc && streamErr) throw new Error(streamErr);
+        if (!acc) {
+          setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: 'The AI service returned an empty response. Please try again.', pending: false } : mm));
+        }
         return;
       }
 
-      const parsed = (() => {
-        try {
-          const obj = JSON.parse(rawText);
-          if (typeof obj === 'string') return obj;
-          if (typeof obj?.message === 'string') return obj.message;
-          if (typeof obj?.content === 'string') return obj.content;
-          if (typeof obj?.text === 'string') return obj.text;
-          if (typeof obj?.reply === 'string') return obj.reply;
-          if (typeof obj?.answer === 'string') return obj.answer;
-          if (typeof obj?.response === 'string') return obj.response;
-          if (typeof obj?.output === 'string') return obj.output;
-          if (obj?.choices?.[0]?.message?.content) return obj.choices[0].message.content;
-          if (obj?.choices?.[0]?.text) return obj.choices[0].text;
-          if (typeof obj?.detail === 'string') return obj.detail;
-          return '';
-        } catch {
-          const normalized = rawText.replace(/^data:\s*/i, '').trim();
-          if (!normalized) return rawText;
-          try {
-            const obj2 = JSON.parse(normalized);
-            if (typeof obj2 === 'string') return obj2;
-            if (typeof obj2?.message === 'string') return obj2.message;
-            if (typeof obj2?.content === 'string') return obj2.content;
-            if (typeof obj2?.text === 'string') return obj2.text;
-            if (typeof obj2?.reply === 'string') return obj2.reply;
-            if (typeof obj2?.answer === 'string') return obj2.answer;
-            if (typeof obj2?.response === 'string') return obj2.response;
-            if (typeof obj2?.output === 'string') return obj2.output;
-            if (obj2?.choices?.[0]?.message?.content) return obj2.choices[0].message.content;
-            if (obj2?.choices?.[0]?.text) return obj2.choices[0].text;
-            return '';
-          } catch {
-            return normalized.replace(/^\[DONE\]\s*$/i, '').trim();
-          }
-        }
-      })();
-
-      const finalText = parsed || rawText;
-      setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: finalText.trim(), pending: false } : mm));
+      // Fallback: environment doesn't support streamed reads — read the whole
+      // body at once and parse out every "data:" event from it.
+      const rawText = await res.text().catch(() => '');
+      const { text, error } = extractDeltasFromSSE(rawText);
+      if (text) {
+        setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text, pending: false } : mm));
+      } else {
+        throw new Error(error || 'The AI service returned an empty response.');
+      }
     } catch (e: any) {
       setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: `Sorry, I couldn't respond: ${e.message}`, pending: false } : mm));
     } finally {
