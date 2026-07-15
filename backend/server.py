@@ -55,6 +55,42 @@ def new_id(prefix: str = "id") -> str:
     return f"{prefix}_{uuid.uuid4().hex[:16]}"
 
 
+# ------------------------- FX conversion ------------------------------
+# Free, no-API-key exchange rate service. Cached in-memory per base currency
+# for 6 hours so we don't hammer it on every request.
+_fx_cache: Dict[str, Any] = {}
+
+
+async def get_fx_rates(base: str) -> Dict[str, float]:
+    cached = _fx_cache.get(base)
+    if cached and (now_utc() - cached["fetched_at"]).total_seconds() < 6 * 3600:
+        return cached["rates"]
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as hc:
+            resp = await hc.get(f"https://open.er-api.com/v6/latest/{base}")
+            data = resp.json()
+            rates = data.get("rates") or {}
+            if rates:
+                _fx_cache[base] = {"rates": rates, "fetched_at": now_utc()}
+                return rates
+    except Exception:
+        log.warning("FX rate fetch failed for base=%s, using stale/empty cache", base)
+    return cached["rates"] if cached else {}
+
+
+async def convert_amount(amount: float, from_ccy: Optional[str], to_ccy: Optional[str]) -> float:
+    """Convert `amount` (in from_ccy) into to_ccy. Falls back to the original
+    amount (1:1) if either currency is missing/unknown or the FX API is down —
+    never breaks the dashboard just because a rate lookup failed."""
+    if not from_ccy or not to_ccy or from_ccy == to_ccy:
+        return amount
+    rates = await get_fx_rates(to_ccy)
+    rate = rates.get(from_ccy)
+    if not rate:
+        return amount
+    return amount / rate
+
+
 def hash_pw(pw: str) -> str:
     return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
 
@@ -304,6 +340,11 @@ def _clean_user(u: Dict[str, Any]) -> Dict[str, Any]:
 async def list_wallets(authorization: Optional[str] = Header(None)):
     u = await get_user_from_token(authorization)
     items = await db.wallets.find({"user_id": u["user_id"]}, {"_id": 0}).sort("created_at", 1).to_list(500)
+    home_ccy = u.get("currency", "USD")
+    for w in items:
+        w_ccy = w.get("currency", home_ccy)
+        w["converted_balance"] = round(await convert_amount(float(w.get("balance", 0.0)), w_ccy, home_ccy), 2)
+        w["home_currency"] = home_ccy
     return {"wallets": items}
 
 
@@ -744,6 +785,44 @@ async def delete_asset(asset_id: str, authorization: Optional[str] = Header(None
 
 
 # ------------------------- analytics ---------------------------------
+def _lerp_clamp(x: float, x0: float, y0: float, x1: float, y1: float) -> float:
+    """Linearly interpolate y for x between (x0,y0) and (x1,y1), clamped to that range."""
+    if x1 == x0:
+        return y0
+    t = (x - x0) / (x1 - x0)
+    t = max(0.0, min(1.0, t))
+    return y0 + t * (y1 - y0)
+
+
+def _savings_subscore(saving_rate: float) -> float:
+    """0 at -50% saving rate, 50 at breakeven, 100 at +30% or better."""
+    if saving_rate <= 0:
+        return _lerp_clamp(saving_rate, -50, 0, 0, 50)
+    return _lerp_clamp(saving_rate, 0, 50, 30, 100)
+
+
+def _debt_subscore(debt_ratio: float) -> float:
+    """100 with no debt, 50 at a 50% debt ratio, 0 at 100%+."""
+    if debt_ratio <= 50:
+        return _lerp_clamp(debt_ratio, 0, 100, 50, 50)
+    return _lerp_clamp(debt_ratio, 50, 50, 100, 0)
+
+
+def _diversification_subscore(inv_total: float, wallet_total: float, asset_total: float) -> float:
+    """Rewards holding some of net worth in investments; full score once ~20%+ is invested."""
+    denom = max(wallet_total + inv_total + asset_total, 1.0)
+    share_pct = (inv_total / denom) * 100
+    return _lerp_clamp(share_pct, 0, 0, 20, 100)
+
+
+def _liquidity_subscore(wallet_total: float, month_expense: float) -> float:
+    """Based on how many months of expenses your liquid balance could cover."""
+    if month_expense <= 0:
+        return 100.0 if wallet_total > 0 else 50.0
+    runway_months = wallet_total / month_expense
+    return _lerp_clamp(runway_months, 0, 0, 6, 100)
+
+
 @api.get("/analytics/summary")
 async def analytics_summary(authorization: Optional[str] = Header(None)):
     u = await get_user_from_token(authorization)
@@ -754,13 +833,17 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
     investments = await db.investments.find({"user_id": uid}, {"_id": 0}).to_list(500)
     assets = await db.assets.find({"user_id": uid}, {"_id": 0}).to_list(500)
 
-    wallet_total = sum(float(w.get("balance", 0.0)) for w in wallets)
+    home_ccy = u.get("currency", "USD")
+    wallet_total = 0.0
+    for w in wallets:
+        wallet_total += await convert_amount(float(w.get("balance", 0.0)), w.get("currency", home_ccy), home_ccy)
     debt_total = sum(float(d.get("remaining", 0.0)) for d in debts)
     inv_total = sum(float(i.get("quantity", 0.0)) * float(i.get("current_price", 0.0)) for i in investments)
     asset_total = sum(float(a.get("value", 0.0)) for a in assets)
     net_worth = wallet_total + inv_total + asset_total - debt_total
 
-    month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+    month_start_dt = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_start = month_start_dt.isoformat()
     month_txs = await db.transactions.find(
         {"user_id": uid, "date": {"$gte": month_start}},
         {"_id": 0, "type": 1, "amount": 1, "category": 1, "date": 1},
@@ -772,16 +855,18 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
     debt_ratio = round((debt_total / (wallet_total + inv_total + asset_total) * 100)
                        if (wallet_total + inv_total + asset_total) > 0 else 0.0, 1)
 
-    score = 50
-    if saving_rate >= 20: score += 25
-    elif saving_rate >= 10: score += 15
-    elif saving_rate > 0: score += 5
-    else: score -= 10
-    if debt_ratio < 20: score += 15
-    elif debt_ratio < 40: score += 5
-    else: score -= 10
-    if inv_total > 0: score += 5
-    if len(assets) > 0: score += 5
+    score_breakdown = {
+        "savings": round(_savings_subscore(saving_rate), 1),
+        "debt": round(_debt_subscore(debt_ratio), 1),
+        "diversification": round(_diversification_subscore(inv_total, wallet_total, asset_total), 1),
+        "liquidity": round(_liquidity_subscore(wallet_total, expense), 1),
+    }
+    score = round(
+        score_breakdown["savings"] * 0.40
+        + score_breakdown["debt"] * 0.25
+        + score_breakdown["diversification"] * 0.15
+        + score_breakdown["liquidity"] * 0.20
+    )
     score = max(0, min(100, score))
 
     cat: Dict[str, float] = {}
@@ -790,6 +875,32 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
             cat[t["category"]] = cat.get(t["category"], 0.0) + float(t["amount"])
     category_breakdown = [{"category": k, "amount": round(v, 2)} for k, v in
                           sorted(cat.items(), key=lambda x: -x[1])]
+
+    # ---- Smart spending alerts: this month vs trailing 3-month average per category ----
+    trailing_months = 3
+    ty, tm = month_start_dt.year, month_start_dt.month - trailing_months
+    while tm <= 0:
+        tm += 12
+        ty -= 1
+    trailing_start = datetime(ty, tm, 1, tzinfo=timezone.utc).isoformat()
+    trailing_txs = await db.transactions.find(
+        {"user_id": uid, "type": "expense", "date": {"$gte": trailing_start, "$lt": month_start}},
+        {"_id": 0, "category": 1, "amount": 1},
+    ).to_list(20000)
+    trailing_totals: Dict[str, float] = {}
+    for t in trailing_txs:
+        trailing_totals[t["category"]] = trailing_totals.get(t["category"], 0.0) + float(t["amount"])
+    trailing_avg = {k: v / trailing_months for k, v in trailing_totals.items()}
+
+    spending_alerts = []
+    for k, v in cat.items():
+        avg = trailing_avg.get(k, 0.0)
+        if avg >= 1.0 and v > avg * 1.3:  # needs spending history + at least 30% over the norm
+            spending_alerts.append({
+                "category": k, "current": round(v, 2), "average": round(avg, 2),
+                "pct_over": round((v / avg - 1) * 100),
+            })
+    spending_alerts.sort(key=lambda a: -a["pct_over"])
 
     trend = []
     for i in range(5, -1, -1):
@@ -821,6 +932,8 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
         "saving_rate": saving_rate,
         "debt_ratio": debt_ratio,
         "health_score": score,
+        "health_breakdown": score_breakdown,
+        "spending_alerts": spending_alerts,
         "category_breakdown": category_breakdown,
         "trend": trend,
         "counts": {
@@ -871,17 +984,16 @@ async def coach_chat(payload: ChatIn, authorization: Optional[str] = Header(None
                     "POST",
                     "https://api.groq.com/openai/v1/chat/completions",
                     headers={
-                        "Authorization": f"Bearer {GROQ_API_KEY}",
+                        "x-api-key": GROQ_API_KEY,
+                        "anthropic-version": "2023-06-01",
                         "content-type": "application/json",
                     },
                     json={
-                        "model": "llama-3.3-70b-versatile",
+                        "model": "claude-sonnet-4-6",
                         "max_tokens": 1024,
+                        "system": system_msg,
                         "stream": True,
-                        "messages": [
-                            {"role": "system", "content": system_msg},
-                            {"role": "user", "content": payload.message},
-                        ],
+                        "messages": [{"role": "user", "content": payload.message}],
                     },
                 ) as resp:
                     async for line in resp.aiter_lines():
@@ -891,8 +1003,8 @@ async def coach_chat(payload: ChatIn, authorization: Optional[str] = Header(None
                                 break
                             try:
                                 ev = _json.loads(data)
-                                delta = ev["choices"][0]["delta"].get("content", "")
-                                if delta:
+                                if ev.get("type") == "content_block_delta":
+                                    delta = ev["delta"].get("text", "")
                                     acc += delta
                                     yield f"data: {_json.dumps({'delta': delta})}\n\n"
                             except Exception:
