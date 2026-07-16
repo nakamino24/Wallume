@@ -718,11 +718,111 @@ async def create_debt(payload: DebtIn, authorization: Optional[str] = Header(Non
     return {"debt": doc}
 
 
+@api.patch("/debts/{debt_id}")
+async def update_debt(debt_id: str, body: Dict[str, Any], authorization: Optional[str] = Header(None)):
+    u = await get_user_from_token(authorization)
+    allowed_keys = {"name", "principal", "remaining", "interest_rate", "monthly_payment", "due_day", "kind"}
+    allowed = {k: v for k, v in body.items() if k in allowed_keys}
+    if allowed:
+        await db.debts.update_one({"id": debt_id, "user_id": u["user_id"]}, {"$set": allowed})
+    d = await db.debts.find_one({"id": debt_id, "user_id": u["user_id"]}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Not found")
+    return {"debt": d}
+
+
 @api.delete("/debts/{debt_id}")
 async def delete_debt(debt_id: str, authorization: Optional[str] = Header(None)):
     u = await get_user_from_token(authorization)
     await db.debts.delete_one({"id": debt_id, "user_id": u["user_id"]})
     return {"ok": True}
+
+
+def _simulate_payoff(debts: List[Dict[str, Any]], strategy: str, extra_monthly: float) -> Dict[str, Any]:
+    """Month-by-month amortization simulation. `strategy` decides which debt gets
+    every extra dollar first: 'avalanche' = highest interest rate, 'snowball' =
+    smallest balance. Freed-up minimum payments from paid-off debts roll into
+    the next target automatically (the classic "debt snowball" mechanic)."""
+    sim = [{
+        "id": d["id"], "name": d["name"], "balance": float(d.get("remaining", 0.0)),
+        "rate": float(d.get("interest_rate", 0.0)) / 100 / 12,  # monthly rate
+        "min_payment": float(d.get("monthly_payment", 0.0)),
+        "paid_off_month": None, "total_interest": 0.0,
+    } for d in debts if float(d.get("remaining", 0.0)) > 0]
+
+    if not sim:
+        return {"months": 0, "total_interest": 0.0, "debt_free_date": None, "debts": []}
+
+    order_key = (lambda x: -x["rate"]) if strategy == "avalanche" else (lambda x: x["balance"])
+    month = 0
+    total_interest = 0.0
+    max_months = 600  # 50-year safety cap so a bad input can't loop forever
+
+    while any(d["balance"] > 0.01 for d in sim) and month < max_months:
+        month += 1
+        pool = extra_monthly
+        # minimum payments first (interest accrues, then principal)
+        for d in sim:
+            if d["balance"] <= 0.01:
+                continue
+            interest = d["balance"] * d["rate"]
+            d["total_interest"] += interest
+            total_interest += interest
+            pay = min(d["min_payment"], d["balance"] + interest)
+            d["balance"] = d["balance"] + interest - pay
+            if d["balance"] <= 0.01:
+                d["balance"] = 0.0
+                d["paid_off_month"] = month
+                pool += 0  # its own min payment frees up next month, handled by loop naturally
+
+        # snowball/avalanche extra goes to the priority target this month
+        active = [d for d in sim if d["balance"] > 0.01]
+        active.sort(key=order_key)
+        # freed minimum payments from already-paid-off debts also join the pool
+        freed = sum(d["min_payment"] for d in sim if d["paid_off_month"] is not None and d["paid_off_month"] < month)
+        pool += freed
+        for d in active:
+            if pool <= 0:
+                break
+            extra_pay = min(pool, d["balance"])
+            d["balance"] -= extra_pay
+            pool -= extra_pay
+            if d["balance"] <= 0.01:
+                d["balance"] = 0.0
+                d["paid_off_month"] = month
+
+    today = now_utc()
+    debt_free_date = None
+    if month < max_months:
+        y, m = today.year, today.month + month
+        while m > 12:
+            m -= 12
+            y += 1
+        debt_free_date = f"{y:04d}-{m:02d}"
+
+    return {
+        "months": month if month < max_months else None,
+        "total_interest": round(total_interest, 2),
+        "debt_free_date": debt_free_date,
+        "debts": [{"id": d["id"], "name": d["name"], "payoff_month": d["paid_off_month"],
+                   "interest_paid": round(d["total_interest"], 2)} for d in sim],
+    }
+
+
+@api.get("/debts/payoff-plan")
+async def debts_payoff_plan(extra_monthly: float = 0.0, authorization: Optional[str] = Header(None)):
+    u = await get_user_from_token(authorization)
+    debts = await db.debts.find({"user_id": u["user_id"]}, {"_id": 0}).to_list(200)
+    if not debts:
+        return {"avalanche": None, "snowball": None, "has_debts": False}
+    avalanche = _simulate_payoff(debts, "avalanche", extra_monthly)
+    snowball = _simulate_payoff(debts, "snowball", extra_monthly)
+    return {
+        "avalanche": avalanche,
+        "snowball": snowball,
+        "has_debts": True,
+        "interest_saved_with_avalanche": round(snowball["total_interest"] - avalanche["total_interest"], 2),
+    }
 
 
 @api.get("/investments")
