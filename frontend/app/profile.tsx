@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
+import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable } from '@/src/auth/AppLockGate';
 import { spacing, radius, font, CURRENCIES } from '@/src/theme/tokens';
 import { Screen, Card, H1, H2, Body, Label, Button, Chip } from '@/src/components/ui';
 
@@ -13,6 +14,27 @@ export default function Profile() {
   const { colors, mode, toggle } = useTheme();
   const { user, logout, updateProfile } = useAuth();
   const router = useRouter();
+  const [bioEnabled, setBioEnabled] = useState(false);
+  const [bioAvailable, setBioAvailable] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setBioAvailable(await isBiometricAvailable());
+      setBioEnabled(await isBiometricLockEnabled());
+    })();
+  }, []);
+
+  const onToggleBiometric = async (value: boolean) => {
+    if (value) {
+      const available = await isBiometricAvailable();
+      if (!available) {
+        Alert.alert('Not available', 'Set up Face ID, fingerprint, or a screen lock on your device first.');
+        return;
+      }
+    }
+    await setBiometricLockEnabled(value);
+    setBioEnabled(value);
+  };
 
   const doLogout = () => {
     Alert.alert('Sign out?', 'You can sign back in anytime.', [
@@ -45,6 +67,20 @@ export default function Profile() {
                 <Body style={{ marginTop: 4, fontFamily: font.textBold }}>{mode === 'dark' ? 'Dark mode' : 'Light mode'}</Body>
               </View>
               <Switch testID="profile-dark-toggle" value={mode === 'dark'} onValueChange={toggle} trackColor={{ true: colors.brandPrimary }} />
+            </View>
+          </Card>
+
+          <Card>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flex: 1, marginRight: spacing.md }}>
+                <Label>Security</Label>
+                <Body style={{ marginTop: 4, fontFamily: font.textBold }}>Face ID / Fingerprint lock</Body>
+                <Body muted style={{ marginTop: 2, fontSize: 12 }}>
+                  {bioAvailable ? 'Require biometrics to open Wallume' : 'Not available on this device'}
+                </Body>
+              </View>
+              <Switch testID="profile-biometric-toggle" value={bioEnabled} onValueChange={onToggleBiometric}
+                disabled={!bioAvailable} trackColor={{ true: colors.brandPrimary }} />
             </View>
           </Card>
 

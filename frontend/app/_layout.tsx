@@ -11,6 +11,7 @@ import { useFonts } from 'expo-font';
 import { useIconFonts } from '@/src/hooks/use-icon-fonts';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
 import { AuthProvider } from '@/src/auth/AuthProvider';
+import { AppLockGate } from '@/src/auth/AppLockGate';
 
 if (__DEV__) {
   const originalWarn = console.warn;
@@ -77,9 +78,11 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <BottomSheetGate>
-              <StackWithTheme />
-            </BottomSheetGate>
+            <AppLockGate>
+              <BottomSheetGate>
+                <StackWithTheme />
+              </BottomSheetGate>
+            </AppLockGate>
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>

@@ -253,6 +253,7 @@ function PlansSection({ plans, currency, onAdd, onOpen }: any) {
 /* --------------------- DEBTS --------------------- */
 function DebtsSection({ debts, currency, onAdd, onReload }: any) {
   const { colors } = useTheme();
+  const router = useRouter();
   return (
     <>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -262,6 +263,14 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
           <Ionicons name="add" size={18} color={colors.onBrand} />
         </TouchableOpacity>
       </View>
+      {debts.length > 0 && (
+        <TouchableOpacity testID="debt-planner-link" onPress={() => router.push('/debt-planner')}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.brandSoft, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.md }}>
+          <Ionicons name="trending-down" size={18} color={colors.onBrandSoft} />
+          <Body style={{ flex: 1, fontFamily: font.textMedium, color: colors.onBrandSoft }}>See your payoff plan</Body>
+          <Ionicons name="chevron-forward" size={16} color={colors.onBrandSoft} />
+        </TouchableOpacity>
+      )}
       {debts.length === 0 ? (
         <EmptyState testID="debts-empty" title="No debts tracked" subtitle="Track loans and credit cards to plan payoff." actionLabel="Add debt" onAction={onAdd} />
       ) : debts.map((d: any) => {

@@ -28,6 +28,12 @@
     "plugins": [
       "expo-router",
       [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Wallume to use Face ID to unlock the app."
+        }
+      ],
+      [
         "react-native-android-widget",
         {
           "widgets": [

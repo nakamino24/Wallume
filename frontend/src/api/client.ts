@@ -89,7 +89,9 @@ export const api = {
 
   debts: () => req('/debts'),
   createDebt: (body: any) => req('/debts', { method: 'POST', body: JSON.stringify(body) }),
+  updateDebt: (id: string, body: any) => req(`/debts/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteDebt: (id: string) => req(`/debts/${id}`, { method: 'DELETE' }),
+  payoffPlan: (extraMonthly: number = 0) => req(`/debts/payoff-plan?extra_monthly=${extraMonthly}`),
 
   investments: () => req('/investments'),
   createInvestment: (body: any) => req('/investments', { method: 'POST', body: JSON.stringify(body) }),

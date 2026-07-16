@@ -64,7 +64,7 @@ export type ThemeMode = 'light' | 'dark';
 export type Palette = typeof palette.dark;
 
 export const images = {
-  wedding: 'https://www.vecteezy.com/vector-art/4548434-muslim-wedding-character-illustration-for-online-invitation',
+  wedding: 'https://i.pinimg.com/736x/27/5c/b7/275cb72bd46fc5255d6984af0a4083b6.jpg',
   house: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbK2eqo5HzgTeQxV5ojNLPYIIgQ89h3q3ZQidxAomshwxwVx39LHcsY4no&s=10',
   car: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTfHxlqfubEzSNWBs5D4wj8Nl_JN6P_Q1mzJunNTUO6jAj0ihNh3eMceuDK&s=10',
   vacation: 'https://i.pinimg.com/736x/8c/11/4e/8c114ef2759b895083f4cd2886deb57f.jpg',
