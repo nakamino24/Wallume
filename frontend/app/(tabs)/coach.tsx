@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, StyleSheet, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, StyleSheet, ActivityIndicator, Keyboard } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 
@@ -46,9 +46,11 @@ function extractDeltasFromSSE(raw: string): { text: string; error?: string } {
 export default function Coach() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
   const loadHistory = useCallback(async () => {
@@ -60,7 +62,21 @@ export default function Coach() {
   useFocusEffect(useCallback(() => { loadHistory(); }, [loadHistory]));
 
   useEffect(() => {
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates?.height || 0);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    const id = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);
+    return () => clearTimeout(id);
   }, [messages.length]);
 
   const send = async (text?: string) => {
@@ -142,20 +158,14 @@ export default function Coach() {
   return (
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-        >
-          <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="sparkles" size={20} color={colors.onBrand} />
-              </View>
-              <View>
-                <H2>AI Coach</H2>
-                <Body muted style={{ fontSize: 12 }}>Personal finance guidance</Body>
-              </View>
+        <View style={{ flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.sm + keyboardHeight + insets.bottom }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="sparkles" size={20} color={colors.onBrand} />
+            </View>
+            <View>
+              <H2>AI Coach</H2>
+              <Body muted style={{ fontSize: 12 }}>Personal finance guidance</Body>
             </View>
           </View>
 
@@ -164,6 +174,7 @@ export default function Coach() {
             style={{ flex: 1 }}
             contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xxxl }}
             keyboardShouldPersistTaps="handled"
+            onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
           >
             {messages.length === 0 && (
               <View style={{ paddingVertical: spacing.xl }}>
@@ -206,7 +217,7 @@ export default function Coach() {
             ))}
           </ScrollView>
 
-          <View style={[styles.inputBar, { backgroundColor: colors.surface2, borderTopColor: colors.border }]}>
+          <View style={[styles.inputBar, { backgroundColor: colors.surface2, borderTopColor: colors.border, paddingBottom: spacing.md + insets.bottom }]}>
             <TextInput
               testID="coach-input"
               value={input}
@@ -227,7 +238,7 @@ export default function Coach() {
               <Ionicons name="arrow-up" size={20} color={input.trim() ? colors.onBrand : colors.muted} />
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </SafeAreaView>
     </Screen>
   );
