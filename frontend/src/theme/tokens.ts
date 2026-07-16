@@ -64,11 +64,11 @@ export type ThemeMode = 'light' | 'dark';
 export type Palette = typeof palette.dark;
 
 export const images = {
-  wedding: 'https://images.unsplash.com/photo-1680624528924-7ee5542e4f4d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwxfHx3ZWRkaW5nJTIwYWVzdGhldGljJTIwbWluaW1hbGlzdGljJTIwcGhvdG98ZW58MHx8fHwxNzgzNzI0OTU0fDA&ixlib=rb-4.1.0&q=85',
-  house: 'https://images.unsplash.com/photo-1628012209120-d9db7abf7eab?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjh8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBtaW5pbWFsaXN0JTIwYXJjaGl0ZWN0dXJlJTIwaG91c2V8ZW58MHx8fHwxNzgzNzI0OTU0fDA&ixlib=rb-4.1.0&q=85',
-  car: 'https://images.unsplash.com/photo-1485291571150-772bcfc10da5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NDQ2NDN8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBjYXIlMjBzbGVlayUyMGRhcmt8ZW58MHx8fHwxNzgzNzI0OTU0fDA&ixlib=rb-4.1.0&q=85',
-  vacation: 'https://images.unsplash.com/photo-1541417904950-b855846fe074?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwdHJvcGljYWwlMjB2YWNhdGlvbiUyMGFlc3RoZXRpY3xlbnwwfHx8fDE3ODM3MjQ5NTR8MA&ixlib=rb-4.1.0&q=85',
-  emptyWallet: 'https://images.unsplash.com/photo-1614260938313-a7fc1a7ad0d2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTF8MHwxfHNlYXJjaHwxfHxlbXB0eSUyMHdhbGxldCUyMGlsbHVzdHJhdGlvbiUyMG1pbmltYWx8ZW58MHx8fHwxNzgzNzI0OTU0fDA&ixlib=rb-4.1.0&q=85',
+  wedding: 'https://www.vecteezy.com/vector-art/4548434-muslim-wedding-character-illustration-for-online-invitation',
+  house: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbK2eqo5HzgTeQxV5ojNLPYIIgQ89h3q3ZQidxAomshwxwVx39LHcsY4no&s=10',
+  car: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTfHxlqfubEzSNWBs5D4wj8Nl_JN6P_Q1mzJunNTUO6jAj0ihNh3eMceuDK&s=10',
+  vacation: 'https://i.pinimg.com/736x/8c/11/4e/8c114ef2759b895083f4cd2886deb57f.jpg',
+  emptyWallet: 'https://cdn.vectoricons.net/molmedia/illustrations/DA9569A60DC1/66BA7CF58801/uploads-empty-wallet-wallet-money-empty-purse-lost-money-poor-finance-wallet-void-money-gone-1024.webp',
 };
 
 export const CURRENCIES = [
@@ -90,6 +90,9 @@ export function currencySymbol(code: string) {
   return CURRENCIES.find((c) => c.code === code)?.symbol || code;
 }
 
+// Currencies that are conventionally shown without decimal places.
+const ZERO_DECIMAL_CURRENCIES = new Set(['IDR', 'JPY', 'KRW', 'VND', 'CLP', 'ISK', 'HUF']);
+
 export function formatMoney(amount: number, currency: string = 'USD') {
   const sym = currencySymbol(currency);
   const abs = Math.abs(amount);
@@ -106,5 +109,6 @@ export function formatMoneyFull(amount: number, currency: string = 'USD') {
   const sym = currencySymbol(currency);
   const abs = Math.abs(amount);
   const sign = amount < 0 ? '-' : '';
-  return `${sign}${sym}${abs.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
+  const decimals = ZERO_DECIMAL_CURRENCIES.has(currency) ? 0 : 2;
+  return `${sign}${sym}${abs.toLocaleString(undefined, { maximumFractionDigits: decimals, minimumFractionDigits: decimals })}`;
 }

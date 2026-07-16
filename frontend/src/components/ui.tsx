@@ -35,12 +35,17 @@ export function DisplayNumber({ children, size = 40, style, color }: {
 }) {
   const { colors } = useTheme();
   return (
-    <Text style={[{
-      color: color || colors.onSurface,
-      fontFamily: font.displayBold,
-      fontSize: size,
-      letterSpacing: -0.5,
-    }, style]}>{children}</Text>
+    <Text
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.5}
+      style={[{
+        color: color || colors.onSurface,
+        fontFamily: font.displayBold,
+        fontSize: size,
+        letterSpacing: -0.5,
+      }, style]}
+    >{children}</Text>
   );
 }
 
