@@ -43,11 +43,19 @@ export default function Profile() {
     ]);
   };
 
+  const onBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/home');
+    }
+  };
+
   return (
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-          <TouchableOpacity testID="profile-back" onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
+          <TouchableOpacity testID="profile-back" onPress={onBack}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
           <H2 style={{ marginLeft: spacing.md }}>Profile</H2>
         </View>
         <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.md, paddingBottom: 60 }}>

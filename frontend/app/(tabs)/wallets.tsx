@@ -82,6 +82,28 @@ export default function Wallets() {
                   <Body style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 12 }}>{wallets.length} accounts</Body>
                 </View>
               </View>
+
+              <View style={{ marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
+                <Body style={{ fontFamily: font.textBold, fontSize: 13 }}>Quick actions</Body>
+                <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, flexWrap: 'wrap' }}>
+                  <TouchableOpacity onPress={() => router.push('/transaction/new')} style={[styles.actionBtn, { backgroundColor: colors.brandSoft }]}> 
+                    <Ionicons name="add-circle-outline" size={16} color={colors.onBrandSoft} />
+                    <Body style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 12, marginLeft: 6 }}>Add transaction</Body>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => router.push('/goal/new')} style={[styles.actionBtn, { backgroundColor: colors.surface3 }]}> 
+                    <Ionicons name="flag-outline" size={16} color={colors.onSurface} />
+                    <Body style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 12, marginLeft: 6 }}>Set savings goal</Body>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => router.push('/budget/new')} style={[styles.actionBtn, { backgroundColor: colors.surface3 }]}> 
+                    <Ionicons name="pie-chart-outline" size={16} color={colors.onSurface} />
+                    <Body style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 12, marginLeft: 6 }}>Set budget</Body>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => router.push('/recurring/new')} style={[styles.actionBtn, { backgroundColor: colors.surface3 }]}> 
+                    <Ionicons name="repeat-outline" size={16} color={colors.onSurface} />
+                    <Body style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 12, marginLeft: 6 }}>Add recurring</Body>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
           </View>
 
@@ -172,6 +194,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     padding: spacing.lg,
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
   },
   iconBadge: {
     width: 40,
