@@ -110,9 +110,7 @@ export default function Home() {
       const amt = Number(tx.amount) || 0;
       return !best || amt > Number(best.amount) ? tx : best;
     }, null as any);
-    const savingsRate = derivedSummary.month_income > 0
-      ? Math.max(0, Math.round(((derivedSummary.month_income - derivedSummary.month_expense) / derivedSummary.month_income) * 100))
-      : 0;
+    const savingsRate = Math.round(summary?.saving_rate ?? 0);
     const tip = savingsRate >= 20
       ? 'You are building a healthy cash buffer.'
       : derivedSummary.month_expense > 0
@@ -126,7 +124,7 @@ export default function Home() {
       savingsRate,
       tip,
     };
-  }, [derivedSummary.month_expense, derivedSummary.month_income, txs]);
+  }, [derivedSummary.month_expense, derivedSummary.month_income, txs, summary]);
 
   return (
     <Screen>
