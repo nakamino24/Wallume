@@ -951,7 +951,11 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
     income = sum(float(t["amount"]) for t in month_txs if t["type"] == "income")
     expense = sum(float(t["amount"]) for t in month_txs if t["type"] == "expense")
     cash_flow = income - expense
-    saving_rate = round((cash_flow / income * 100) if income > 0 else 0.0, 1)
+    # Saving rate as % of income breaks down (mathematically explodes) when income
+    # is tiny relative to expenses — clamp to a sane, human-readable range instead
+    # of letting a Rp10,000 gift transaction produce something like "-17450.8%".
+    raw_saving_rate = (cash_flow / income * 100) if income > 0 else (-100.0 if expense > 0 else 0.0)
+    saving_rate = round(max(-100.0, min(100.0, raw_saving_rate)), 1)
     debt_ratio = round((debt_total / (wallet_total + inv_total + asset_total) * 100)
                        if (wallet_total + inv_total + asset_total) > 0 else 0.0, 1)
 
