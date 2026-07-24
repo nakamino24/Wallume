@@ -333,10 +333,18 @@ function AssetsSection({ assets, investments, currency, onAddAsset, onAddInv, on
     <>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <H2>Investments</H2>
-        <TouchableOpacity testID="inv-add-btn" onPress={onAddInv}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="add" size={18} color={colors.onBrand} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          {investments.length > 0 && (
+            <TouchableOpacity testID="inv-portfolio-btn" onPress={() => router.push('/portfolio' as any)}
+              style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="pie-chart" size={16} color={colors.onBrandSoft} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity testID="inv-add-btn" onPress={onAddInv}
+            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="add" size={18} color={colors.onBrand} />
+          </TouchableOpacity>
+        </View>
       </View>
       {investments.length === 0 ? (
         <EmptyState testID="inv-empty" title="No investments" subtitle="Track stocks, crypto, gold and funds." actionLabel="Add investment" onAction={onAddInv} />
