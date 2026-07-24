@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Linking } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import * as LinkingExpo from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, font } from '@/src/theme/tokens';
-import { Screen, H1, Body, Button, Input, Label, DisplayNumber } from '@/src/components/ui';
+import { font, spacing } from '@/src/theme/tokens';
+import { Screen, H1, Body, Button, Input } from '@/src/components/ui';
 
 export default function Login() {
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
   const { login, loginWithEmergentToken } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -46,7 +47,6 @@ export default function Login() {
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
       if (result.type === 'success' && result.url) {
         const url = result.url;
-        // parse session_id from hash or query
         const hashIdx = url.indexOf('#');
         const qIdx = url.indexOf('?');
         let params = new URLSearchParams();
@@ -66,15 +66,25 @@ export default function Login() {
 
   return (
     <Screen>
+      <LinearGradient
+        colors={mode === 'dark'
+          ? ['rgba(16,185,129,0.08)', 'transparent']
+          : ['rgba(16,185,129,0.06)', 'transparent']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 0.6 }}
+      />
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={{ flexGrow: 1, padding: spacing.xl, justifyContent: 'center' }} keyboardShouldPersistTaps="handled">
             <View style={{ marginBottom: spacing.xxl }}>
-              <View style={{ width: 56, height: 56, borderRadius: 18, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg }}>
-                <DisplayNumber size={28} color={colors.onBrand}>M</DisplayNumber>
+              <View style={[styles.logoBadge, { backgroundColor: colors.brandPrimary }]}>
+                <View style={styles.logoInner}>
+                  <Body style={{ color: colors.onBrand, fontFamily: font.displayBold, fontSize: 22, lineHeight: 26, letterSpacing: -1 }}>W</Body>
+                </View>
               </View>
               <H1>Welcome back.</H1>
-              <Body style={{ marginTop: 8 }} muted>Sign in to Matrix Finance</Body>
+              <Body style={{ marginTop: 8 }} muted>Sign in to Wallume</Body>
             </View>
 
             <Input
@@ -109,7 +119,7 @@ export default function Login() {
             <Button
               testID="login-google"
               variant="secondary"
-              label={googleLoading ? 'Connecting…' : 'Continue with Google'}
+              label={googleLoading ? 'Connecting\u2026' : 'Continue with Google'}
               onPress={googleLogin}
               loading={googleLoading}
               icon={<Ionicons name="logo-google" size={18} color={colors.onSurface} />}
@@ -131,4 +141,16 @@ export default function Login() {
 const styles = StyleSheet.create({
   dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: spacing.xl },
   dividerLine: { flex: 1, height: 1 },
+  logoBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  logoInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
