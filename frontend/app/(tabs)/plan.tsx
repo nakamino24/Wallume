@@ -254,6 +254,33 @@ function PlansSection({ plans, currency, onAdd, onOpen }: any) {
 function DebtsSection({ debts, currency, onAdd, onReload }: any) {
   const { colors } = useTheme();
   const router = useRouter();
+
+  const onDebtAction = (d: any) => {
+    Alert.alert(d.name, undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: d.remaining > 0 ? 'Mark as paid' : 'Delete',
+        style: d.remaining > 0 ? 'default' : 'destructive',
+        onPress: async () => {
+          try {
+            if (d.remaining > 0) {
+              const r = await api.updateDebt(d.id, { remaining: 0 });
+              if (r.celebrate) {
+                Alert.alert(
+                  '🎉 Debt paid off!',
+                  `Congratulations! ${d.name} is fully paid off. You're one step closer to financial freedom.`,
+                );
+              }
+            } else {
+              await api.deleteDebt(d.id);
+            }
+            onReload();
+          } catch {}
+        },
+      },
+      { text: 'Delete', style: 'destructive', onPress: async () => { await api.deleteDebt(d.id); onReload(); } },
+    ]);
+  };
   return (
     <>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -277,7 +304,7 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
         const paid = d.principal - d.remaining;
         const p = d.principal > 0 ? Math.min(1, paid / d.principal) : 0;
         return (
-          <Card key={d.id} onPress={() => confirmDialog('Delete debt?', async () => { await api.deleteDebt(d.id); onReload(); })}>
+          <Card key={d.id} onPress={() => onDebtAction(d)}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <View style={{ flex: 1 }}>
                 <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{d.name}</Body>

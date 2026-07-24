@@ -60,6 +60,7 @@ export const api = {
   me: () => req('/auth/me'),
   logout: () => req('/auth/logout', { method: 'POST' }),
   updateMe: (body: any) => req('/auth/me', { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteAccount: () => req('/auth/me', { method: 'DELETE' }),
 
   // core
   wallets: () => req('/wallets'),

@@ -8,6 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable } from '@/src/auth/AppLockGate';
 import { useOnboarding } from '@/src/hooks/use-onboarding';
+import { api } from '@/src/api/client';
 import { spacing, radius, font, CURRENCIES } from '@/src/theme/tokens';
 import { Screen, Card, H1, H2, Body, Label, Button, Chip } from '@/src/components/ui';
 
@@ -43,6 +44,25 @@ export default function Profile() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign out', style: 'destructive', onPress: async () => { await logout(); router.replace('/(auth)/login'); } },
     ]);
+  };
+
+  const doDeleteAccount = () => {
+    Alert.alert(
+      'Delete account?',
+      'All your wallets, transactions, budgets, and goals will be permanently deleted. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete everything', style: 'destructive', onPress: async () => {
+          try {
+            await api.deleteAccount();
+            await logout();
+            router.replace('/(auth)/login');
+          } catch (e: any) {
+            Alert.alert('Error', e.message || 'Could not delete account');
+          }
+        }},
+      ],
+    );
   };
 
   const onBack = () => {
@@ -139,7 +159,22 @@ export default function Profile() {
             </View>
           </Card>
 
+          <Card onPress={() => router.push('/privacy' as any)}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View>
+                <Body style={{ fontFamily: font.textBold }}>Privacy Policy</Body>
+                <Body muted style={{ marginTop: 2, fontSize: 12 }}>How your data is handled</Body>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+            </View>
+          </Card>
+
           <Button testID="profile-signout" label="Sign out" variant="danger" onPress={doLogout} style={{ marginTop: spacing.md }} />
+
+          <TouchableOpacity testID="profile-delete-account" onPress={doDeleteAccount}
+            style={{ alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.sm }}>
+            <Body muted style={{ fontSize: 12 }}>Delete account & all data</Body>
+          </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     </Screen>

@@ -360,6 +360,19 @@ async def update_me(body: Dict[str, Any], authorization: Optional[str] = Header(
     return {"user": _clean_user(updated)}
 
 
+@api.delete("/auth/me")
+async def delete_account(authorization: Optional[str] = Header(None)):
+    u = await get_user_from_token(authorization)
+    uid = u["user_id"]
+    collections = ["wallets", "transactions", "budgets", "goals", "plans",
+                   "debts", "investments", "assets", "chat_messages",
+                   "recurring", "user_sessions"]
+    for coll in collections:
+        await db[coll].delete_many({"user_id": uid})
+    await db.users.delete_one({"user_id": uid})
+    return {"ok": True}
+
+
 def _clean_user(u: Dict[str, Any]) -> Dict[str, Any]:
     return {k: v for k, v in u.items() if k not in {"_id", "password_hash"}}
 
@@ -751,13 +764,15 @@ async def create_debt(payload: DebtIn, authorization: Optional[str] = Header(Non
 async def update_debt(debt_id: str, body: Dict[str, Any], authorization: Optional[str] = Header(None)):
     u = await get_user_from_token(authorization)
     allowed_keys = {"name", "principal", "remaining", "interest_rate", "monthly_payment", "due_day", "kind"}
+    old = await db.debts.find_one({"id": debt_id, "user_id": u["user_id"]}, {"_id": 0})
     allowed = {k: v for k, v in body.items() if k in allowed_keys}
     if allowed:
         await db.debts.update_one({"id": debt_id, "user_id": u["user_id"]}, {"$set": allowed})
     d = await db.debts.find_one({"id": debt_id, "user_id": u["user_id"]}, {"_id": 0})
     if not d:
         raise HTTPException(404, "Not found")
-    return {"debt": d}
+    just_paid = old and float(old.get("remaining", 0)) > 0 and float(d.get("remaining", 0)) <= 0
+    return {"debt": d, "celebrate": just_paid}
 
 
 @api.delete("/debts/{debt_id}")
