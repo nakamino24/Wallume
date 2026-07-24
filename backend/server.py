@@ -18,6 +18,7 @@ from pathlib import Path
 import os
 import uuid
 import logging
+import asyncio
 import bcrypt
 import jwt
 import httpx
@@ -541,17 +542,18 @@ async def delete_transaction(tx_id: str, authorization: Optional[str] = Header(N
 @api.get("/budgets")
 async def list_budgets(authorization: Optional[str] = Header(None)):
     u = await get_user_from_token(authorization)
-    items = await db.budgets.find({"user_id": u["user_id"]}, {"_id": 0}).to_list(200)
+    items = await db.budgets.find({"user_id": u["user_id"]}, {"_id": 0}).to_list(100)
     month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
-    txs = await db.transactions.find(
-        {"user_id": u["user_id"], "type": "expense", "date": {"$gte": month_start}},
-        {"_id": 0, "category": 1, "amount": 1},
-    ).to_list(5000)
-    spent_by_cat: Dict[str, float] = {}
-    for t in txs:
-        spent_by_cat[t["category"]] = spent_by_cat.get(t["category"], 0.0) + float(t["amount"])
+    spent_pipeline = [
+        {"$match": {"user_id": u["user_id"], "type": "expense", "date": {"$gte": month_start}}},
+        {"$group": {"_id": "$category", "total": {"$sum": {"$toDouble": "$amount"}}}},
+    ]
+    spent_by_cat: Dict[str, float] = {
+        r["_id"]: round(r["total"], 2)
+        for r in await db.transactions.aggregate(spent_pipeline).to_list(200)
+    }
     for b in items:
-        b["spent"] = round(spent_by_cat.get(b["category"], 0.0), 2)
+        b["spent"] = spent_by_cat.get(b["category"], 0.0)
     return {"budgets": items}
 
 
@@ -971,13 +973,15 @@ def _liquidity_subscore(wallet_total: float, month_expense: float) -> float:
 async def analytics_summary(authorization: Optional[str] = Header(None)):
     u = await get_user_from_token(authorization)
     uid = u["user_id"]
-
-    wallets = await db.wallets.find({"user_id": uid}, {"_id": 0}).to_list(500)
-    debts = await db.debts.find({"user_id": uid}, {"_id": 0}).to_list(500)
-    investments = await db.investments.find({"user_id": uid}, {"_id": 0}).to_list(500)
-    assets = await db.assets.find({"user_id": uid}, {"_id": 0}).to_list(500)
-
     home_ccy = u.get("currency", "USD")
+
+    wallets, debts, investments, assets = await asyncio.gather(
+        db.wallets.find({"user_id": uid}, {"_id": 0, "balance": 1, "currency": 1}).to_list(100),
+        db.debts.find({"user_id": uid}, {"_id": 0, "remaining": 1}).to_list(100),
+        db.investments.find({"user_id": uid}, {"_id": 0, "quantity": 1, "current_price": 1}).to_list(100),
+        db.assets.find({"user_id": uid}, {"_id": 0, "value": 1}).to_list(100),
+    )
+
     wallet_total = 0.0
     for w in wallets:
         wallet_total += await convert_amount(float(w.get("balance", 0.0)), w.get("currency", home_ccy), home_ccy)
@@ -987,18 +991,55 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
     net_worth = wallet_total + inv_total + asset_total - debt_total
 
     month_start_dt = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    month_start = month_start_dt.isoformat()
-    month_txs = await db.transactions.find(
-        {"user_id": uid, "date": {"$gte": month_start}},
-        {"_id": 0, "type": 1, "amount": 1, "category": 1, "date": 1},
-    ).to_list(10000)
-    income = sum(float(t["amount"]) for t in month_txs if t["type"] == "income")
-    expense = sum(float(t["amount"]) for t in month_txs if t["type"] == "expense")
-    cash_flow = income - expense
-    # Saving rate as % of income breaks down (mathematically explodes) when income
-    # is tiny relative to expenses — clamp to a sane, human-readable range instead
-    # of letting a Rp10,000 gift transaction produce something like "-17450.8%".
-    raw_saving_rate = (cash_flow / income * 100) if income > 0 else (-100.0 if expense > 0 else 0.0)
+
+    # --- Single aggregation: monthly income/expense for last 6 months + current + trailing ---
+    six_months_ago = month_start_dt - timedelta(days=180)
+    pipeline = [
+        {"$match": {"user_id": uid, "date": {"$gte": six_months_ago.isoformat()}}},
+        {"$addFields": {
+            "month_key": {"$substr": ["$date", 0, 7]},
+            "month_label": {"$substr": ["$date", 5, 3]},
+        }},
+        {"$group": {
+            "_id": {"month": "$month_key", "label": "$month_label", "type": "$type"},
+            "total": {"$sum": {"$toDouble": "$amount"}},
+        }},
+        {"$sort": {"_id.month": 1}},
+    ]
+    agg = await db.transactions.aggregate(pipeline).to_list(200)
+
+    # Build trend + category + trailing from agg + a single expense query
+    month_map: Dict[str, dict] = {}
+    income_total = 0.0
+    expense_total = 0.0
+    cat_totals: Dict[str, float] = {}
+    cat_trailing: Dict[str, list] = {}
+
+    for row in agg:
+        mk = row["_id"]["month"]
+        lbl = row["_id"]["label"]
+        typ = row["_id"]["type"]
+        amt = round(row["total"], 2)
+        if mk not in month_map:
+            month_map[mk] = {"month": lbl, "income": 0.0, "expense": 0.0}
+        if typ == "income":
+            month_map[mk]["income"] += amt
+        else:
+            month_map[mk]["expense"] += amt
+
+        if mk == month_start_dt.strftime("%Y-%m"):
+            income_total += amt if typ == "income" else 0
+            expense_total += amt if typ == "expense" else 0
+            if typ == "expense":
+                cat_totals[row.get("category", "Other")] = cat_totals.get(row.get("category", "Other"), 0.0) + amt
+        else:
+            if typ == "expense":
+                cat_trailing.setdefault(row.get("category", "Other"), []).append(amt)
+
+    trend = [v for k, v in sorted(month_map.items())][-6:]
+
+    cash_flow = income_total - expense_total
+    raw_saving_rate = (cash_flow / income_total * 100) if income_total > 0 else (-100.0 if expense_total > 0 else 0.0)
     saving_rate = round(max(-100.0, min(100.0, raw_saving_rate)), 1)
     debt_ratio = round((debt_total / (wallet_total + inv_total + asset_total) * 100)
                        if (wallet_total + inv_total + asset_total) > 0 else 0.0, 1)
@@ -1007,7 +1048,7 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
         "savings": round(_savings_subscore(saving_rate), 1),
         "debt": round(_debt_subscore(debt_ratio), 1),
         "diversification": round(_diversification_subscore(inv_total, wallet_total, asset_total), 1),
-        "liquidity": round(_liquidity_subscore(wallet_total, expense), 1),
+        "liquidity": round(_liquidity_subscore(wallet_total, expense_total), 1),
     }
     score = round(
         score_breakdown["savings"] * 0.40
@@ -1017,56 +1058,18 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
     )
     score = max(0, min(100, score))
 
-    cat: Dict[str, float] = {}
-    for t in month_txs:
-        if t["type"] == "expense":
-            cat[t["category"]] = cat.get(t["category"], 0.0) + float(t["amount"])
-    category_breakdown = [{"category": k, "amount": round(v, 2)} for k, v in
-                          sorted(cat.items(), key=lambda x: -x[1])]
+    category_breakdown = sorted(
+        [{"category": k, "amount": round(v, 2)} for k, v in cat_totals.items()],
+        key=lambda x: -x["amount"],
+    )
 
-    # ---- Smart spending alerts: this month vs trailing 3-month average per category ----
-    trailing_months = 3
-    ty, tm = month_start_dt.year, month_start_dt.month - trailing_months
-    while tm <= 0:
-        tm += 12
-        ty -= 1
-    trailing_start = datetime(ty, tm, 1, tzinfo=timezone.utc).isoformat()
-    trailing_txs = await db.transactions.find(
-        {"user_id": uid, "type": "expense", "date": {"$gte": trailing_start, "$lt": month_start}},
-        {"_id": 0, "category": 1, "amount": 1},
-    ).to_list(20000)
-    trailing_totals: Dict[str, float] = {}
-    for t in trailing_txs:
-        trailing_totals[t["category"]] = trailing_totals.get(t["category"], 0.0) + float(t["amount"])
-    trailing_avg = {k: v / trailing_months for k, v in trailing_totals.items()}
-
-    spending_alerts = []
-    for k, v in cat.items():
-        avg = trailing_avg.get(k, 0.0)
-        if avg >= 1.0 and v > avg * 1.3:  # needs spending history + at least 30% over the norm
-            spending_alerts.append({
-                "category": k, "current": round(v, 2), "average": round(avg, 2),
-                "pct_over": round((v / avg - 1) * 100),
-            })
-    spending_alerts.sort(key=lambda a: -a["pct_over"])
-
-    trend = []
-    for i in range(5, -1, -1):
-        d = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        y, m = d.year, d.month - i
-        while m <= 0:
-            m += 12
-            y -= 1
-        start = datetime(y, m, 1, tzinfo=timezone.utc)
-        ny, nm = (y + 1, 1) if m == 12 else (y, m + 1)
-        end = datetime(ny, nm, 1, tzinfo=timezone.utc)
-        txs = await db.transactions.find(
-            {"user_id": uid, "date": {"$gte": start.isoformat(), "$lt": end.isoformat()}},
-            {"_id": 0, "type": 1, "amount": 1},
-        ).to_list(20000)
-        inc = sum(float(t["amount"]) for t in txs if t["type"] == "income")
-        exp = sum(float(t["amount"]) for t in txs if t["type"] == "expense")
-        trend.append({"month": start.strftime("%b"), "income": round(inc, 2), "expense": round(exp, 2)})
+    trailing_avg = {k: round(sum(v) / len(v), 2) for k, v in cat_trailing.items()}
+    spending_alerts = sorted([
+        {"category": k, "current": cat_totals[k], "average": avg,
+         "pct_over": round((cat_totals[k] / avg - 1) * 100) if avg > 0 else 0}
+        for k, v in cat_totals.items()
+        if (avg := trailing_avg.get(k, 0.0)) >= 1.0 and v > avg * 1.3
+    ], key=lambda a: -a["pct_over"])
 
     return {
         "net_worth": round(net_worth, 2),
@@ -1074,8 +1077,8 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
         "debt_total": round(debt_total, 2),
         "investment_total": round(inv_total, 2),
         "asset_total": round(asset_total, 2),
-        "month_income": round(income, 2),
-        "month_expense": round(expense, 2),
+        "month_income": round(income_total, 2),
+        "month_expense": round(expense_total, 2),
         "cash_flow": round(cash_flow, 2),
         "saving_rate": saving_rate,
         "debt_ratio": debt_ratio,
@@ -1093,7 +1096,34 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
     }
 
 
-# ---------------------------- AI coach (Anthropic direct) ------------
+# ---------------------------- AI coach ------------
+async def _coach_context(authorization: Optional[str]) -> str:
+    """Lightweight context for the AI coach — avoids the full analytics pipeline."""
+    try:
+        u = await get_user_from_token(authorization)
+        uid = u["user_id"]
+        cur = u.get("currency", "USD")
+        wallets = await db.wallets.find({"user_id": uid}, {"_id": 0, "balance": 1, "currency": 1}).to_list(50)
+        debts = await db.debts.find({"user_id": uid}, {"_id": 0, "remaining": 1}).to_list(50)
+        wallet_total = 0.0
+        for w in wallets:
+            wallet_total += await convert_amount(float(w.get("balance", 0.0)), w.get("currency", cur), cur)
+        debt_total = sum(float(d.get("remaining", 0.0)) for d in debts)
+        month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+        inc_exp = await db.transactions.aggregate([
+            {"$match": {"user_id": uid, "date": {"$gte": month_start}}},
+            {"$group": {"_id": "$type", "total": {"$sum": {"$toDouble": "$amount"}}}},
+        ]).to_list(10)
+        income = next((r["total"] for r in inc_exp if r["_id"] == "income"), 0.0)
+        expense = next((r["total"] for r in inc_exp if r["_id"] == "expense"), 0.0)
+        sr = round((income - expense) / income * 100, 1) if income > 0 else 0.0
+        return (f"[USER CONTEXT] name={u.get('name')} currency={cur} "
+                f"net_worth={round(wallet_total - debt_total, 2)} "
+                f"month_income={round(income, 2)} month_expense={round(expense, 2)} "
+                f"saving_rate={sr}%")
+    except Exception:
+        return ""
+
 COACH_SYSTEM = (
     "You are Matrix Finance Coach, a warm, concise, and expert personal finance advisor. "
     "Give practical, numbers-first advice. Keep answers short (3-6 sentences) unless the user asks for detail. "
@@ -1114,11 +1144,7 @@ async def coach_chat(payload: ChatIn, authorization: Optional[str] = Header(None
     })
 
     try:
-        ctx_resp = await analytics_summary(authorization)
-        ctx = (f"[USER CONTEXT] name={u.get('name')} currency={u.get('currency','USD')} "
-               f"net_worth={ctx_resp['net_worth']} month_income={ctx_resp['month_income']} "
-               f"month_expense={ctx_resp['month_expense']} saving_rate={ctx_resp['saving_rate']}% "
-               f"debt_ratio={ctx_resp['debt_ratio']}% health_score={ctx_resp['health_score']}")
+        ctx = await _coach_context(authorization)
     except Exception:
         ctx = ""
 
