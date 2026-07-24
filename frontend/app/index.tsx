@@ -4,13 +4,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { useTheme } from '@/src/theme/ThemeProvider';
+import { useOnboarding } from '@/src/hooks/use-onboarding';
 import { font, radius, spacing } from '@/src/theme/tokens';
 
 export default function Index() {
   const { user, loading } = useAuth();
+  const { done: onboardingDone, checking: onboardingChecking } = useOnboarding();
   const { colors, mode } = useTheme();
 
-  if (loading) {
+  if (loading || onboardingChecking) {
     return (
       <LinearGradient
         colors={[colors.brandPrimary, mode === 'dark' ? '#0f172a' : '#f8fafc']}
@@ -38,7 +40,9 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={user ? '/(tabs)/home' : '/(auth)/login'} />;
+  if (!user) return <Redirect href="/(auth)/login" />;
+  if (!onboardingDone) return <Redirect href="/(auth)/onboarding" />;
+  return <Redirect href="/(tabs)/home" />;
 }
 
 const styles = StyleSheet.create({

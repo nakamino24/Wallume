@@ -79,10 +79,10 @@ export default function PlanScreen() {
             <BudgetsSection budgets={budgets} currency={cur} onAdd={() => router.push('/budget/new')} onReload={load} />
           )}
           {section === 'goals' && (
-            <GoalsSection goals={goals} currency={cur} onAdd={() => router.push('/goal/new')} onOpen={(id) => router.push({ pathname: '/goal/[id]', params: { id } })} onReload={load} />
+            <GoalsSection goals={goals} currency={cur} onAdd={() => router.push('/goal/new')} onOpen={(id: string) => router.push({ pathname: '/goal/[id]', params: { id } })} onReload={load} />
           )}
           {section === 'plans' && (
-            <PlansSection plans={plans} currency={cur} onAdd={(kind) => router.push({ pathname: '/plan/new', params: { kind } })} onOpen={(id) => router.push({ pathname: '/plan/[id]', params: { id } })} />
+            <PlansSection plans={plans} currency={cur} onAdd={(kind: string) => router.push({ pathname: '/plan/new', params: { kind } })} onOpen={(id: string) => router.push({ pathname: '/plan/[id]', params: { id } })} />
           )}
           {section === 'debts' && (
             <DebtsSection debts={debts} currency={cur} onAdd={() => router.push('/debt/new')} onReload={load} />

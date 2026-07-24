@@ -59,7 +59,7 @@ export function AppLockGate({ children }: { children: ReactNode }) {
       setChecking(false);
       if (enabled) attemptUnlock();
     })();
-  }, [user?.id, attemptUnlock]);
+  }, [user?.user_id, attemptUnlock]);
 
   // Re-lock on returning from background — this is the part a naive
   // "check once on launch" implementation always forgets.
@@ -85,7 +85,7 @@ export function AppLockGate({ children }: { children: ReactNode }) {
   if (unlocked) return <>{children}</>;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
+    <View style={{ flex: 1, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
       <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg }}>
         <Ionicons name="lock-closed" size={30} color={colors.onBrandSoft} />
       </View>

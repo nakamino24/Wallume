@@ -12,6 +12,7 @@ import { useIconFonts } from '@/src/hooks/use-icon-fonts';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
 import { AuthProvider } from '@/src/auth/AuthProvider';
 import { AppLockGate } from '@/src/auth/AppLockGate';
+import { AppErrorBoundary } from '@/src/components/ErrorBoundary';
 
 if (__DEV__) {
   const originalWarn = console.warn;
@@ -78,11 +79,13 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <AppLockGate>
-              <BottomSheetGate>
-                <StackWithTheme />
-              </BottomSheetGate>
-            </AppLockGate>
+            <AppErrorBoundary>
+              <AppLockGate>
+                <BottomSheetGate>
+                  <StackWithTheme />
+                </BottomSheetGate>
+              </AppLockGate>
+            </AppErrorBoundary>
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>

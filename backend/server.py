@@ -7,6 +7,9 @@ from fastapi import FastAPI, APIRouter, HTTPException, Header, Request
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Literal, Any, Dict
@@ -40,6 +43,9 @@ client = AsyncIOMotorClient(
 db = client[DB_NAME]
 
 app = FastAPI(title="Matrix Finance")
+limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 api = APIRouter(prefix="/api")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -103,9 +109,14 @@ def verify_pw(pw: str, hashed: str) -> bool:
 
 
 def issue_jwt(user_id: str) -> str:
-    payload = {"sub": user_id, "iat": int(now_utc().timestamp()),
+    jti = uuid.uuid4().hex[:16]
+    payload = {"sub": user_id, "jti": jti, "iat": int(now_utc().timestamp()),
                "exp": int((now_utc() + timedelta(days=30)).timestamp())}
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+
+
+async def is_token_blacklisted(jti: str) -> bool:
+    return await db.token_blacklist.find_one({"jti": jti}) is not None
 
 
 async def get_user_from_token(authorization: Optional[str]) -> Dict[str, Any]:
@@ -115,6 +126,9 @@ async def get_user_from_token(authorization: Optional[str]) -> Dict[str, Any]:
     # try JWT first
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        jti = payload.get("jti", "")
+        if jti and await is_token_blacklisted(jti):
+            raise HTTPException(401, "Token revoked")
         user = await db.users.find_one({"user_id": payload["sub"]}, {"_id": 0, "password_hash": 0})
         if user:
             return user
@@ -267,7 +281,8 @@ async def root():
 
 # ------------------------------ auth ---------------------------------
 @api.post("/auth/signup")
-async def signup(payload: SignupIn):
+@limiter.limit("5/minute")
+async def signup(payload: SignupIn, request: Request):
     existing = await db.users.find_one({"email": payload.email.lower()}, {"_id": 0})
     if existing:
         raise HTTPException(400, "Email already registered")
@@ -291,7 +306,8 @@ async def signup(payload: SignupIn):
 
 
 @api.post("/auth/login")
-async def login(payload: LoginIn):
+@limiter.limit("10/minute")
+async def login(payload: LoginIn, request: Request):
     user = await db.users.find_one({"email": payload.email.lower()}, {"_id": 0})
     if not user or not user.get("password_hash") or not verify_pw(payload.password, user["password_hash"]):
         raise HTTPException(401, "Invalid credentials")
@@ -316,6 +332,19 @@ async def logout(authorization: Optional[str] = Header(None)):
     if authorization and authorization.startswith("Bearer "):
         token = authorization.split(" ", 1)[1]
         await db.user_sessions.delete_many({"session_token": token})
+        # Blacklist the JWT so it can't be used again
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            jti = payload.get("jti")
+            exp = payload.get("exp")
+            if jti:
+                await db.token_blacklist.update_one(
+                    {"jti": jti},
+                    {"$set": {"jti": jti, "expires_at": datetime.fromtimestamp(exp, tz=timezone.utc) if exp else now_utc()}},
+                    upsert=True,
+                )
+        except jwt.PyJWTError:
+            pass
     return {"ok": True}
 
 
@@ -1172,6 +1201,8 @@ async def startup():
     await db.users.create_index("user_id", unique=True)
     await db.user_sessions.create_index("session_token", unique=True)
     await db.user_sessions.create_index("expires_at", expireAfterSeconds=0)
+    await db.token_blacklist.create_index("jti", unique=True)
+    await db.token_blacklist.create_index("expires_at", expireAfterSeconds=0)
     for coll in ("wallets", "transactions", "budgets", "goals", "plans",
                  "debts", "investments", "assets", "chat_messages", "recurring"):
         await db[coll].create_index("user_id")
@@ -1187,7 +1218,11 @@ app.include_router(api)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://victorious-enthusiasm-production.up.railway.app",
+        "http://localhost:8081",
+        "http://localhost:8001",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )

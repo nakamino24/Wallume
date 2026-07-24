@@ -7,12 +7,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable } from '@/src/auth/AppLockGate';
+import { useOnboarding } from '@/src/hooks/use-onboarding';
 import { spacing, radius, font, CURRENCIES } from '@/src/theme/tokens';
 import { Screen, Card, H1, H2, Body, Label, Button, Chip } from '@/src/components/ui';
 
 export default function Profile() {
   const { colors, mode, toggle } = useTheme();
   const { user, logout, updateProfile } = useAuth();
+  const { resetOnboarding } = useOnboarding();
   const router = useRouter();
   const [bioEnabled, setBioEnabled] = useState(false);
   const [bioAvailable, setBioAvailable] = useState(true);
@@ -112,6 +114,16 @@ export default function Profile() {
               <View>
                 <Body style={{ fontFamily: font.textBold }}>Reports</Body>
                 <Body muted style={{ marginTop: 2, fontSize: 12 }}>Charts, trends and category breakdown</Body>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+            </View>
+          </Card>
+
+          <Card onPress={() => { resetOnboarding(); router.push('/(auth)/onboarding' as any); }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View>
+                <Body style={{ fontFamily: font.textBold }}>Onboarding tour</Body>
+                <Body muted style={{ marginTop: 2, fontSize: 12 }}>Replay the intro walkthrough</Body>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.muted} />
             </View>

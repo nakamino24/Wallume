@@ -78,6 +78,10 @@ agenthub/agents/youtube/db
 
 memory/test_credentials.md
 
+# Agent/IDE config
+.claude/
+.emergent/
+
 # Mobile development
 android-sdk/
 .env

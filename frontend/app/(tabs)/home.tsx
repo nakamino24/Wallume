@@ -39,13 +39,16 @@ export default function Home() {
 
   const load = useCallback(async (useCache = true) => {
     if (useCache) {
-      const cached = await storage.getItem<HomeCachePayload | null>(HOME_CACHE_KEY, null);
+      const cached = await storage.getItem<string | null>(HOME_CACHE_KEY, null);
       if (cached) {
-        setSummary(cached.summary ?? null);
-        setTxs(cached.txs ?? []);
-        setWallets(cached.wallets ?? []);
-        setUpcoming([]);
-        setLastSyncedAt(cached.updatedAt ?? null);
+        try {
+          const parsed: HomeCachePayload = JSON.parse(cached);
+          setSummary(parsed.summary ?? null);
+          setTxs(parsed.txs ?? []);
+          setWallets(parsed.wallets ?? []);
+          setUpcoming([]);
+          setLastSyncedAt(parsed.updatedAt ?? null);
+        } catch {}
       }
     }
 
@@ -66,7 +69,7 @@ export default function Home() {
       setWallets(nextWallets);
       setUpcoming([]);
       setLastSyncedAt(updatedAt);
-      await storage.setItem(HOME_CACHE_KEY, { summary: nextSummary, txs: nextTxs, wallets: nextWallets, updatedAt });
+      await storage.setItem(HOME_CACHE_KEY, JSON.stringify({ summary: nextSummary, txs: nextTxs, wallets: nextWallets, updatedAt }));
     } catch {
       // keep cached state intact if network fails
     }

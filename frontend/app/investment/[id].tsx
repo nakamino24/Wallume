@@ -10,7 +10,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, formatMoney } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, Button, Divider } from '@/src/components/ui';
-import { computeInvestmentMetrics, kindLabel, quantitySummary } from '@/src/lib/investmentKinds';
+import { computeInvestmentMetrics, kindLabel, quantitySummary, type InvestmentDoc } from '@/src/lib/investmentKinds';
 
 export default function InvestmentDetail() {
   const { colors } = useTheme();
