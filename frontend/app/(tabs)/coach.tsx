@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, StyleSheet, ActivityIndicator, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
@@ -8,7 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font } from '@/src/theme/tokens';
 import { api, getToken, BASE_URL } from '@/src/api/client';
-import { Screen, H1, H2, Body, Chip } from '@/src/components/ui';
+import { Screen, H1, H2, Body } from '@/src/components/ui';
 
 type Msg = { id: string; role: 'user' | 'assistant'; text: string; pending?: boolean };
 
@@ -18,6 +18,8 @@ const SUGGESTIONS = [
   'Should I pay off debt or invest?',
   'Build me a 3-month plan',
 ];
+
+const QUICK_SUMMARY = 'Give me a quick financial summary';
 
 const SESSION_ID = 'default';
 
@@ -148,14 +150,22 @@ export default function Coach() {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
           <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="sparkles" size={20} color={colors.onBrand} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="sparkles" size={20} color={colors.onBrand} />
+                </View>
+                <View>
+                  <H2>AI Coach</H2>
+                  <Body muted style={{ fontSize: 12 }}>Personal finance guidance</Body>
+                </View>
               </View>
-              <View>
-                <H2>AI Coach</H2>
-                <Body muted style={{ fontSize: 12 }}>Personal finance guidance</Body>
-              </View>
+              {messages.length > 0 && (
+                <TouchableOpacity testID="coach-clear" onPress={() => setMessages([])}
+                  style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="trash-outline" size={16} color={colors.muted} />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
@@ -171,6 +181,14 @@ export default function Coach() {
                 <Body muted style={{ marginBottom: spacing.lg }}>
                   I&apos;m your personal finance coach. Ask me anything about budgeting, saving, or investing.
                 </Body>
+                <TouchableOpacity testID="coach-quick-summary" onPress={() => send(QUICK_SUMMARY)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.brandPrimary + '1A', borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.brandPrimary + '44' }}>
+                  <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="stats-chart" size={16} color={colors.onBrand} />
+                  </View>
+                  <Body style={{ flex: 1, fontFamily: font.textBold, color: colors.brandPrimary }}>Quick financial summary</Body>
+                  <Ionicons name="chevron-forward" size={16} color={colors.brandPrimary} />
+                </TouchableOpacity>
                 <View style={{ gap: spacing.sm }}>
                   {SUGGESTIONS.map((s) => (
                     <TouchableOpacity key={s} testID={`coach-suggest-${s.slice(0, 10)}`} onPress={() => send(s)}
@@ -195,7 +213,7 @@ export default function Coach() {
                   borderColor: colors.border,
                 }}>
                   {m.pending && !m.text ? (
-                    <ActivityIndicator size="small" color={colors.brandPrimary} />
+                    <TypingDots color={colors.brandPrimary} />
                   ) : (
                     <Body style={{ color: m.role === 'user' ? colors.onBrand : colors.onSurface, lineHeight: 20 }}>
                       {m.text}
@@ -243,3 +261,31 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
 });
+
+function TypingDots({ color }: { color: string }) {
+  const opacity1 = useRef(new Animated.Value(0.3)).current;
+  const opacity2 = useRef(new Animated.Value(0.3)).current;
+  const opacity3 = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const bounce = (anim: Animated.Value, delay: number) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(anim, { toValue: 1, duration: 400, delay, useNativeDriver: true }),
+          Animated.timing(anim, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+        ]),
+      ).start();
+    };
+    bounce(opacity1, 0);
+    bounce(opacity2, 200);
+    bounce(opacity3, 400);
+  }, []);
+
+  return (
+    <View style={{ flexDirection: 'row', gap: 4, paddingVertical: 4 }}>
+      {[opacity1, opacity2, opacity3].map((o, i) => (
+        <Animated.View key={i} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color, opacity: o }} />
+      ))}
+    </View>
+  );
+}
