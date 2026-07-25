@@ -112,7 +112,7 @@ export default function RecurringDetail() {
           )}
 
           <TouchableOpacity testID="recurring-detail-mark-paid" onPress={onMarkPaid}
-            style={{ marginTop: spacing.xl, paddingVertical: spacing.md, borderRadius: radius.pill, alignItems: 'center', backgroundColor: colors.brandPrimary }}>
+            style={{ marginTop: spacing.xl, paddingVertical: spacing.md, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.brandPrimary }}>
             <Body style={{ fontFamily: font.textBold, color: colors.onBrand }}>Mark as paid</Body>
           </TouchableOpacity>
         </View>

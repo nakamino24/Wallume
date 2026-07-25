@@ -15,7 +15,7 @@ const KEY = 'mf.theme';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const system = useColorScheme();
-  const [mode, setModeState] = useState<ThemeMode>('dark');
+  const [mode, setModeState] = useState<ThemeMode>('light');
 
   useEffect(() => {
     (async () => {

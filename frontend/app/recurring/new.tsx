@@ -75,10 +75,10 @@ export default function RecurringForm() {
 
           <ScrollView ref={scrollRef} contentContainerStyle={{ padding: spacing.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
             {/* Type selector */}
-            <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.pill, padding: 4, marginBottom: spacing.xl }}>
+            <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.md, padding: 4, marginBottom: spacing.xl }}>
               {(['expense', 'income'] as const).map((t) => (
                 <TouchableOpacity key={t} testID={`recurring-type-${t}`} onPress={() => setType(t)}
-                  style={{ flex: 1, paddingVertical: 10, borderRadius: radius.pill, alignItems: 'center', backgroundColor: type === t ? (t === 'income' ? colors.success : colors.error) : 'transparent' }}>
+                  style={{ flex: 1, paddingVertical: 10, borderRadius: radius.md, alignItems: 'center', backgroundColor: type === t ? (t === 'income' ? colors.success : colors.error) : 'transparent' }}>
                   <Body style={{ color: type === t ? '#fff' : colors.onSurface2, fontFamily: font.textBold, textTransform: 'capitalize' }}>{t}</Body>
                 </TouchableOpacity>
               ))}

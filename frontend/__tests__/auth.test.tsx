@@ -151,6 +151,6 @@ describe('Auth Flow', () => {
     expect(getByTestId('signup-password')).toBeTruthy();
     expect(getByTestId('signup-submit')).toBeTruthy();
     expect(getByTestId('signup-goto-login')).toBeTruthy();
-    expect(getByText(/Start your financial journey/i)).toBeTruthy();
+    expect(getByText(/Create your account/i)).toBeTruthy();
   });
 });

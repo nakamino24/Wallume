@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: '#10B981',
     paddingVertical: 14, paddingHorizontal: spacing.xl,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
   },
   buttonText: {
     fontFamily: font.textBold, fontSize: 15, color: '#000000',

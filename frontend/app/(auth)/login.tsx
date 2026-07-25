@@ -5,15 +5,14 @@ import * as WebBrowser from 'expo-web-browser';
 import * as LinkingExpo from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { font, spacing } from '@/src/theme/tokens';
-import { Screen, H1, Body, Button, Input } from '@/src/components/ui';
+import { Screen, Body, Button, Input } from '@/src/components/ui';
 
 export default function Login() {
-  const { colors, mode } = useTheme();
+  const { colors } = useTheme();
   const { login, loginWithEmergentToken } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -66,25 +65,17 @@ export default function Login() {
 
   return (
     <Screen>
-      <LinearGradient
-        colors={mode === 'dark'
-          ? ['rgba(16,185,129,0.08)', 'transparent']
-          : ['rgba(16,185,129,0.06)', 'transparent']}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 0.6 }}
-      />
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={{ flexGrow: 1, padding: spacing.xl, justifyContent: 'center' }} keyboardShouldPersistTaps="handled">
             <View style={{ marginBottom: spacing.xxl }}>
-              <View style={[styles.logoBadge, { backgroundColor: colors.brandPrimary }]}>
-                <View style={styles.logoInner}>
-                  <Body style={{ color: colors.onBrand, fontFamily: font.displayBold, fontSize: 22, lineHeight: 26, letterSpacing: -1 }}>W</Body>
-                </View>
+              <View style={[styles.logoBadge, { backgroundColor: colors.brand }]}>
+                <Body style={{ color: '#FFFFFF', fontFamily: font.displayBold, fontSize: 20, fontWeight: '600', letterSpacing: -0.5 }}>W</Body>
               </View>
-              <H1>Welcome back.</H1>
-              <Body style={{ marginTop: 8 }} muted>Sign in to Wallume</Body>
+              <Body style={{ fontFamily: font.displayBold, fontSize: font.sizes.xl, color: colors.onSurface, fontWeight: '600', letterSpacing: -0.3 }}>
+                Welcome back.
+              </Body>
+              <Body muted style={{ marginTop: spacing.xs, fontSize: font.sizes.base }}>Sign in to Wallume</Body>
             </View>
 
             <Input
@@ -103,16 +94,16 @@ export default function Login() {
               secureTextEntry
               value={password}
               onChangeText={setPassword}
-              placeholder="••••••••"
+              placeholder="Enter your password"
             />
 
-            {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
+            {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md, fontSize: font.sizes.sm }}>{err}</Body>}
 
             <Button testID="login-submit" label="Sign in" onPress={submit} loading={loading} style={{ marginTop: spacing.sm }} />
 
             <View style={styles.dividerRow}>
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Body muted style={{ marginHorizontal: spacing.md }}>or</Body>
+              <Body muted style={{ marginHorizontal: spacing.md, fontSize: font.sizes.sm }}>or</Body>
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
@@ -122,13 +113,13 @@ export default function Login() {
               label={googleLoading ? 'Connecting\u2026' : 'Continue with Google'}
               onPress={googleLogin}
               loading={googleLoading}
-              icon={<Ionicons name="logo-google" size={18} color={colors.onSurface} />}
+              icon={<Ionicons name="logo-google" size={16} color={colors.onSurface} />}
             />
 
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: spacing.xl }}>
-              <Body muted>New here? </Body>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: spacing.xxl }}>
+              <Body muted style={{ fontSize: font.sizes.sm }}>New here? </Body>
               <TouchableOpacity testID="login-goto-signup" onPress={() => router.push('/(auth)/signup')}>
-                <Body style={{ color: colors.brandPrimary, fontFamily: font.textBold }}>Create account</Body>
+                <Body style={{ color: colors.brandPrimary, fontFamily: font.textMedium, fontSize: font.sizes.sm, fontWeight: '500' }}>Create account</Body>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -142,15 +133,11 @@ const styles = StyleSheet.create({
   dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: spacing.xl },
   dividerLine: { flex: 1, height: 1 },
   logoBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
-  },
-  logoInner: {
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

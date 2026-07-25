@@ -284,6 +284,13 @@ async def root():
 @api.post("/auth/signup")
 @limiter.limit("5/minute")
 async def signup(payload: SignupIn, request: Request):
+    pw = payload.password
+    if len(pw) < 8:
+        raise HTTPException(400, "Password must be at least 8 characters")
+    if not any(c.isdigit() for c in pw):
+        raise HTTPException(400, "Password must contain at least one number")
+    if not any(c.isupper() for c in pw):
+        raise HTTPException(400, "Password must contain at least one uppercase letter")
     existing = await db.users.find_one({"email": payload.email.lower()}, {"_id": 0})
     if existing:
         raise HTTPException(400, "Email already registered")

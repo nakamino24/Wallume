@@ -9,7 +9,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { font } from '@/src/theme/tokens';
 
 export default function TabsLayout() {
-  const { colors, mode } = useTheme();
+  const { colors } = useTheme();
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -34,8 +34,8 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface2,
           borderTopColor: colors.border,
-          height: Platform.OS === 'ios' ? 88 : 68,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+          height: Platform.OS === 'ios' ? 88 : 60,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 8,
           paddingTop: 8,
         },
       }}

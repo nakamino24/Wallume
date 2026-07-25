@@ -1,74 +1,84 @@
-// Theme tokens sourced from /app/design_guidelines.json
-// Personality: iOS-Native Clean × Glass / Luxe DARK. Emerald accent. No blue/purple.
-
 export const palette = {
   light: {
-    surface: '#F6F6F6',
-    onSurface: '#121212',
+    surface: '#F8F7F4',
+    onSurface: '#222222',
     surface2: '#FFFFFF',
-    onSurface2: '#171717',
-    surface3: '#EAEAEA',
-    onSurface3: '#404040',
-    inverse: '#121212',
-    onInverse: '#F6F6F6',
-    brand: '#059669',
-    brandPrimary: '#10B981',
+    onSurface2: '#222222',
+    surface3: '#F0EFED',
+    onSurface3: '#6B7280',
+    inverse: '#16213E',
+    onInverse: '#FFFFFF',
+    brand: '#16213E',
+    brandPrimary: '#3FA796',
     onBrand: '#FFFFFF',
-    brandSoft: '#A7F3D0',
-    onBrandSoft: '#064E3B',
-    success: '#10B981',
-    warning: '#F59E0B',
-    error: '#EF4444',
-    info: '#737373',
-    border: '#E5E5E5',
-    borderStrong: '#A3A3A3',
-    muted: '#737373',
+    brandSoft: '#E8F5F1',
+    onBrandSoft: '#16213E',
+    success: '#2E7D32',
+    onSuccess: '#FFFFFF',
+    warning: '#ED6C02',
+    onWarning: '#FFFFFF',
+    error: '#D32F2F',
+    onError: '#FFFFFF',
+    info: '#6B7280',
+    onInfo: '#FFFFFF',
+    border: '#E5E7EB',
+    borderStrong: '#D1D5DB',
+    muted: '#6B7280',
+    secondary: '#F4A261',
+    onSecondary: '#FFFFFF',
   },
   dark: {
-    surface: '#09090B',
-    onSurface: '#FAFAFA',
-    surface2: '#18181B',
-    onSurface2: '#F4F4F5',
-    surface3: '#27272A',
-    onSurface3: '#D4D4D8',
-    inverse: '#FAFAFA',
-    onInverse: '#09090B',
-    brand: '#10B981',
-    brandPrimary: '#10B981',
-    onBrand: '#000000',
-    brandSoft: '#065F46',
-    onBrandSoft: '#D1FAE5',
-    success: '#34D399',
-    warning: '#FBBF24',
-    error: '#F87171',
-    info: '#A1A1AA',
-    border: '#27272A',
-    borderStrong: '#3F3F46',
-    muted: '#A1A1AA',
+    surface: '#0F0F12',
+    onSurface: '#F5F5F5',
+    surface2: '#1A1A1E',
+    onSurface2: '#F5F5F5',
+    surface3: '#252528',
+    onSurface3: '#9CA3AF',
+    inverse: '#FFFFFF',
+    onInverse: '#16213E',
+    brand: '#3FA796',
+    brandPrimary: '#3FA796',
+    onBrand: '#FFFFFF',
+    brandSoft: '#1A2E2A',
+    onBrandSoft: '#3FA796',
+    success: '#4CAF50',
+    onSuccess: '#FFFFFF',
+    warning: '#FF9800',
+    onWarning: '#FFFFFF',
+    error: '#EF5350',
+    onError: '#FFFFFF',
+    info: '#9CA3AF',
+    onInfo: '#FFFFFF',
+    border: '#2A2A2E',
+    borderStrong: '#3A3A3E',
+    muted: '#9CA3AF',
+    secondary: '#F4A261',
+    onSecondary: '#FFFFFF',
   },
 };
 
-export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 };
-export const radius = { sm: 6, md: 12, lg: 20, xl: 28, pill: 999 };
+export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48, huge: 64 };
+export const radius = { sm: 8, md: 12, lg: 16 };
 
 export const font = {
-  display: 'SpaceGrotesk',
-  displayMedium: 'SpaceGrotesk-Medium',
-  displayBold: 'SpaceGrotesk-Bold',
-  text: 'PlusJakarta',
-  textMedium: 'PlusJakarta-Medium',
-  textBold: 'PlusJakarta-SemiBold',
+  display: 'System',
+  displayMedium: 'System',
+  displayBold: 'System',
+  text: 'System',
+  textMedium: 'System',
+  textBold: 'System',
+  sizes: { sm: 12, base: 14, lg: 16, xl: 24, xxl: 32, display: 40 } as const,
 };
 
 export type ThemeMode = 'light' | 'dark';
-export type Palette = typeof palette.dark;
+export type Palette = typeof palette.light;
 
 export const images = {
-  wedding: 'https://i.pinimg.com/736x/27/5c/b7/275cb72bd46fc5255d6984af0a4083b6.jpg',
-  house: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbK2eqo5HzgTeQxV5ojNLPYIIgQ89h3q3ZQidxAomshwxwVx39LHcsY4no&s=10',
-  car: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTfHxlqfubEzSNWBs5D4wj8Nl_JN6P_Q1mzJunNTUO6jAj0ihNh3eMceuDK&s=10',
-  vacation: 'https://i.pinimg.com/736x/8c/11/4e/8c114ef2759b895083f4cd2886deb57f.jpg',
-  emptyWallet: 'https://cdn.vectoricons.net/molmedia/illustrations/DA9569A60DC1/66BA7CF58801/uploads-empty-wallet-wallet-money-empty-purse-lost-money-poor-finance-wallet-void-money-gone-1024.webp',
+  wedding: 'https://images.unsplash.com/photo-1680624528924-7ee5542e4f4d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwxfHx3ZWRkaW5nJTIwYWVzdGhldGljJTIwbWluaW1hbGlzdGljJTIwcGhvdG98ZW58MHx8fHwxNzgzNzI0OTU0fDA&ixlib=rb-4.1.0&q=85',
+  house: 'https://images.unsplash.com/photo-1628012209120-d9db7abf7eab?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjh8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBtaW5pbWFsaXN0JTIwYXJjaGl0ZWN0dXJlJTIwaG91c2V8ZW58MHx8fHwxNzgzNzI0OTU0fDA&ixlib=rb-4.1.0&q=85',
+  car: 'https://images.unsplash.com/photo-1485291571150-772bcfc10da5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w7NDQ2NDN8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBjYXIlMjBzbGVlayUyMGRhcmt8ZW58MHx8fHwxNzgzNzI0OTU0fDA&ixlib=rb-4.1.0&q=85',
+  vacation: 'https://images.unsplash.com/photo-1541417904950-b855846fe074?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwdHJvcGljYWwlMjB2YWNhdGlvbiUyMGFlc3RoZXRpY3xlbnwwfHx8fDE3ODM3MjQ5NTR8MA&ixlib=rb-4.1.0&q=85',
+  emptyWallet: 'https://images.unsplash.com/photo-1614260938313-a7fc1a7ad0d2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTF8MHwxfHNlYXJjaHwxfHxlbXB0eSUyMHdhbGxldCUyMGlsbHVzdHJhdGlvbiUyMG1pbmltYWx8ZW58MHx8fHwxNzgzNzI0OTU0fDA&ixlib=rb-4.1.0&q=85',
 };
 
 export const CURRENCIES = [
@@ -90,7 +100,6 @@ export function currencySymbol(code: string) {
   return CURRENCIES.find((c) => c.code === code)?.symbol || code;
 }
 
-// Currencies that are conventionally shown without decimal places.
 const ZERO_DECIMAL_CURRENCIES = new Set(['IDR', 'JPY', 'KRW', 'VND', 'CLP', 'ISK', 'HUF']);
 
 export function formatMoney(amount: number, currency: string = 'USD') {

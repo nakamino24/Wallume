@@ -93,10 +93,10 @@ export default function DebtPlanner() {
               </Card>
 
               {/* Strategy switch */}
-              <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.pill, padding: 4, marginTop: spacing.lg }}>
+              <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.md, padding: 4, marginTop: spacing.lg }}>
                 {(['avalanche', 'snowball'] as Strategy[]).map((s) => (
                   <TouchableOpacity key={s} testID={`planner-strategy-${s}`} onPress={() => setActive(s)}
-                    style={{ flex: 1, paddingVertical: 10, borderRadius: radius.pill, alignItems: 'center', backgroundColor: active === s ? colors.brandPrimary : 'transparent' }}>
+                    style={{ flex: 1, paddingVertical: 10, borderRadius: radius.md, alignItems: 'center', backgroundColor: active === s ? colors.brandPrimary : 'transparent' }}>
                     <Body style={{ color: active === s ? colors.onBrand : colors.onSurface2, fontFamily: font.textBold, textTransform: 'capitalize' }}>{s}</Body>
                   </TouchableOpacity>
                 ))}

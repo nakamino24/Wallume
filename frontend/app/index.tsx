@@ -1,6 +1,5 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Redirect } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { useTheme } from '@/src/theme/ThemeProvider';
@@ -10,37 +9,26 @@ import { font, radius, spacing } from '@/src/theme/tokens';
 export default function Index() {
   const { user, loading } = useAuth();
   const { done: onboardingDone, checking: onboardingChecking } = useOnboarding();
-  const { colors, mode } = useTheme();
+  const { colors } = useTheme();
 
   if (loading || onboardingChecking) {
     return (
-      <LinearGradient
-        colors={[colors.brandPrimary, mode === 'dark' ? '#0f172a' : '#f8fafc']}
-        style={styles.gradient}
-        start={{ x: 0.1, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
+      <View style={[styles.gradient, { backgroundColor: colors.surface }]}>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.shell}>
-            <View style={[styles.heroCard, { backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.55)', borderColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)' }]}>
-              <View style={[styles.logoWrap, { backgroundColor: mode === 'dark' ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.25)' }]}>
-                <Text style={styles.logoText}>W</Text>
-              </View>
-
-              <Text style={[styles.title, { color: mode === 'dark' ? colors.onSurface : '#111827', fontFamily: font.displayBold }]}>Wallume</Text>
-              <Text style={[styles.subtitle, { color: mode === 'dark' ? colors.onSurface3 : '#4b5563', fontFamily: font.text }]}>Organize your money with clarity.</Text>
-
-              <View style={[styles.loaderWrap, { backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(16,185,129,0.15)' }]}>
-                <ActivityIndicator size="large" color={mode === 'dark' ? colors.onSurface : colors.brandPrimary} />
-              </View>
+            <View style={[styles.logoWrap, { backgroundColor: colors.brandPrimary }]}>
+              <Text style={styles.logoText}>W</Text>
             </View>
+            <Text style={[styles.title, { color: colors.onSurface, fontFamily: font.displayBold }]}>Wallume</Text>
+            <Text style={[styles.subtitle, { color: colors.muted, fontFamily: font.text }]}>Organize your money with clarity.</Text>
+            <ActivityIndicator size="small" color={colors.brandPrimary} style={{ marginTop: spacing.xxl }} />
           </View>
         </SafeAreaView>
-      </LinearGradient>
+      </View>
     );
   }
 
-  if (!user) return <Redirect href="/(auth)/login" />;
+  if (!user) return <Redirect href={'/(auth)/login' as any} />;
   if (!onboardingDone) return <Redirect href={'/(auth)/onboarding' as any} />;
   return <Redirect href="/(tabs)/home" />;
 }
@@ -53,50 +41,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxxl,
-  },
-  heroCard: {
-    width: '100%',
-    maxWidth: 420,
-    alignItems: 'center',
-    borderRadius: radius.xl,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.xxxl,
-    borderWidth: 1,
   },
   logoWrap: {
-    width: 88,
-    height: 88,
-    borderRadius: radius.xl,
+    width: 56,
+    height: 56,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
-    shadowColor: '#10B981',
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 8,
   },
   logoText: {
-    fontSize: 40,
+    fontSize: 24,
     fontFamily: font.displayBold,
-    color: '#10B981',
-    letterSpacing: -2,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   title: {
-    fontSize: 32,
-    letterSpacing: 0.3,
+    fontSize: font.sizes.xl,
+    letterSpacing: -0.3,
     marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: font.sizes.base,
     textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
-  loaderWrap: {
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.pill,
   },
 });

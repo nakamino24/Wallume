@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   pill: {
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
   },
   card: {
     borderRadius: radius.lg,
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: 8,
   },

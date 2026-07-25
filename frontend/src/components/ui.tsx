@@ -5,13 +5,11 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, radius, font } from '@/src/theme/tokens';
 import Svg, { Circle } from 'react-native-svg';
 
-// ------------------------- Screen ---------------------------------
 export function Screen({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   const { colors } = useTheme();
   return <View style={[{ flex: 1, backgroundColor: colors.surface }, style]}>{children}</View>;
 }
 
-// ------------------------- Card -----------------------------------
 export function Card({ children, style, onPress, testID }: {
   children: React.ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; testID?: string;
 }) {
@@ -19,17 +17,17 @@ export function Card({ children, style, onPress, testID }: {
   const inner = (
     <View style={[{
       backgroundColor: colors.surface2,
-      borderRadius: radius.lg,
+      borderRadius: radius.md,
       padding: spacing.lg,
       borderWidth: 1,
       borderColor: colors.border,
     }, style]}>{children}</View>
   );
-  if (onPress) return <TouchableOpacity testID={testID} activeOpacity={0.85} onPress={onPress}>{inner}</TouchableOpacity>;
+  if (onPress) return <TouchableOpacity testID={testID} activeOpacity={0.7} onPress={onPress}>{inner}</TouchableOpacity>;
   return inner;
 }
 
-// ----------------------- Typography -------------------------------
+// Typography
 export function DisplayNumber({ children, size = 40, style, color }: {
   children: React.ReactNode; size?: number; style?: StyleProp<TextStyle>; color?: string;
 }) {
@@ -44,6 +42,7 @@ export function DisplayNumber({ children, size = 40, style, color }: {
         fontFamily: font.displayBold,
         fontSize: size,
         letterSpacing: -0.5,
+        fontWeight: '600',
       }, style]}
     >{children}</Text>
   );
@@ -51,22 +50,26 @@ export function DisplayNumber({ children, size = 40, style, color }: {
 
 export function H1({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
   const { colors } = useTheme();
-  return <Text style={[{ color: colors.onSurface, fontFamily: font.displayBold, fontSize: 28, letterSpacing: -0.4 }, style]}>{children}</Text>;
+  return <Text style={[{ color: colors.onSurface, fontFamily: font.displayBold, fontSize: font.sizes.xl, fontWeight: '600', letterSpacing: -0.3 }, style]}>{children}</Text>;
 }
 export function H2({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
   const { colors } = useTheme();
-  return <Text style={[{ color: colors.onSurface, fontFamily: font.displayBold, fontSize: 20 }, style]}>{children}</Text>;
+  return <Text style={[{ color: colors.onSurface, fontFamily: font.displayBold, fontSize: font.sizes.lg, fontWeight: '600', letterSpacing: -0.2 }, style]}>{children}</Text>;
 }
 export function Body({ children, style, muted, testID, ...rest }: TextProps & { children: React.ReactNode; style?: StyleProp<TextStyle>; muted?: boolean; testID?: string }) {
   const { colors } = useTheme();
-  return <Text testID={testID} style={[{ color: muted ? colors.muted : colors.onSurface2, fontFamily: font.text, fontSize: 14 }, style]} {...rest}>{children}</Text>;
+  return <Text testID={testID} style={[{ color: muted ? colors.muted : colors.onSurface2, fontFamily: font.text, fontSize: font.sizes.base, lineHeight: 22 }, style]} {...rest}>{children}</Text>;
+}
+export function Caption({ children, style, muted }: { children: React.ReactNode; style?: StyleProp<TextStyle>; muted?: boolean }) {
+  const { colors } = useTheme();
+  return <Text style={[{ color: muted ? colors.muted : colors.onSurface3, fontFamily: font.text, fontSize: font.sizes.sm }, style]}>{children}</Text>;
 }
 export function Label({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
   const { colors } = useTheme();
-  return <Text style={[{ color: colors.muted, fontFamily: font.textMedium, fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase' }, style]}>{children}</Text>;
+  return <Text style={[{ color: colors.muted, fontFamily: font.textMedium, fontSize: 11, letterSpacing: 0.5 }, style]}>{children}</Text>;
 }
 
-// ------------------------- Button ---------------------------------
+// Button
 export function Button({
   label, onPress, variant = 'primary', loading, disabled, style, testID, icon,
 }: {
@@ -77,48 +80,46 @@ export function Button({
   style?: StyleProp<ViewStyle>; testID?: string; icon?: React.ReactNode;
 }) {
   const { colors } = useTheme();
-  const bg =
-    variant === 'primary' ? colors.brandPrimary
-    : variant === 'secondary' ? colors.surface3
-    : variant === 'danger' ? colors.error
-    : 'transparent';
-  const fg =
-    variant === 'primary' ? colors.onBrand
-    : variant === 'danger' ? '#fff'
-    : colors.onSurface;
+  const isPrimary = variant === 'primary';
+  const isDanger = variant === 'danger';
+  const isGhost = variant === 'ghost';
+  const bg = isPrimary ? colors.brandPrimary : isDanger ? 'transparent' : isGhost ? 'transparent' : 'transparent';
+  const fg = isPrimary ? colors.onBrand : isDanger ? colors.error : colors.onSurface;
+  const bd = isPrimary ? 'transparent' : isDanger ? colors.error : colors.border;
   return (
     <TouchableOpacity
       testID={testID}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.85}
+      activeOpacity={0.7}
       style={[{
         backgroundColor: bg,
-        borderRadius: radius.pill,
-        paddingVertical: 14,
-        paddingHorizontal: spacing.xl,
+        borderRadius: radius.sm,
+        paddingVertical: 12,
+        paddingHorizontal: spacing.lg,
         alignItems: 'center',
         justifyContent: 'center',
         opacity: disabled ? 0.5 : 1,
         flexDirection: 'row',
+        borderWidth: isPrimary ? 0 : 1,
+        borderColor: bd,
       }, style]}
     >
       {loading ? <ActivityIndicator color={fg} /> : (
         <>
           {icon && <View style={{ marginRight: 8 }}>{icon}</View>}
-          <Text style={{ color: fg, fontFamily: font.textBold, fontSize: 15 }}>{label}</Text>
+          <Text style={{ color: fg, fontFamily: font.textMedium, fontSize: 14, fontWeight: '500' }}>{label}</Text>
         </>
       )}
     </TouchableOpacity>
   );
 }
 
-// --------------------- Progress Ring -----------------------------
+// Progress Ring
 export function ProgressRing({
   progress, size = 72, stroke = 8, color, trackColor, children,
 }: {
-  progress: number; // 0..1
-  size?: number; stroke?: number;
+  progress: number; size?: number; stroke?: number;
   color?: string; trackColor?: string;
   children?: React.ReactNode;
 }) {
@@ -147,30 +148,28 @@ export function ProgressRing({
   );
 }
 
-// ------------------- Linear Progress Bar --------------------------
 export function ProgressBar({ progress, color, height = 6 }: { progress: number; color?: string; height?: number }) {
   const { colors } = useTheme();
   const p = Math.max(0, Math.min(1, progress));
   return (
-    <View style={{ height, backgroundColor: colors.surface3, borderRadius: height, overflow: 'hidden' }}>
-      <View style={{ width: `${p * 100}%`, height, backgroundColor: color || colors.brandPrimary, borderRadius: height }} />
+    <View style={{ height, backgroundColor: colors.surface3, borderRadius: height / 2, overflow: 'hidden' }}>
+      <View style={{ width: `${p * 100}%`, height, backgroundColor: color || colors.brandPrimary, borderRadius: height / 2 }} />
     </View>
   );
 }
 
-// ------------------------- Chip -----------------------------------
 export function Chip({ label, active, onPress, testID }: { label: string; active?: boolean; onPress?: () => void; testID?: string }) {
   const { colors } = useTheme();
   return (
     <TouchableOpacity
       testID={testID}
       onPress={onPress}
-      activeOpacity={0.85}
+      activeOpacity={0.7}
       style={{
-        height: 36,
+        height: 34,
         flexShrink: 0,
-        paddingHorizontal: spacing.lg,
-        borderRadius: radius.pill,
+        paddingHorizontal: spacing.md,
+        borderRadius: radius.sm,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
@@ -186,13 +185,11 @@ export function Chip({ label, active, onPress, testID }: { label: string; active
   );
 }
 
-// ------------------------- Divider --------------------------------
 export function Divider() {
   const { colors } = useTheme();
   return <View style={{ height: 1, backgroundColor: colors.border, marginVertical: spacing.md }} />;
 }
 
-// ------------------------- Empty ----------------------------------
 export function EmptyState({
   icon, title, subtitle, actionLabel, onAction, testID,
 }: {
@@ -203,8 +200,8 @@ export function EmptyState({
   return (
     <View testID={testID} style={{ alignItems: 'center', paddingVertical: spacing.xxxl, paddingHorizontal: spacing.xl }}>
       {icon && <View style={{ marginBottom: spacing.md }}>{icon}</View>}
-      <Text style={{ color: colors.onSurface, fontFamily: font.displayBold, fontSize: 18, marginBottom: 6 }}>{title}</Text>
-      {subtitle && <Text style={{ color: colors.muted, textAlign: 'center', fontFamily: font.text, fontSize: 14, marginBottom: spacing.lg }}>{subtitle}</Text>}
+      <Text style={{ color: colors.onSurface, fontFamily: font.displayBold, fontSize: 18, fontWeight: '600', marginBottom: 6 }}>{title}</Text>
+      {subtitle && <Text style={{ color: colors.muted, textAlign: 'center', fontFamily: font.text, fontSize: font.sizes.base, marginBottom: spacing.lg }}>{subtitle}</Text>}
       {actionLabel && onAction && (
         <Button label={actionLabel} onPress={onAction} testID={testID ? `${testID}-action` : undefined} />
       )}
@@ -212,7 +209,7 @@ export function EmptyState({
   );
 }
 
-// --------------------- Input --------------------------------------
+// Input
 import { TextInput, TextInputProps } from 'react-native';
 
 export function Input(props: TextInputProps & { label?: string; testID?: string }) {
@@ -228,20 +225,19 @@ export function Input(props: TextInputProps & { label?: string; testID?: string 
         style={[{
           backgroundColor: colors.surface2,
           color: colors.onSurface,
-          borderRadius: radius.md,
-          paddingHorizontal: spacing.lg,
-          paddingVertical: 14,
+          borderRadius: radius.sm,
+          paddingHorizontal: spacing.md,
+          paddingVertical: 12,
           borderWidth: 1,
           borderColor: colors.border,
           fontFamily: font.text,
-          fontSize: 15,
+          fontSize: font.sizes.base,
         }, style]}
       />
     </View>
   );
 }
 
-// --------------------- IconBadge (emoji-free) ---------------------
 export function IconBadge({ children, color, size = 40 }: { children: React.ReactNode; color?: string; size?: number }) {
   const { colors } = useTheme();
   return (

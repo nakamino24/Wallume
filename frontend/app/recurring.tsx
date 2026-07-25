@@ -95,7 +95,7 @@ export default function Recurring() {
                   </View>
                 </View>
                 <TouchableOpacity testID={`recurring-mark-paid-${r.id}`} onPress={() => markPaid(r.id, r.name)}
-                  style={{ marginTop: spacing.md, paddingVertical: 8, borderRadius: radius.pill, alignItems: 'center', backgroundColor: colors.surface2 }}>
+                  style={{ marginTop: spacing.md, paddingVertical: 8, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.surface2 }}>
                   <Body style={{ fontFamily: font.textMedium, fontSize: 13, color: dueColor }}>Mark as paid</Body>
                 </TouchableOpacity>
               </Card>
