@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.database.mongo import get_database, create_indexes, close_database
 from app.middleware.logging import RequestLoggingMiddleware
 from app.api.router import register_routers
+from app.utils.money import register_decimal_encoder
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,6 +39,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    register_decimal_encoder(app)
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 

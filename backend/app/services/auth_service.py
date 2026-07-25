@@ -13,6 +13,7 @@ from app.repositories.repos import (
 )
 from app.security.auth import hash_password, verify_password, create_access_token, decode_access_token
 from app.utils.helpers import new_id, now_utc, clean_user
+from app.utils.money import round_money
 
 
 class AuthService:
