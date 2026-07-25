@@ -1,0 +1,51 @@
+from __future__ import annotations
+
+from typing import Any, Optional
+from fastapi import APIRouter, Header, HTTPException
+from app.schemas.models import WalletCreate
+from app.repositories.repos import WalletRepository
+from app.services.auth_service import AuthService
+from app.services.domain_services import FxService
+from app.utils.helpers import new_id, now_utc
+
+router = APIRouter(prefix="/wallets")
+auth_service = AuthService()
+wallets = WalletRepository()
+
+
+@router.get("")
+async def list_wallets(authorization: Optional[str] = Header(None)):
+    u = await auth_service.get_current_user(authorization)
+    items = await wallets.find_by_user(u["user_id"])
+    home_ccy = u.get("currency", "USD")
+    for w in items:
+        w_ccy = w.get("currency", home_ccy)
+        w["converted_balance"] = round(await FxService.convert(float(w.get("balance", 0.0)), w_ccy, home_ccy), 2)
+        w["home_currency"] = home_ccy
+    return {"success": True, "data": {"wallets": items}}
+
+
+@router.post("")
+async def create_wallet(payload: WalletCreate, authorization: Optional[str] = Header(None)):
+    u = await auth_service.get_current_user(authorization)
+    doc = {"id": new_id("wal"), "user_id": u["user_id"], **payload.model_dump(), "created_at": now_utc()}
+    await wallets.insert_one(doc)
+    return {"success": True, "data": {"wallet": {k: v for k, v in doc.items() if k != "_id"}}}
+
+
+@router.patch("/{wallet_id}")
+async def update_wallet(wallet_id: str, body: dict[str, Any], authorization: Optional[str] = Header(None)):
+    u = await auth_service.get_current_user(authorization)
+    allowed = {k: v for k, v in body.items() if k in {"name", "type", "balance", "currency", "color", "icon"}}
+    await wallets.update_one({"id": wallet_id, "user_id": u["user_id"]}, {"$set": allowed})
+    w = await wallets.find_one({"id": wallet_id, "user_id": u["user_id"]})
+    return {"success": True, "data": {"wallet": w}}
+
+
+@router.delete("/{wallet_id}")
+async def delete_wallet(wallet_id: str, authorization: Optional[str] = Header(None)):
+    u = await auth_service.get_current_user(authorization)
+    await wallets.delete_one({"id": wallet_id, "user_id": u["user_id"]})
+    from app.repositories.repos import TransactionRepository
+    await TransactionRepository().delete_many({"user_id": u["user_id"], "wallet_id": wallet_id})
+    return {"success": True, "data": None}
