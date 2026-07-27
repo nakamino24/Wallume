@@ -8,6 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable } from '@/src/auth/AppLockGate';
 import { useOnboarding } from '@/src/hooks/use-onboarding';
+import { usePayday } from '@/src/hooks/use-payday';
 import { api } from '@/src/api/client';
 import { spacing, radius, font, CURRENCIES } from '@/src/theme/tokens';
 import { Screen, Card, H1, H2, Body, Label, Button, Chip } from '@/src/components/ui';
@@ -16,6 +17,7 @@ export default function Profile() {
   const { colors, mode, toggle } = useTheme();
   const { user, logout, updateProfile } = useAuth();
   const { resetOnboarding } = useOnboarding();
+  const { info: payday } = usePayday(user?.payday_day);
   const router = useRouter();
   const [bioEnabled, setBioEnabled] = useState(false);
   const [bioAvailable, setBioAvailable] = useState(true);
@@ -127,6 +129,24 @@ export default function Profile() {
                 />
               ))}
             </ScrollView>
+          </Card>
+
+          <Card>
+            <Label>Payday</Label>
+            <Body muted style={{ fontSize: 12, marginTop: 2 }}>
+              {payday ? `Next: ${payday.nextDate.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}` : 'Set your payday date'}
+            </Body>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md }}>
+              {[5, 10, 15, 20, 25, 28, 31].map((d) => (
+                <Chip
+                  key={d}
+                  testID={`profile-payday-${d}`}
+                  label={`Every ${d}th`}
+                  active={user?.payday_day === d}
+                  onPress={() => updateProfile({ payday_day: d })}
+                />
+              ))}
+            </View>
           </Card>
 
           <Card onPress={() => router.push('/reports')}>

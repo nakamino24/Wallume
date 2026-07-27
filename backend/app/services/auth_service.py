@@ -104,7 +104,7 @@ class AuthService:
 
     async def update_profile(self, authorization: Optional[str], body: dict) -> dict:
         user = await self.get_current_user(authorization)
-        allowed = {k: v for k, v in body.items() if k in {"name", "currency", "theme", "picture"}}
+        allowed = {k: v for k, v in body.items() if k in {"name", "currency", "theme", "picture", "payday_day"}}
         if allowed:
             await self.users.update_profile(user["user_id"], allowed)
         updated = await self.users.find_by_user_id(user["user_id"])

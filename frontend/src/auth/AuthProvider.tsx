@@ -9,6 +9,7 @@ type User = {
   provider: string;
   currency: string;
   theme?: string;
+  payday_day?: number | null;
 };
 
 type Ctx = {

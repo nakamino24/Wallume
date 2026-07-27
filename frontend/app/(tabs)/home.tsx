@@ -6,10 +6,11 @@ import { useRouter, useFocusEffect } from 'expo-router';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
+import { usePayday } from '@/src/hooks/use-payday';
 import { spacing, radius, font, formatMoneyFull, formatMoney } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { storage } from '@/src/utils/storage';
-import { Screen, Card, H1, H2, Body, Label, DisplayNumber, ProgressRing, Chip, EmptyState } from '@/src/components/ui';
+import { Screen, Card, H1, H2, Body, Label, DisplayNumber, ProgressRing, Chip, EmptyState, Caption } from '@/src/components/ui';
 
 const CATEGORY_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
@@ -36,6 +37,7 @@ export default function Home() {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
+  const { info: payday } = usePayday(user?.payday_day);
 
   const load = useCallback(async (useCache = true) => {
     if (useCache) {
@@ -148,6 +150,30 @@ export default function Home() {
               </View>
             </TouchableOpacity>
           </View>
+
+          {/* Payday countdown */}
+          {payday && (
+            <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+              <TouchableOpacity onPress={() => router.push('/profile')} activeOpacity={0.7}>
+                <Card style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: payday.isPaydayToday ? colors.success + '22' : colors.brandSoft, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
+                    <Ionicons name={payday.isPaydayToday ? 'gift' : 'calendar-outline'} size={18} color={payday.isPaydayToday ? colors.success : colors.brandPrimary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Body style={{ fontFamily: font.textMedium, fontSize: font.sizes.sm }}>
+                      {payday.isPaydayToday ? 'Payday today!' : `${payday.daysRemaining} days until payday`}
+                    </Body>
+                    <Caption muted>
+                      {payday.nextDate.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </Caption>
+                  </View>
+                  {!payday.isPaydayToday && (
+                    <Body style={{ fontFamily: font.displayBold, fontSize: 18, color: colors.brandPrimary }}>{payday.daysRemaining}</Body>
+                  )}
+                </Card>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Net Worth hero */}
           <View style={{ padding: spacing.xl }}>

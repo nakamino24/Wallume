@@ -24,6 +24,7 @@ class UserUpdateRequest(BaseModel):
     currency: Optional[str] = None
     theme: Optional[str] = None
     picture: Optional[str] = None
+    payday_day: Optional[int] = None
 
 # --- Wallet ---
 class WalletCreate(BaseModel):
