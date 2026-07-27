@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
+import { isIndonesianHoliday } from '@/src/lib/indonesian-holidays';
 
 function isWeekend(date: Date): boolean {
   const day = date.getDay();
   return day === 0 || day === 6;
 }
 
+function isNonBusinessDay(date: Date): boolean {
+  return isWeekend(date) || isIndonesianHoliday(date);
+}
+
 function getPreviousBusinessDay(date: Date): Date {
   const prev = new Date(date);
   prev.setDate(prev.getDate() - 1);
-  while (isWeekend(prev)) {
+  while (isNonBusinessDay(prev)) {
     prev.setDate(prev.getDate() - 1);
   }
   return prev;
@@ -21,7 +26,7 @@ export function calculateNextPayday(paydayDay: number): { nextDate: Date; daysRe
   const currentDay = now.getDate();
 
   let paydayThisMonth = new Date(currentYear, currentMonth, paydayDay);
-  if (isWeekend(paydayThisMonth)) {
+  if (isNonBusinessDay(paydayThisMonth)) {
     paydayThisMonth = getPreviousBusinessDay(paydayThisMonth);
   }
 
@@ -33,7 +38,7 @@ export function calculateNextPayday(paydayDay: number): { nextDate: Date; daysRe
       nextYear += 1;
     }
     let paydayNext = new Date(nextYear, nextMonth, paydayDay);
-    if (isWeekend(paydayNext)) {
+    if (isNonBusinessDay(paydayNext)) {
       paydayNext = getPreviousBusinessDay(paydayNext);
     }
     return {
