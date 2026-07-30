@@ -116,9 +116,11 @@ function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
       ) : (
         budgets.map((b: any) => {
           const spent = b.spent || 0;
-          const p = b.amount > 0 ? Math.min(1, spent / b.amount) : 0;
+          const pct = b.amount > 0 ? (spent / b.amount) * 100 : 0;
+          const p = Math.min(1, pct / 100);
           const over = spent > b.amount;
-          const color = over ? colors.error : p > 0.8 ? colors.warning : colors.brandPrimary;
+          const warn = pct >= 80 && !over;
+          const color = over ? colors.error : warn ? colors.warning : colors.brandPrimary;
           return (
             <Card key={b.id} onPress={() => confirmDialog('Delete budget?', async () => { await api.deleteBudget(b.id); onReload(); })}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>

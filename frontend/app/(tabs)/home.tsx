@@ -11,6 +11,8 @@ import { spacing, radius, font, formatMoneyFull, formatMoney } from '@/src/theme
 import { api } from '@/src/api/client';
 import { storage } from '@/src/utils/storage';
 import { Screen, Card, H1, H2, Body, Label, DisplayNumber, ProgressRing, Chip, EmptyState, Caption } from '@/src/components/ui';
+import { Skeleton, SkeletonCard, SkeletonRow } from '@/src/components/Skeleton';
+import { ErrorBanner } from '@/src/components/ErrorBanner';
 
 const CATEGORY_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
@@ -36,6 +38,8 @@ export default function Home() {
   const [upcoming, setUpcoming] = useState<any[]>([]);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const { info: payday } = usePayday(user?.payday_day);
 
@@ -55,6 +59,7 @@ export default function Home() {
     }
 
     try {
+      setLoadError(null);
       const [summaryResult, txResult, walletResult] = await Promise.allSettled([
         api.summary().catch(() => null),
         api.transactions().catch(() => ({ transactions: [] })),
@@ -72,8 +77,10 @@ export default function Home() {
       setUpcoming([]);
       setLastSyncedAt(updatedAt);
       await storage.setItem(HOME_CACHE_KEY, JSON.stringify({ summary: nextSummary, txs: nextTxs, wallets: nextWallets, updatedAt }));
+      setInitialLoading(false);
     } catch {
-      // keep cached state intact if network fails
+      if (!summary) setLoadError('Could not load your data');
+      setInitialLoading(false);
     }
   }, []);
 
@@ -150,6 +157,12 @@ export default function Home() {
               </View>
             </TouchableOpacity>
           </View>
+
+          {loadError && (
+            <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+              <ErrorBanner message={loadError} onRetry={onRefresh} />
+            </View>
+          )}
 
           {/* Payday countdown */}
           {payday && (
@@ -273,7 +286,34 @@ export default function Home() {
                   const dueSoon = r.days_until !== null && r.days_until >= 0 && r.days_until <= 3;
                   const dueColor = overdue ? colors.error : dueSoon ? colors.warning : colors.onSurface2;
                   const dueText = overdue ? `${Math.abs(r.days_until)}d overdue` : r.days_until === 0 ? 'Due today' : `in ${r.days_until}d`;
-                  return (
+  if (initialLoading && !summary) {
+    return (
+      <Screen>
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+            <Skeleton width={120} height={14} />
+            <Skeleton width={100} height={22} style={{ marginTop: 4 }} />
+          </View>
+          <View style={{ padding: spacing.xl }}>
+            <SkeletonCard />
+          </View>
+          <View style={{ paddingHorizontal: spacing.xl, flexDirection: 'row', gap: spacing.md }}>
+            {[1, 2, 3, 4].map((i) => <Skeleton key={i} width={80} height={80} style={{ borderRadius: radius.md, flex: 1 }} />)}
+          </View>
+          <View style={{ padding: spacing.xl, gap: spacing.md }}>
+            <Skeleton width={120} height={16} />
+            <SkeletonCard />
+            <Skeleton width={140} height={16} />
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </View>
+        </SafeAreaView>
+      </Screen>
+    );
+  }
+
+  return (
                     <TouchableOpacity key={r.id} testID={`home-recurring-${r.id}`} onPress={() => router.push(`/recurring/${r.id}`)}
                       style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderBottomWidth: idx === upcoming.length - 1 ? 0 : 1, borderBottomColor: colors.border }}>
                       <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: dueColor + '22', alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
