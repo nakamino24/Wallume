@@ -31,6 +31,7 @@ export default function EditTransaction() {
     amount?: string;
     category?: string;
     note?: string;
+    date?: string;
   }>();
 
   const [type, setType] = useState<'income' | 'expense' | 'transfer'>((params.type as any) || 'expense');
@@ -40,6 +41,7 @@ export default function EditTransaction() {
   const [wallets, setWallets] = useState<any[]>([]);
   const [walletId, setWalletId] = useState(params.wallet_id || '');
   const [toWalletId, setToWalletId] = useState(params.to_wallet_id || '');
+  const [date, setDate] = useState(params.date || new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
   const scrollRef = useRef<ScrollView>(null);
@@ -61,7 +63,7 @@ export default function EditTransaction() {
       await api.updateTransaction(params.id, {
         wallet_id: walletId,
         to_wallet_id: type === 'transfer' ? toWalletId : undefined,
-        type, amount: amt, category, note,
+        type, amount: amt, category, note, date: date || undefined,
       });
       router.back();
     } catch (e: any) { setErr(e.message); }
@@ -125,6 +127,18 @@ export default function EditTransaction() {
                   style={{ fontSize: 44, fontFamily: font.displayBold, textAlign: 'center', backgroundColor: 'transparent', borderWidth: 0, minWidth: 160, paddingVertical: 4 }}
                 />
               </View>
+            </View>
+
+            {/* Date */}
+            <View style={{ marginBottom: spacing.md }}>
+              <Label>Date</Label>
+              <Input
+                testID="edit-tx-date"
+                value={date}
+                onChangeText={setDate}
+                placeholder="YYYY-MM-DD"
+                autoCapitalize="none"
+              />
             </View>
 
             {/* Category */}

@@ -13,6 +13,7 @@ import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
 import { AuthProvider } from '@/src/auth/AuthProvider';
 import { AppLockGate } from '@/src/auth/AppLockGate';
 import { AppErrorBoundary } from '@/src/components/ErrorBoundary';
+import { ToastProvider } from '@/src/components/Toast';
 
 if (__DEV__) {
   const originalWarn = console.warn;
@@ -80,11 +81,13 @@ export default function RootLayout() {
         <ThemeProvider>
           <AuthProvider>
             <AppErrorBoundary>
-              <AppLockGate>
-                <BottomSheetGate>
-                  <StackWithTheme />
-                </BottomSheetGate>
-              </AppLockGate>
+              <ToastProvider>
+                <AppLockGate>
+                  <BottomSheetGate>
+                    <StackWithTheme />
+                  </BottomSheetGate>
+                </AppLockGate>
+              </ToastProvider>
             </AppErrorBoundary>
           </AuthProvider>
         </ThemeProvider>

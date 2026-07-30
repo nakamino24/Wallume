@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,8 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, H1, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
+import { ErrorBanner } from '@/src/components/ErrorBanner';
+import { useToast } from '@/src/components/Toast';
 
 const CATEGORIES = {
   income: ['Salary', 'Freelance', 'Investment', 'Business', 'Gift', 'Other'],
@@ -20,6 +22,7 @@ export default function NewTransaction() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const params = useLocalSearchParams<{ type?: string }>();
   const [type, setType] = useState<'income' | 'expense' | 'transfer'>((params.type as any) || 'expense');
   const [amount, setAmount] = useState('');
@@ -28,8 +31,10 @@ export default function NewTransaction() {
   const [wallets, setWallets] = useState<any[]>([]);
   const [walletId, setWalletId] = useState('');
   const [toWalletId, setToWalletId] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const scrollRef = useRef<ScrollView>(null);
 
   const load = useCallback(async () => {
@@ -46,17 +51,25 @@ export default function NewTransaction() {
 
   const submit = async () => {
     setErr('');
+    setFieldErrors({});
+    const errors: Record<string, string> = {};
     const amt = parseFloat(amount);
-    if (!amt || amt <= 0) { setErr('Enter a valid amount'); return; }
-    if (!walletId) { setErr('Select a wallet'); return; }
-    if (type === 'transfer' && (!toWalletId || toWalletId === walletId)) { setErr('Select a different destination wallet'); return; }
+    if (!amt || amt <= 0) errors.amount = 'Enter a valid amount';
+    if (!walletId) errors.wallet = 'Select a wallet';
+    if (type === 'transfer' && (!toWalletId || toWalletId === walletId)) errors.toWallet = 'Select a different wallet';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setErr(Object.values(errors)[0]);
+      return;
+    }
     setLoading(true);
     try {
       await api.createTransaction({
         wallet_id: walletId,
         to_wallet_id: type === 'transfer' ? toWalletId : undefined,
-        type, amount: amt, category, note,
+        type, amount: amt, category, note, date: date || undefined,
       });
+      toast.show(`${type === 'income' ? 'Income' : type === 'expense' ? 'Expense' : 'Transfer'} added`, 'success');
       router.back();
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
@@ -116,6 +129,18 @@ export default function NewTransaction() {
                   style={{ fontSize: 44, fontFamily: font.displayBold, textAlign: 'center', backgroundColor: 'transparent', borderWidth: 0, minWidth: 160, paddingVertical: 4 }}
                 />
               </View>
+            </View>
+
+            {/* Date */}
+            <View style={{ marginBottom: spacing.md }}>
+              <Label>Date</Label>
+              <Input
+                testID="tx-date"
+                value={date}
+                onChangeText={setDate}
+                placeholder="YYYY-MM-DD"
+                autoCapitalize="none"
+              />
             </View>
 
             {/* Category */}
