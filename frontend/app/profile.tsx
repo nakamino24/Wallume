@@ -10,6 +10,8 @@ import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable }
 import { useOnboarding } from '@/src/hooks/use-onboarding';
 import { usePayday } from '@/src/hooks/use-payday';
 import { api } from '@/src/api/client';
+import { t, setLocale } from '@/src/lib/i18n';
+import { getNotifSettings, setNotifSettings, requestNotificationPermission, type NotifSettings } from '@/src/utils/notifications';
 import { spacing, radius, font, CURRENCIES } from '@/src/theme/tokens';
 import { Screen, Card, H1, H2, Body, Label, Button, Chip } from '@/src/components/ui';
 
@@ -19,6 +21,8 @@ export default function Profile() {
   const { resetOnboarding } = useOnboarding();
   const { info: payday } = usePayday(user?.payday_day);
   const router = useRouter();
+  const [notif, setNotifState] = useState<NotifSettings>({ billingReminder: true, budgetAlert: true, paydayReminder: true });
+  const [lang, setLangState] = useState<'en' | 'id'>('en');
   const [bioEnabled, setBioEnabled] = useState(false);
   const [bioAvailable, setBioAvailable] = useState(true);
 
@@ -26,6 +30,9 @@ export default function Profile() {
     (async () => {
       setBioAvailable(await isBiometricAvailable());
       setBioEnabled(await isBiometricLockEnabled());
+      setNotifState(await getNotifSettings());
+      const { initLocale } = await import('@/src/lib/i18n');
+      setLangState(await initLocale());
     })();
   }, []);
 
@@ -149,6 +156,27 @@ export default function Profile() {
             </View>
           </Card>
 
+          {/* Language */}
+          <Card>
+            <Label>{t('language')}</Label>
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+              {(['en', 'id'] as const).map((l) => (
+                <Chip key={l} testID={`profile-lang-${l}`} label={l === 'en' ? 'English' : 'Indonesia'}
+                  active={lang === l} onPress={async () => { setLangState(l); await setLocale(l); }} />
+              ))}
+            </View>
+          </Card>
+
+          {/* Notifications */}
+          <Card>
+            <Label>{t('notifications')}</Label>
+            <View style={{ marginTop: spacing.md, gap: spacing.md }}>
+              <NotifRow label={t('notif.billing')} value={notif.billingReminder} onChange={async (v) => { const n = { ...notif, billingReminder: v }; setNotifState(n); await setNotifSettings(n); }} colors={colors} />
+              <NotifRow label={t('notif.budget')} value={notif.budgetAlert} onChange={async (v) => { const n = { ...notif, budgetAlert: v }; setNotifState(n); await setNotifSettings(n); }} colors={colors} />
+              <NotifRow label={t('notif.payday')} value={notif.paydayReminder} onChange={async (v) => { const n = { ...notif, paydayReminder: v }; setNotifState(n); await setNotifSettings(n); }} colors={colors} />
+            </View>
+          </Card>
+
           <Card onPress={() => router.push('/reports')}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View>
@@ -198,5 +226,14 @@ export default function Profile() {
         </ScrollView>
       </SafeAreaView>
     </Screen>
+  );
+}
+
+function NotifRow({ label, value, onChange, colors }: { label: string; value: boolean; onChange: (v: boolean) => void; colors: any }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Body style={{ fontSize: 13 }}>{label}</Body>
+      <Switch value={value} onValueChange={onChange} trackColor={{ true: colors.brandPrimary }} />
+    </View>
   );
 }
