@@ -87,6 +87,9 @@ export default function Login() {
               onChangeText={setEmail}
               placeholder="you@example.com"
               autoComplete="email"
+              autoFocus
+              returnKeyType="next"
+              onSubmitEditing={() => {}}
             />
             <Input
               testID="login-password"
@@ -95,6 +98,8 @@ export default function Login() {
               value={password}
               onChangeText={setPassword}
               placeholder="Enter your password"
+              returnKeyType="done"
+              onSubmitEditing={submit}
             />
 
             {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md, fontSize: font.sizes.sm }}>{err}</Body>}

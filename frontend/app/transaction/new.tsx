@@ -126,6 +126,7 @@ export default function NewTransaction() {
                   value={amount}
                   onChangeText={setAmount}
                   placeholder="0"
+                  autoFocus
                   style={{ fontSize: 44, fontFamily: font.displayBold, textAlign: 'center', backgroundColor: 'transparent', borderWidth: 0, minWidth: 160, paddingVertical: 4 }}
                 />
               </View>
