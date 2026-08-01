@@ -2,6 +2,14 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.1b] — 2026-08-01
+
+### Added
+- Quick-add category from the transaction form: a "+ Add" button beside the category selector opens an inline bottom-sheet to create a category (name + type) without leaving the flow. The new category is saved via the same backend endpoint as the Categories screen and auto-selected in the form.
+
+### Fixed
+- Wedding plan checklist items: "Budget" and "Funds collected" (both the summary text and the input fields) are now stacked top/bottom instead of side-by-side, matching the summary card layout.
+
 ## [1.0.1a] — 2026-08-01
 
 ### Fixed

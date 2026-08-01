@@ -132,21 +132,22 @@ export default function PlanDetail() {
                   </TouchableOpacity>
                   <View style={{ flex: 1 }}>
                     <Body style={{ fontFamily: font.textBold, textDecorationLine: it.done ? 'line-through' : 'none' }}>{it.label}</Body>
-                    <Body muted style={{ fontSize: 12, marginTop: 2 }}>
-                      Paid {formatMoney(cv(it, 'paid'), cur)} · Budget {formatMoney(cv(it, 'amount'), cur)}
-                    </Body>
+                    <View style={{ marginTop: 4 }}>
+                      <Body muted style={{ fontSize: 12, lineHeight: 16 }}>Budget  <Body style={{ fontFamily: font.textBold, fontSize: 12, lineHeight: 16 }}>{formatMoney(cv(it, 'amount'), cur)}</Body></Body>
+                      <Body muted style={{ fontSize: 12, lineHeight: 16 }}>Funds collected  <Body style={{ fontFamily: font.textBold, fontSize: 12, lineHeight: 16, color: colors.brandPrimary }}>{formatMoney(cv(it, 'paid'), cur)}</Body></Body>
+                    </View>
                   </View>
                   <TouchableOpacity onPress={() => removeItem(it.id)} style={{ padding: 4 }}>
                     <Ionicons name="close-circle" size={20} color={colors.muted} />
                   </TouchableOpacity>
                 </View>
-                <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
-                  <Input testID={`item-amount-${it.id}`} keyboardType="decimal-pad" value={String(it.amount ?? '')} placeholder="Budget"
+                <View style={{ marginTop: spacing.sm }}>
+                  <Input testID={`item-amount-${it.id}`} keyboardType="decimal-pad" value={String(it.amount ?? '')} label="Budget"
                     onChangeText={(v) => updateItem(it.id, { amount: parseFloat(v) || 0 })}
-                    style={{ flex: 1, marginBottom: 0 }} />
-                  <Input testID={`item-paid-${it.id}`} keyboardType="decimal-pad" value={String(it.paid ?? '')} placeholder="Paid"
+                    style={{ marginBottom: 0 }} />
+                  <Input testID={`item-paid-${it.id}`} keyboardType="decimal-pad" value={String(it.paid ?? '')} label="Funds collected"
                     onChangeText={(v) => updateItem(it.id, { paid: parseFloat(v) || 0 })}
-                    style={{ flex: 1, marginBottom: 0 }} />
+                    style={{ marginTop: spacing.sm, marginBottom: 0 }} />
                 </View>
               </Card>
             ))}

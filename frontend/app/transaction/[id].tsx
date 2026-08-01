@@ -12,6 +12,7 @@ import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
 import { DateField } from '@/src/components/DateField';
+import { CategorySelector } from '@/src/components/CategorySelector';
 
 // Edit an existing transaction. The list screen (transactions.tsx) passes the
 // transaction's fields in as route params, so we don't need a dedicated
@@ -131,12 +132,7 @@ export default function EditTransaction() {
             <DateField testID="edit-tx-date" label="Date" value={date} onChange={setDate} />
 
             {/* Category */}
-            <Label>Category</Label>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-              {(type === 'transfer' ? ['Transfer'] : getOptions(type)).map((c) => (
-                <Chip key={c} testID={`edit-cat-${c}`} label={c} active={category === c} onPress={() => setCategory(c)} />
-              ))}
-            </ScrollView>
+            <CategorySelector type={type} value={category} onChange={setCategory} testID="edit-tx" />
 
             {/* Wallet */}
             <Label style={{ marginTop: spacing.md }}>{type === 'transfer' ? 'From' : 'Wallet'}</Label>

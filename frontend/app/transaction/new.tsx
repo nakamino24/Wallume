@@ -14,6 +14,7 @@ import { ErrorBanner } from '@/src/components/ErrorBanner';
 import { useToast } from '@/src/components/Toast';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
 import { DateField } from '@/src/components/DateField';
+import { CategorySelector } from '@/src/components/CategorySelector';
 
 export default function NewTransaction() {
   const { colors } = useTheme();
@@ -134,12 +135,7 @@ export default function NewTransaction() {
             <DateField testID="tx-date" label="Date" value={date} onChange={setDate} />
 
             {/* Category */}
-            <Label>Category</Label>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-              {(type === 'transfer' ? ['Transfer'] : getOptions(type)).map((c) => (
-                <Chip key={c} testID={`cat-${c}`} label={c} active={category === c} onPress={() => setCategory(c)} />
-              ))}
-            </ScrollView>
+            <CategorySelector type={type} value={category} onChange={setCategory} testID="tx" />
 
             {/* Wallet */}
             <Label style={{ marginTop: spacing.md }}>{type === 'transfer' ? 'From' : 'Wallet'}</Label>
