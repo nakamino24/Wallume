@@ -9,8 +9,8 @@ import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
+import { useUserCategories } from '@/src/hooks/use-user-categories';
 
-const CATEGORIES = ['Bills', 'Entertainment', 'Health', 'Rent', 'Transport', 'Shopping', 'Other'];
 const FREQUENCIES: { id: 'weekly' | 'monthly' | 'yearly'; label: string }[] = [
   { id: 'weekly', label: 'Weekly' },
   { id: 'monthly', label: 'Monthly' },
@@ -21,6 +21,7 @@ export default function RecurringForm() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const { getOptions } = useUserCategories();
   const params = useLocalSearchParams<Record<string, string>>();
   const isEdit = !!params.id;
 
@@ -103,7 +104,7 @@ export default function RecurringForm() {
 
             <Label>Category</Label>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-              {CATEGORIES.map((c) => (<Chip key={c} testID={`recurring-cat-${c}`} label={c} active={category === c} onPress={() => setCategory(c)} />))}
+              {getOptions(type).map((c) => (<Chip key={c} testID={`recurring-cat-${c}`} label={c} active={category === c} onPress={() => setCategory(c)} />))}
             </ScrollView>
 
             <Label>Wallet</Label>

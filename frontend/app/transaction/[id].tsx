@@ -9,12 +9,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
-
-const CATEGORIES = {
-  income: ['Salary', 'Freelance', 'Investment', 'Business', 'Gift', 'Other'],
-  expense: ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Rent', 'Groceries', 'Other'],
-  transfer: ['Transfer'],
-};
+import { useUserCategories } from '@/src/hooks/use-user-categories';
 
 // Edit an existing transaction. The list screen (transactions.tsx) passes the
 // transaction's fields in as route params, so we don't need a dedicated
@@ -23,6 +18,7 @@ export default function EditTransaction() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const { getOptions, isKnown } = useUserCategories();
   const params = useLocalSearchParams<{
     id: string;
     wallet_id?: string;
@@ -92,7 +88,7 @@ export default function EditTransaction() {
                   testID={`edit-type-${t}`}
                   onPress={() => {
                     setType(t);
-                    if (!CATEGORIES[t].includes(category)) setCategory(CATEGORIES[t][0]);
+                    if (t !== 'transfer' && !isKnown(t, category)) setCategory(getOptions(t)[0]);
                   }}
                   style={{
                     flex: 1,
@@ -142,16 +138,12 @@ export default function EditTransaction() {
             </View>
 
             {/* Category */}
-            {type !== 'transfer' && (
-              <>
-                <Label>Category</Label>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-                  {CATEGORIES[type].map((c) => (
-                    <Chip key={c} testID={`edit-cat-${c}`} label={c} active={category === c} onPress={() => setCategory(c)} />
-                  ))}
-                </ScrollView>
-              </>
-            )}
+            <Label>Category</Label>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+              {(type === 'transfer' ? ['Transfer'] : getOptions(type)).map((c) => (
+                <Chip key={c} testID={`edit-cat-${c}`} label={c} active={category === c} onPress={() => setCategory(c)} />
+              ))}
+            </ScrollView>
 
             {/* Wallet */}
             <Label style={{ marginTop: spacing.md }}>{type === 'transfer' ? 'From' : 'Wallet'}</Label>

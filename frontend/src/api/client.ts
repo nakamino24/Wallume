@@ -113,6 +113,10 @@ export const api = {
   deleteRecurring: (id: string) => req(`/recurring/${id}`, { method: 'DELETE' }),
   markRecurringPaid: (id: string) => req(`/recurring/${id}/mark-paid`, { method: 'POST' }),
 
+  categories: () => req('/categories'),
+  createCategory: (body: any) => req('/categories', { method: 'POST', body: JSON.stringify(body) }),
+  deleteCategory: (id: string) => req(`/categories/${id}`, { method: 'DELETE' }),
+
   summary: () => req('/analytics/summary'),
 
   coachHistory: (session_id: string) => req(`/coach/history?session_id=${session_id}`),

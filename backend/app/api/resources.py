@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Optional
 from fastapi import APIRouter, Header, HTTPException
-from app.schemas.models import BudgetCreate, GoalCreate, GoalContribute, PlanCreate
+from app.schemas.models import BudgetCreate, GoalCreate, GoalContribute, PlanCreate, CategoryCreate
 from app.schemas.models import DebtCreate, InvestmentCreate, AssetCreate, RecurringCreate
 from app.repositories.repos import (
     BudgetRepository, GoalRepository, PlanRepository,
     DebtRepository, InvestmentRepository, AssetRepository,
     RecurringRepository, WalletRepository, TransactionRepository,
+    CategoryRepository,
 )
 from app.services.auth_service import AuthService
 from app.services.domain_services import DebtService
@@ -339,3 +340,36 @@ async def mark_recurring_paid(rec_id: str, authorization: Optional[str] = Header
     await recurring_repo.update_one({"id": rec_id, "user_id": u["user_id"]}, {"$set": {"next_date": next_date}})
     updated = await recurring_repo.find_one({"id": rec_id, "user_id": u["user_id"]})
     return {"success": True, "data": {"recurring": updated, "transaction": tx_doc}}
+
+
+# --- Custom Categories ---
+categories_router = APIRouter(prefix="/categories")
+categories_repo = CategoryRepository()
+
+
+@categories_router.get("")
+async def list_categories(authorization: Optional[str] = Header(None)):
+    u = await auth_service.get_current_user(authorization)
+    items = await categories_repo.find_by_user(u["user_id"])
+    return {"success": True, "data": {"categories": items}}
+
+
+@categories_router.post("")
+async def create_category(payload: CategoryCreate, authorization: Optional[str] = Header(None)):
+    u = await auth_service.get_current_user(authorization)
+    label = payload.label.strip()
+    if not label:
+        raise HTTPException(400, "Category label is required")
+    existing = await categories_repo.find_one({"user_id": u["user_id"], "label": label, "type": payload.type})
+    if existing:
+        raise HTTPException(400, "Category already exists")
+    doc = {"id": new_id("cat"), "user_id": u["user_id"], **payload.model_dump(exclude={"label"}), "label": label, "created_at": now_utc()}
+    await categories_repo.insert_one(doc)
+    return {"success": True, "data": {"category": {k: v for k, v in doc.items() if k != "_id"}}}
+
+
+@categories_router.delete("/{category_id}")
+async def delete_category(category_id: str, authorization: Optional[str] = Header(None)):
+    u = await auth_service.get_current_user(authorization)
+    await categories_repo.delete_one({"id": category_id, "user_id": u["user_id"]})
+    return {"success": True, "data": None}

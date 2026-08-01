@@ -102,10 +102,22 @@ export default function PlanDetail() {
           <View style={{ padding: spacing.xl, gap: spacing.md }}>
             <Card>
               <Label>Summary</Label>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.sm }}>
-                <View><Body muted style={{ fontSize: 12 }}>Budget</Body><Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>{formatMoney(plan.total_budget, cur)}</Body></View>
-                <View><Body muted style={{ fontSize: 12 }}>Allocated</Body><Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>{formatMoney(totals.allocated, cur)}</Body></View>
-                <View><Body muted style={{ fontSize: 12 }}>Paid</Body><Body style={{ fontFamily: font.displayBold, fontSize: 18, color: colors.brandPrimary }}>{formatMoney(totals.paid, cur)}</Body></View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: spacing.sm }}>
+                <View>
+                  <Body muted style={{ fontSize: 12 }}>Budget</Body>
+                  <Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>{formatMoney(plan.total_budget, cur)}</Body>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Body muted style={{ fontSize: 12 }}>Allocated</Body>
+                  <Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>{formatMoney(totals.allocated, cur)}</Body>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: spacing.lg, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border }}>
+                <View>
+                  <Body muted style={{ fontSize: 12 }}>Funds collected</Body>
+                  <Body style={{ fontFamily: font.displayBold, fontSize: 18, color: colors.brandPrimary }}>{formatMoney(totals.paid, cur)}</Body>
+                </View>
+                <Body muted style={{ fontSize: 12 }}>{Math.round(progress * 100)}% of budget</Body>
               </View>
             </Card>
 

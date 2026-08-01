@@ -7,6 +7,8 @@ class SignupRequest(BaseModel):
     email: EmailStr
     password: str
     name: str
+    payday_day: Optional[int] = None
+    currency: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -25,6 +27,13 @@ class UserUpdateRequest(BaseModel):
     theme: Optional[str] = None
     picture: Optional[str] = None
     payday_day: Optional[int] = None
+
+# --- Category ---
+class CategoryCreate(BaseModel):
+    label: str
+    type: Literal["income", "expense"] = "expense"
+    color: Optional[str] = None
+    icon: Optional[str] = None
 
 # --- Wallet ---
 class WalletCreate(BaseModel):

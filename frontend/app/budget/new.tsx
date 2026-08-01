@@ -8,12 +8,13 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
-
-const CATS = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Rent', 'Groceries', 'Other'];
+import { useUserCategories } from '@/src/hooks/use-user-categories';
 
 export default function NewBudget() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { getOptions } = useUserCategories();
+  const cats = getOptions('expense');
   const [category, setCategory] = useState('Food');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,7 +43,7 @@ export default function NewBudget() {
           <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
             <Label>Category</Label>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-              {CATS.map((c) => (
+              {cats.map((c) => (
                 <Chip key={c} testID={`budget-cat-${c}`} label={c} active={category === c} onPress={() => setCategory(c)} />
               ))}
             </ScrollView>

@@ -117,3 +117,8 @@ class RecurringRepository(BaseRepository):
 class ChatMessageRepository(BaseRepository):
     def __init__(self) -> None:
         super().__init__("chat_messages")
+
+
+class CategoryRepository(BaseRepository):
+    def __init__(self) -> None:
+        super().__init__("categories")

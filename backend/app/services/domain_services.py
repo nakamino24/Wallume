@@ -180,6 +180,24 @@ class AnalyticsService:
             },
         }
 
+    async def monthly_spending(self, authorization: Optional[str]) -> list[dict]:
+        """Current-month expense totals by category. Lightweight — used by the
+        home-screen widget chart. Returns [{category, amount}] sorted desc."""
+        u = await self.auth.get_current_user(authorization)
+        uid = u["user_id"]
+        month_key = now_utc().strftime("%Y-%m-%d")
+        pipeline = [
+            {"$match": {
+                "user_id": uid,
+                "type": "expense",
+                "$expr": {"$gte": [{"$substr": ["$date", 0, 10]}, month_key]},
+            }},
+            {"$group": {"_id": "$category", "total": {"$sum": {"$toDouble": "$amount"}}}},
+            {"$sort": {"total": -1}},
+        ]
+        rows = await self.transactions.aggregate(pipeline)
+        return [{"category": r["_id"], "amount": round(r["total"], 2)} for r in rows]
+
 
 class DebtService:
     def __init__(self) -> None:

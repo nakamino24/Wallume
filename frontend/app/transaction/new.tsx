@@ -11,18 +11,14 @@ import { api } from '@/src/api/client';
 import { Screen, H1, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { ErrorBanner } from '@/src/components/ErrorBanner';
 import { useToast } from '@/src/components/Toast';
-
-const CATEGORIES = {
-  income: ['Salary', 'Freelance', 'Investment', 'Business', 'Gift', 'Other'],
-  expense: ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Rent', 'Groceries', 'Other'],
-  transfer: ['Transfer'],
-};
+import { useUserCategories } from '@/src/hooks/use-user-categories';
 
 export default function NewTransaction() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
   const toast = useToast();
+  const { getOptions } = useUserCategories();
   const params = useLocalSearchParams<{ type?: string }>();
   const [type, setType] = useState<'income' | 'expense' | 'transfer'>((params.type as any) || 'expense');
   const [amount, setAmount] = useState('');
@@ -46,7 +42,7 @@ export default function NewTransaction() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   useEffect(() => {
-    setCategory(CATEGORIES[type][0]);
+    setCategory(getOptions(type === 'transfer' ? 'expense' : type)[0]);
   }, [type]);
 
   const submit = async () => {
@@ -145,16 +141,12 @@ export default function NewTransaction() {
             </View>
 
             {/* Category */}
-            {type !== 'transfer' && (
-              <>
-                <Label>Category</Label>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-                  {CATEGORIES[type].map((c) => (
-                    <Chip key={c} testID={`cat-${c}`} label={c} active={category === c} onPress={() => setCategory(c)} />
-                  ))}
-                </ScrollView>
-              </>
-            )}
+            <Label>Category</Label>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+              {(type === 'transfer' ? ['Transfer'] : getOptions(type)).map((c) => (
+                <Chip key={c} testID={`cat-${c}`} label={c} active={category === c} onPress={() => setCategory(c)} />
+              ))}
+            </ScrollView>
 
             {/* Wallet */}
             <Label style={{ marginTop: spacing.md }}>{type === 'transfer' ? 'From' : 'Wallet'}</Label>

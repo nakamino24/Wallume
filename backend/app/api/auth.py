@@ -15,7 +15,10 @@ limiter = Limiter(key_func=get_remote_address)
 @router.post("/signup")
 @limiter.limit("5/minute")
 async def signup(payload: SignupRequest, request: Request):
-    result = await auth_service.signup(payload.email, payload.password, payload.name)
+    result = await auth_service.signup(
+        payload.email, payload.password, payload.name,
+        payday_day=payload.payday_day, currency=payload.currency,
+    )
     return {"success": True, "data": result}
 
 

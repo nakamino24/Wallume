@@ -1,14 +1,15 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAuth } from '@/src/auth/AuthProvider';
 import { useOnboarding } from '@/src/hooks/use-onboarding';
 import { font, spacing, radius } from '@/src/theme/tokens';
-import { Button, Body } from '@/src/components/ui';
+import { Button, Body, Chip } from '@/src/components/ui';
 
 const { width } = Dimensions.get('window');
 
@@ -36,19 +37,26 @@ const STEPS = [
   },
 ];
 
+const PAYDAY_OPTIONS = [5, 10, 15, 20, 25, 28, 31];
+
 export default function Onboarding() {
-  const { colors, mode } = useTheme();
+  const { colors } = useTheme();
   const { markDone } = useOnboarding();
+  const { user, updateProfile } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(0);
+  const [paydayDay, setPaydayDay] = useState<number>(user?.payday_day || 25);
   const scrollRef = useRef<any>(null);
 
-  const isLast = step === STEPS.length - 1;
-  const s = STEPS[step];
+  const isPaydayStep = step === STEPS.length;
+  const isLast = isPaydayStep;
 
-  const next = () => {
-    if (isLast) {
-      markDone();
+  const next = async () => {
+    if (isPaydayStep) {
+      if (paydayDay >= 1 && paydayDay <= 31) {
+        try { await updateProfile({ payday_day: paydayDay }); } catch {}
+      }
+      await markDone();
       router.replace('/(tabs)/home');
     } else {
       scrollRef.current?.scrollTo({ x: width * (step + 1), animated: true });
@@ -56,8 +64,8 @@ export default function Onboarding() {
     }
   };
 
-  const skip = () => {
-    markDone();
+  const skip = async () => {
+    await markDone();
     router.replace('/(tabs)/home');
   };
 
@@ -66,36 +74,60 @@ export default function Onboarding() {
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         {/* Skip */}
         <View style={{ alignItems: 'flex-end', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-          {!isLast && (
+          {!isPaydayStep && (
             <Button testID="onboarding-skip" variant="ghost" label="Skip" onPress={skip} />
           )}
         </View>
 
-        {/* Content */}
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl }}>
-          <LinearGradient
-            colors={s.highlight
-              ? [colors.brandPrimary + '30', colors.surface]
-              : [colors.surface3, colors.surface]}
-            style={styles.iconShell}
-          >
-            <View style={[styles.iconBadge, s.highlight && { backgroundColor: colors.brandPrimary }]}>
-              <Ionicons name={s.icon} size={36} color={s.highlight ? colors.onBrand : colors.brandPrimary} />
+        {isPaydayStep ? (
+          /* Payday setup step */
+          <View style={{ flex: 1, paddingHorizontal: spacing.xl }}>
+            <View style={{ flex: 1, justifyContent: 'center' }}>
+              <LinearGradient colors={[colors.brandPrimary + '30', colors.surface]} style={styles.iconShell}>
+                <View style={[styles.iconBadge, { backgroundColor: colors.brandPrimary }]}>
+                  <Ionicons name="calendar" size={36} color={colors.onBrand} />
+                </View>
+              </LinearGradient>
+              <Text style={[styles.title, { color: colors.onSurface, fontFamily: font.displayBold }]}>
+                When is payday?
+              </Text>
+              <Text style={[styles.subtitle, { color: colors.muted, fontFamily: font.text }]}>
+                Pick the day you get paid each month. Wallume will count down to it and remind you — even when it falls on a weekend or holiday.
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center', marginTop: spacing.xl }}>
+                {PAYDAY_OPTIONS.map((d) => (
+                  <Chip key={d} testID={`onboarding-payday-${d}`} label={`Every ${d}th`}
+                    active={paydayDay === d} onPress={() => setPaydayDay(d)} />
+                ))}
+              </View>
             </View>
-          </LinearGradient>
-          <Text style={[styles.title, { color: colors.onSurface, fontFamily: font.displayBold }]}>
-            {s.title}
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.muted, fontFamily: font.text }]}>
-            {s.subtitle}
-          </Text>
-        </View>
+          </View>
+        ) : (
+          /* Marketing steps */
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl }}>
+            <LinearGradient
+              colors={STEPS[step].highlight
+                ? [colors.brandPrimary + '30', colors.surface]
+                : [colors.surface3, colors.surface]}
+              style={styles.iconShell}
+            >
+              <View style={[styles.iconBadge, STEPS[step].highlight && { backgroundColor: colors.brandPrimary }]}>
+                <Ionicons name={STEPS[step].icon} size={36} color={STEPS[step].highlight ? colors.onBrand : colors.brandPrimary} />
+              </View>
+            </LinearGradient>
+            <Text style={[styles.title, { color: colors.onSurface, fontFamily: font.displayBold }]}>
+              {STEPS[step].title}
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.muted, fontFamily: font.text }]}>
+              {STEPS[step].subtitle}
+            </Text>
+          </View>
+        )}
 
         {/* Footer */}
         <View style={{ paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl }}>
-          {/* Dots */}
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: spacing.sm, marginBottom: spacing.xl }}>
-            {STEPS.map((_, idx) => (
+            {[...STEPS.map((_, idx) => idx), STEPS.length].map((idx) => (
               <View
                 key={idx}
                 style={{
@@ -127,6 +159,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xl,
+    alignSelf: 'center',
   },
   iconBadge: {
     width: 80,
@@ -146,5 +179,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: 320,
+    alignSelf: 'center',
   },
 });
