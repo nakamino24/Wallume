@@ -46,7 +46,13 @@ async function req(path: string, opts: RequestInit = {}) {
     throw new Error(msg);
   }
   if (res.status === 204) return null;
-  return res.json();
+  const body = await res.json();
+  // Unwrap the { success, data } envelope the backend uses, so callers can
+  // access `r.token`, `r.wallets`, etc. directly (old flat format is preserved).
+  if (body && typeof body === 'object' && 'success' in body && 'data' in body) {
+    return body.data;
+  }
+  return body;
 }
 
 export const api = {

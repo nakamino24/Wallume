@@ -31,7 +31,8 @@ async function fetchWidgetData(): Promise<NetWorthWidgetData> {
     const headers = { Authorization: `Bearer ${token}` };
     const res = await fetch(`${BASE}/api/analytics/summary`, { headers });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const s = await res.json();
+    const raw = await res.json();
+    const s = raw && raw.success !== undefined && raw.data ? raw.data : raw;
 
     // Chart image for the large variant — fetched with auth headers, then
     // converted to a base64 data URI so the native ImageWidget can render it
