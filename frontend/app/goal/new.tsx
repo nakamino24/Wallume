@@ -8,6 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
+import { DateField } from '@/src/components/DateField';
 
 const KINDS = [
   { id: 'general', label: 'General' },
@@ -66,7 +67,7 @@ export default function NewGoal() {
             </ScrollView>
             <Input testID="goal-target" label="Target amount" keyboardType="decimal-pad" value={target} onChangeText={setTarget} placeholder="5000" />
             <Input testID="goal-saved" label="Already saved (optional)" keyboardType="decimal-pad" value={saved} onChangeText={setSaved} placeholder="0" />
-            <Input testID="goal-date" label="Target date (optional)" value={targetDate} onChangeText={setTargetDate} placeholder="YYYY-MM-DD" />
+            <DateField testID="goal-date" label="Target date (optional)" value={targetDate} onChange={setTargetDate} />
             {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
             <Button testID="goal-save" label="Create goal" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
           </ScrollView>

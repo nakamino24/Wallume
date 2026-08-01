@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, TouchableOpacity, Alert } from 'react-native';
+import { View, TouchableOpacity, Alert, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -65,9 +65,9 @@ export default function Recurring() {
         <View style={{ padding: spacing.xl, paddingBottom: 0 }}>
           <Card style={{ backgroundColor: colors.inverse }}>
             <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Recurring spend</Label>
-            <Body style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 26, marginTop: 4 }}>
-              {formatMoney(monthlyTotal, cur)} <Body style={{ color: colors.onInverse, opacity: 0.6, fontSize: 14 }}>/month equiv.</Body>
-            </Body>
+            <Text style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 26, lineHeight: 32, marginTop: 4 }}>
+              {formatMoney(monthlyTotal, cur)}<Text style={{ color: colors.onInverse, opacity: 0.6, fontSize: 14, lineHeight: 18 }}> /month equiv.</Text>
+            </Text>
           </Card>
         </View>
 

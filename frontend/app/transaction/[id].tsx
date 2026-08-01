@@ -10,6 +10,7 @@ import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
+import { DateField } from '@/src/components/DateField';
 
 // Edit an existing transaction. The list screen (transactions.tsx) passes the
 // transaction's fields in as route params, so we don't need a dedicated
@@ -126,16 +127,7 @@ export default function EditTransaction() {
             </View>
 
             {/* Date */}
-            <View style={{ marginBottom: spacing.md }}>
-              <Label>Date</Label>
-              <Input
-                testID="edit-tx-date"
-                value={date}
-                onChangeText={setDate}
-                placeholder="YYYY-MM-DD"
-                autoCapitalize="none"
-              />
-            </View>
+            <DateField testID="edit-tx-date" label="Date" value={date} onChange={setDate} />
 
             {/* Category */}
             <Label>Category</Label>

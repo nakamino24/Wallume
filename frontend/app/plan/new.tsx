@@ -8,6 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
+import { DateField } from '@/src/components/DateField';
 
 const KINDS = ['wedding', 'house', 'car', 'vacation'] as const;
 
@@ -52,7 +53,7 @@ export default function NewPlan() {
             </ScrollView>
             <Input testID="plan-name" label="Name" value={name} onChangeText={setName} placeholder="Our wedding 2026" />
             <Input testID="plan-budget" label="Total budget" keyboardType="decimal-pad" value={budget} onChangeText={setBudget} placeholder="25000" />
-            <Input testID="plan-date" label="Target date (optional)" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
+            <DateField testID="plan-date" label="Target date (optional)" value={date} onChange={setDate} />
             {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
             <Button testID="plan-save" label="Create plan" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
           </ScrollView>

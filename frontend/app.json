@@ -47,12 +47,13 @@
             {
               "name": "NetWorth",
               "label": "Wallume — Net Worth",
-              "description": "Shows your net worth and this month's cash flow. Resize to see your spending breakdown.",
+              "description": "Net worth, income, and a spending pie chart. Resize large to see your Financial Health score.",
               "minWidth": "180dp",
               "minHeight": "110dp",
               "targetCellWidth": 3,
               "targetCellHeight": 2,
-              "maxResizeHeight": "320dp",
+              "maxResizeWidth": "480dp",
+              "maxResizeHeight": "340dp",
               "resizeMode": "horizontal|vertical",
               "updatePeriodMillis": 1800000
             }

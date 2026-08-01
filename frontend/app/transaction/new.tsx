@@ -12,6 +12,7 @@ import { Screen, H1, H2, Body, Label, Button, Input, Chip } from '@/src/componen
 import { ErrorBanner } from '@/src/components/ErrorBanner';
 import { useToast } from '@/src/components/Toast';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
+import { DateField } from '@/src/components/DateField';
 
 export default function NewTransaction() {
   const { colors } = useTheme();
@@ -129,16 +130,7 @@ export default function NewTransaction() {
             </View>
 
             {/* Date */}
-            <View style={{ marginBottom: spacing.md }}>
-              <Label>Date</Label>
-              <Input
-                testID="tx-date"
-                value={date}
-                onChangeText={setDate}
-                placeholder="YYYY-MM-DD"
-                autoCapitalize="none"
-              />
-            </View>
+            <DateField testID="tx-date" label="Date" value={date} onChange={setDate} />
 
             {/* Category */}
             <Label>Category</Label>

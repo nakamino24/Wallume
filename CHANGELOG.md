@@ -2,6 +2,13 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.0-beta] — 2026-08-01 (revision 2)
+
+### Changed
+- Home-screen widget redesigned: two size variants (3x2 and 6x4). Both show net worth + income + a mini pie chart of expenses by category with legend. The large (6x4) variant additionally shows the Financial Health score as a percentage. The chart is rendered server-side as a PNG pie (Android widgets can't render interactive charts).
+- All manual date text inputs replaced with a native calendar/date picker (transaction, recurring due date, goal target date, plan target date, investment purchase date, report date range).
+- Fixed clipped "Recurring spend" amount text caused by line-height being smaller than font-size.
+
 ## [1.0.0-beta] — 2026-08-01
 
 ### Added

@@ -8,6 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
+import { DateField } from '@/src/components/DateField';
 import { INVESTMENT_KINDS, isQtyKind, QTY_KIND_FIELDS, InvKind } from '@/src/lib/investmentKinds';
 
 // Handles both "add new investment" and "edit investment". When editing, the
@@ -141,7 +142,7 @@ export default function InvestmentForm() {
 
             {/* --- Supporting info, all kinds --- */}
             <Input testID="inv-broker" label="Broker / Platform (optional)" value={broker} onChangeText={setBroker} placeholder="Bibit, Ajaib, Stockbit…" />
-            <Input testID="inv-purchase-date" label="Purchase date (optional)" value={purchaseDate} onChangeText={setPurchaseDate} placeholder="YYYY-MM-DD" />
+            <DateField testID="inv-purchase-date" label="Purchase date (optional)" value={purchaseDate} onChange={setPurchaseDate} />
             <Input testID="inv-notes" label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="Why you bought this…"
               onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)} />
 

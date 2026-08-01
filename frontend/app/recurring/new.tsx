@@ -10,6 +10,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
+import { DateField } from '@/src/components/DateField';
 
 const FREQUENCIES: { id: 'weekly' | 'monthly' | 'yearly'; label: string }[] = [
   { id: 'weekly', label: 'Weekly' },
@@ -100,7 +101,7 @@ export default function RecurringForm() {
               ))}
             </View>
 
-            <Input testID="recurring-next-date" label="Next due date" value={nextDate} onChangeText={setNextDate} placeholder="YYYY-MM-DD" />
+            <DateField testID="recurring-next-date" label="Next due date" value={nextDate} onChange={setNextDate} />
 
             <Label>Category</Label>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>

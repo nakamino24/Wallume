@@ -10,6 +10,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, formatMoney, formatMoneyFull } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, DisplayNumber, EmptyState, Input } from '@/src/components/ui';
+import { DateField } from '@/src/components/DateField';
 
 const CAT_COLORS = ['#3FA796', '#F4A261', '#D32F2F', '#2E7D32', '#16213E', '#ED6C02', '#6B7280', '#222222'];
 
@@ -82,12 +83,10 @@ export default function Reports() {
         {/* Date range */}
         <View style={{ flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
           <View style={{ flex: 1 }}>
-            <Label>From</Label>
-            <Input testID="report-from" value={fromDate} onChangeText={setFromDate} placeholder="YYYY-MM-DD" autoCapitalize="none" />
+            <DateField testID="report-from" label="From" value={fromDate} onChange={setFromDate} />
           </View>
           <View style={{ flex: 1 }}>
-            <Label>To</Label>
-            <Input testID="report-to" value={toDate} onChangeText={setToDate} placeholder="YYYY-MM-DD" autoCapitalize="none" />
+            <DateField testID="report-to" label="To" value={toDate} onChange={setToDate} />
           </View>
         </View>
 
