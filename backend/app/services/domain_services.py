@@ -77,7 +77,8 @@ class AnalyticsService:
         six_months_ago = month_start - timedelta(days=180)
 
         pipeline = [
-            {"$match": {"user_id": uid, "date": {"$gte": six_months_ago.isoformat()}}},
+            # Compare date-prefix so both full-ISO and date-only stored dates match.
+            {"$match": {"user_id": uid, "$expr": {"$gte": [{"$substr": ["$date", 0, 10]}, six_months_ago.strftime("%Y-%m-%d")]}}},
             {"$addFields": {
                 "month_key": {"$substr": ["$date", 0, 7]},
                 "month_label": {"$substr": ["$date", 5, 3]},

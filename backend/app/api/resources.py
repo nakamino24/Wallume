@@ -25,9 +25,16 @@ tx_repo = TransactionRepository()
 async def list_budgets(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     items = await budgets_repo.find_by_user(u["user_id"])
-    month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+    month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_key = month_start.strftime("%Y-%m-%d")
     pipeline = [
-        {"$match": {"user_id": u["user_id"], "type": "expense", "date": {"$gte": month_start}}},
+        {"$match": {
+            "user_id": u["user_id"],
+            "type": "expense",
+            # Compare the date-prefix (YYYY-MM-DD) so both full-ISO and
+            # date-only stored transaction dates are matched correctly.
+            "$expr": {"$gte": [{"$substr": ["$date", 0, 10]}, month_key]},
+        }},
         {"$group": {"_id": "$category", "total": {"$sum": {"$toDouble": "$amount"}}}},
     ]
     spent = {r["_id"]: round(r["total"], 2) for r in await tx_repo.aggregate(pipeline)}

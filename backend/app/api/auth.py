@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from slowapi import Limiter

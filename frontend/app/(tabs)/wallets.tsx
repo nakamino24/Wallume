@@ -8,7 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, formatMoneyFull } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, H1, Body, DisplayNumber, EmptyState } from '@/src/components/ui';
+import { Screen, H1, Body, DisplayNumber, EmptyState, Caption } from '@/src/components/ui';
 import { confirmAction } from '@/src/utils/confirm';
 
 const WALLET_META: Record<string, { icon: any; tint: string }> = {
@@ -51,7 +51,7 @@ export default function Wallets() {
   const onRefresh = useCallback(async () => { setRefreshing(true); await load(); setRefreshing(false); }, [load]);
 
   const cur = user?.currency || 'USD';
-  const total = wallets.reduce((s, w) => s + (Number(w.balance) || 0), 0);
+  const total = wallets.reduce((s, w) => s + (Number(w.converted_balance ?? w.balance) || 0), 0);
 
   return (
     <Screen>
@@ -162,8 +162,11 @@ function WalletCard({ wallet, currency, onLongPress, onPress }: any) {
       <View style={{ marginTop: spacing.md }}>
         <Body muted style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7 }}>Balance</Body>
         <DisplayNumber size={22} style={{ marginTop: 4 }}>
-          {formatMoneyFull(wallet.balance || 0, wallet.currency || currency)}
+          {formatMoneyFull(wallet.converted_balance ?? (wallet.balance || 0), wallet.home_currency || currency)}
         </DisplayNumber>
+        {wallet.currency && wallet.currency !== (wallet.home_currency || currency) && (
+          <Caption muted style={{ marginTop: 2 }}>{formatMoneyFull(wallet.balance || 0, wallet.currency)} · {wallet.currency}</Caption>
+        )}
       </View>
     </TouchableOpacity>
   );
