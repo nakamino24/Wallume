@@ -7,7 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney, formatMoneyFull, images } from '@/src/theme/tokens';
+import { spacing, radius, font, formatMoney, formatMoneyFull, images, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, DisplayNumber, ProgressRing, ProgressBar, EmptyState, Chip } from '@/src/components/ui';
 import { computeInvestmentMetrics, kindLabel, quantitySummary } from '@/src/lib/investmentKinds';
@@ -115,10 +115,11 @@ function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
         <EmptyState testID="budgets-empty" title="No budgets yet" subtitle="Set spending limits per category." actionLabel="Add budget" onAction={onAdd} />
       ) : (
         budgets.map((b: any) => {
-          const spent = b.spent || 0;
-          const pct = b.amount > 0 ? (spent / b.amount) * 100 : 0;
+          const spent = cv(b, 'spent');
+          const amount = cv(b, 'amount');
+          const pct = amount > 0 ? (spent / amount) * 100 : 0;
           const p = Math.min(1, pct / 100);
-          const over = spent > b.amount;
+          const over = spent > amount;
           const warn = pct >= 80 && !over;
           const color = over ? colors.error : warn ? colors.warning : colors.brandPrimary;
           return (
@@ -130,11 +131,11 @@ function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
                 <View style={{ marginLeft: spacing.md, flex: 1 }}>
                   <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{b.category}</Body>
                   <Body muted style={{ marginTop: 2 }}>
-                    {formatMoney(spent, currency)} of {formatMoney(b.amount, currency)}
+                    {formatMoney(spent, currency)} of {formatMoney(amount, currency)}
                   </Body>
                 </View>
                 <Body style={{ fontFamily: font.displayBold, color }}>
-                  {formatMoney(b.amount - spent, currency)}
+                  {formatMoney(amount - spent, currency)}
                 </Body>
               </View>
             </Card>
@@ -161,7 +162,9 @@ function GoalsSection({ goals, currency, onAdd, onOpen, onReload }: any) {
         <EmptyState testID="goals-empty" title="No goals yet" subtitle="Save toward an emergency fund, a car, or anything you want." actionLabel="Create goal" onAction={onAdd} />
       ) : (
         goals.map((g: any) => {
-          const p = g.target_amount > 0 ? Math.min(1, g.saved_amount / g.target_amount) : 0;
+          const saved = cv(g, 'saved_amount');
+          const target = cv(g, 'target_amount');
+          const p = target > 0 ? Math.min(1, saved / target) : 0;
           return (
             <Card key={g.id} onPress={() => onOpen(g.id)}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -171,7 +174,7 @@ function GoalsSection({ goals, currency, onAdd, onOpen, onReload }: any) {
                 <View style={{ marginLeft: spacing.md, flex: 1 }}>
                   <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{g.name}</Body>
                   <Body muted style={{ marginTop: 2 }}>
-                    {formatMoney(g.saved_amount, currency)} / {formatMoney(g.target_amount, currency)}
+                    {formatMoney(saved, currency)} / {formatMoney(target, currency)}
                   </Body>
                 </View>
                 <Body style={{ fontFamily: font.displayBold, color: colors.brandPrimary }}>{Math.round(p * 100)}%</Body>
@@ -208,8 +211,9 @@ function PlansSection({ plans, currency, onAdd, onOpen }: any) {
       <H2>Life plans</H2>
       <Body muted style={{ marginTop: -6, marginBottom: spacing.sm }}>Structured plans with budget & checklist.</Body>
       {plans.length > 0 && plans.map((p: any) => {
-        const totalPaid = (p.items || []).reduce((s: number, i: any) => s + (i.paid || 0), 0);
-        const progress = p.total_budget > 0 ? Math.min(1, totalPaid / p.total_budget) : 0;
+        const totalPaid = (p.items || []).reduce((s: number, i: any) => s + cv(i, 'paid'), 0);
+        const budget = cv(p, 'total_budget');
+        const progress = budget > 0 ? Math.min(1, totalPaid / budget) : 0;
         return (
           <TouchableOpacity key={p.id} testID={`plan-open-${p.id}`} activeOpacity={0.9} onPress={() => onOpen(p.id)}>
             <ImageBackground
@@ -224,7 +228,7 @@ function PlansSection({ plans, currency, onAdd, onOpen }: any) {
                 </View>
                 <H2 style={{ color: '#fff' }}>{p.name}</H2>
                 <Body style={{ color: '#ffffffcc', marginTop: 4 }}>
-                  {formatMoney(totalPaid, currency)} of {formatMoney(p.total_budget, currency)}
+                  {formatMoney(totalPaid, currency)} of {formatMoney(budget, currency)}
                 </Body>
                 <View style={{ marginTop: 8 }}>
                   <ProgressBar progress={progress} color={colors.brandPrimary} />
@@ -303,8 +307,10 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
       {debts.length === 0 ? (
         <EmptyState testID="debts-empty" title="No debts tracked" subtitle="Track loans and credit cards to plan payoff." actionLabel="Add debt" onAction={onAdd} />
       ) : debts.map((d: any) => {
-        const paid = d.principal - d.remaining;
-        const p = d.principal > 0 ? Math.min(1, paid / d.principal) : 0;
+        const remaining = cv(d, 'remaining');
+        const principal = cv(d, 'principal');
+        const paid = principal - remaining;
+        const p = principal > 0 ? Math.min(1, paid / principal) : 0;
         return (
           <Card key={d.id} onPress={() => onDebtAction(d)}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -312,12 +318,12 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
                 <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{d.name}</Body>
                 <Body muted style={{ marginTop: 2 }}>{d.kind.replace('_', ' ')} · {d.interest_rate}% APR</Body>
               </View>
-              <Body style={{ fontFamily: font.displayBold, color: colors.error }}>{formatMoney(d.remaining, currency)}</Body>
+              <Body style={{ fontFamily: font.displayBold, color: colors.error }}>{formatMoney(remaining, currency)}</Body>
             </View>
             <View style={{ marginTop: spacing.md }}>
               <ProgressBar progress={p} color={colors.warning} />
               <Body muted style={{ marginTop: 6, fontSize: 12 }}>
-                Paid {formatMoney(paid, currency)} of {formatMoney(d.principal, currency)} ({Math.round(p * 100)}%)
+                Paid {formatMoney(paid, currency)} of {formatMoney(principal, currency)} ({Math.round(p * 100)}%)
               </Body>
             </View>
           </Card>
@@ -387,7 +393,7 @@ function AssetsSection({ assets, investments, currency, onAddAsset, onAddInv, on
               <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{a.name}</Body>
               <Body muted style={{ marginTop: 2 }}>{a.kind.replace('_', ' ')}</Body>
             </View>
-            <Body style={{ fontFamily: font.displayBold }}>{formatMoney(a.value, currency)}</Body>
+            <Body style={{ fontFamily: font.displayBold }}>{formatMoney(cv(a, 'value'), currency)}</Body>
           </View>
         </Card>
       ))}

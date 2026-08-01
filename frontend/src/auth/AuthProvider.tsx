@@ -10,6 +10,7 @@ type User = {
   currency: string;
   theme?: string;
   payday_day?: number | null;
+  work_week?: number | null;
 };
 
 type Ctx = {

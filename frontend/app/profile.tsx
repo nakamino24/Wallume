@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Switch, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
@@ -19,12 +20,13 @@ export default function Profile() {
   const { colors, mode, toggle } = useTheme();
   const { user, logout, updateProfile } = useAuth();
   const { resetOnboarding } = useOnboarding();
-  const { info: payday } = usePayday(user?.payday_day);
+  const { info: payday, setPaydayDay, setWorkWeek } = usePayday(user?.payday_day, user?.work_week);
   const router = useRouter();
   const [notif, setNotifState] = useState<NotifSettings>({ billingReminder: true, budgetAlert: true, paydayReminder: true });
   const [lang, setLangState] = useState<'en' | 'id'>('en');
   const [bioEnabled, setBioEnabled] = useState(false);
   const [bioAvailable, setBioAvailable] = useState(true);
+  const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -143,15 +145,35 @@ export default function Profile() {
             <Body muted style={{ fontSize: 12, marginTop: 2 }}>
               {payday ? `Next: ${payday.nextDate.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}` : 'Set your payday date'}
             </Body>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md }}>
-              {[5, 10, 15, 20, 25, 28, 31].map((d) => (
-                <Chip
-                  key={d}
-                  testID={`profile-payday-${d}`}
-                  label={`Every ${d}th`}
-                  active={user?.payday_day === d}
-                  onPress={() => updateProfile({ payday_day: d })}
-                />
+            <TouchableOpacity testID="profile-payday-picker" onPress={() => setShowPicker(true)}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface2, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: 12, marginTop: spacing.md }}>
+              <Body style={{ fontFamily: font.textMedium }}>Every {user?.payday_day || 25}th</Body>
+              <Ionicons name="calendar-outline" size={18} color={colors.muted} />
+            </TouchableOpacity>
+            {showPicker && (
+              <DateTimePicker
+                testID="profile-payday-datepicker"
+                value={new Date(new Date().getFullYear(), new Date().getMonth(), user?.payday_day || 25)}
+                mode="date"
+                onChange={(event: DateTimePickerEvent, date?: Date) => {
+                  if (Platform.OS === 'android') setShowPicker(false);
+                  if (event.type === 'set' && date) {
+                    const day = date.getDate();
+                    setPaydayDay(day);
+                    updateProfile({ payday_day: day });
+                  }
+                }}
+              />
+            )}
+            <Label style={{ marginTop: spacing.lg }}>Work schedule</Label>
+            <Body muted style={{ fontSize: 12, marginTop: 2 }}>
+              How many days a week do you work? This decides whether weekends delay your payday.
+            </Body>
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+              {([5, 6, 7] as const).map((w) => (
+                <Chip key={w} testID={`profile-workweek-${w}`} label={`${w}-day`}
+                  active={(user?.work_week ?? 5) === w}
+                  onPress={() => { setWorkWeek(w); updateProfile({ work_week: w }); }} />
               ))}
             </View>
           </Card>

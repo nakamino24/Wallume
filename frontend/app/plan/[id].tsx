@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney, formatMoneyFull, images } from '@/src/theme/tokens';
+import { spacing, radius, font, formatMoney, formatMoneyFull, images, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, Button, Input, ProgressBar, DisplayNumber } from '@/src/components/ui';
 
@@ -32,14 +32,15 @@ export default function PlanDetail() {
 
   const totals = useMemo(() => {
     if (!plan) return { paid: 0, allocated: 0 };
-    const paid = (plan.items || []).reduce((s: number, i: any) => s + (i.paid || 0), 0);
-    const allocated = (plan.items || []).reduce((s: number, i: any) => s + (i.amount || 0), 0);
+    const paid = (plan.items || []).reduce((s: number, i: any) => s + cv(i, 'paid'), 0);
+    const allocated = (plan.items || []).reduce((s: number, i: any) => s + cv(i, 'amount'), 0);
     return { paid, allocated };
   }, [plan]);
 
   if (!plan) return <Screen><SafeAreaView><Body style={{ padding: spacing.xl }}>Loading…</Body></SafeAreaView></Screen>;
 
-  const progress = plan.total_budget > 0 ? Math.min(1, totals.paid / plan.total_budget) : 0;
+  const budget = cv(plan, 'total_budget');
+  const progress = budget > 0 ? Math.min(1, totals.paid / budget) : 0;
 
   const updateItem = async (itemId: string, patch: any) => {
     const items = plan.items.map((it: any) => it.id === itemId ? { ...it, ...patch } : it);
@@ -90,7 +91,7 @@ export default function PlanDetail() {
                 <Body style={{ color: '#ffffffcc', textTransform: 'uppercase', letterSpacing: 0.8, fontSize: 11, fontFamily: font.textMedium }}>{plan.kind}</Body>
                 <H1 style={{ color: '#fff', marginTop: 4 }}>{plan.name}</H1>
                 <Body style={{ color: '#ffffffcc', marginTop: 4 }}>
-                  {formatMoney(totals.paid, cur)} paid of {formatMoney(plan.total_budget, cur)}
+                  {formatMoney(totals.paid, cur)} paid of {formatMoney(budget, cur)}
                 </Body>
                 <View style={{ marginTop: 10 }}>
                   <ProgressBar progress={progress} color={colors.brandPrimary} height={6} />
@@ -105,7 +106,7 @@ export default function PlanDetail() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: spacing.sm }}>
                 <View>
                   <Body muted style={{ fontSize: 12 }}>Budget</Body>
-                  <Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>{formatMoney(plan.total_budget, cur)}</Body>
+                  <Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>{formatMoney(budget, cur)}</Body>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Body muted style={{ fontSize: 12 }}>Allocated</Body>
@@ -132,7 +133,7 @@ export default function PlanDetail() {
                   <View style={{ flex: 1 }}>
                     <Body style={{ fontFamily: font.textBold, textDecorationLine: it.done ? 'line-through' : 'none' }}>{it.label}</Body>
                     <Body muted style={{ fontSize: 12, marginTop: 2 }}>
-                      Paid {formatMoney(it.paid || 0, cur)} · Budget {formatMoney(it.amount || 0, cur)}
+                      Paid {formatMoney(cv(it, 'paid'), cur)} · Budget {formatMoney(cv(it, 'amount'), cur)}
                     </Body>
                   </View>
                   <TouchableOpacity onPress={() => removeItem(it.id)} style={{ padding: 4 }}>

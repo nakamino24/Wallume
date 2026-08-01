@@ -17,7 +17,7 @@ limiter = Limiter(key_func=get_remote_address)
 async def signup(payload: SignupRequest, request: Request):
     result = await auth_service.signup(
         payload.email, payload.password, payload.name,
-        payday_day=payload.payday_day, currency=payload.currency,
+        payday_day=payload.payday_day, currency=payload.currency, work_week=payload.work_week,
     )
     return {"success": True, "data": result}
 

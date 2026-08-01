@@ -1,9 +1,10 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
@@ -37,8 +38,6 @@ const STEPS = [
   },
 ];
 
-const PAYDAY_OPTIONS = [5, 10, 15, 20, 25, 28, 31];
-
 export default function Onboarding() {
   const { colors } = useTheme();
   const { markDone } = useOnboarding();
@@ -46,6 +45,8 @@ export default function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [paydayDay, setPaydayDay] = useState<number>(user?.payday_day || 25);
+  const [workWeek, setWorkWeek] = useState<number>(user?.work_week || 5);
+  const [showPicker, setShowPicker] = useState(false);
   const scrollRef = useRef<any>(null);
 
   const isPaydayStep = step === STEPS.length;
@@ -54,7 +55,7 @@ export default function Onboarding() {
   const next = async () => {
     if (isPaydayStep) {
       if (paydayDay >= 1 && paydayDay <= 31) {
-        try { await updateProfile({ payday_day: paydayDay }); } catch {}
+        try { await updateProfile({ payday_day: paydayDay, work_week: workWeek }); } catch {}
       }
       await markDone();
       router.replace('/(tabs)/home');
@@ -81,7 +82,7 @@ export default function Onboarding() {
 
         {isPaydayStep ? (
           /* Payday setup step */
-          <View style={{ flex: 1, paddingHorizontal: spacing.xl }}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.xl }}>
             <View style={{ flex: 1, justifyContent: 'center' }}>
               <LinearGradient colors={[colors.brandPrimary + '30', colors.surface]} style={styles.iconShell}>
                 <View style={[styles.iconBadge, { backgroundColor: colors.brandPrimary }]}>
@@ -92,16 +93,40 @@ export default function Onboarding() {
                 When is payday?
               </Text>
               <Text style={[styles.subtitle, { color: colors.muted, fontFamily: font.text }]}>
-                Pick the day you get paid each month. Wallume will count down to it and remind you — even when it falls on a weekend or holiday.
+                Pick the day you get paid each month. Wallume counts down to it and shifts it to the previous working day when it falls on a weekend or holiday.
               </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center', marginTop: spacing.xl }}>
-                {PAYDAY_OPTIONS.map((d) => (
-                  <Chip key={d} testID={`onboarding-payday-${d}`} label={`Every ${d}th`}
-                    active={paydayDay === d} onPress={() => setPaydayDay(d)} />
+
+              <TouchableOpacity testID="onboarding-payday-picker" onPress={() => setShowPicker(true)}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingVertical: 16, marginTop: spacing.xl }}>
+                <Ionicons name="calendar-outline" size={20} color={colors.brandPrimary} />
+                <Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>Every {paydayDay}th</Body>
+              </TouchableOpacity>
+              {showPicker && (
+                <DateTimePicker
+                  testID="onboarding-payday-datepicker"
+                  value={new Date(new Date().getFullYear(), new Date().getMonth(), paydayDay)}
+                  mode="date"
+                  onChange={(event: DateTimePickerEvent, date?: Date) => {
+                    if (Platform.OS === 'android') setShowPicker(false);
+                    if (event.type === 'set' && date) setPaydayDay(date.getDate());
+                  }}
+                />
+              )}
+
+              <Text style={[styles.title, { color: colors.onSurface, fontFamily: font.displayBold, fontSize: 22, marginTop: spacing.xxl }]}>
+                Your work schedule
+              </Text>
+              <Text style={[styles.subtitle, { color: colors.muted, fontFamily: font.text }]}>
+                Do you work a 5-day, 6-day, or 7-day work week? This decides which days count as non-working for payday.
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center', marginTop: spacing.lg }}>
+                {([5, 6, 7] as const).map((w) => (
+                  <Chip key={w} testID={`onboarding-workweek-${w}`} label={`${w}-day week`}
+                    active={workWeek === w} onPress={() => setWorkWeek(w)} />
                 ))}
               </View>
             </View>
-          </View>
+          </ScrollView>
         ) : (
           /* Marketing steps */
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl }}>

@@ -22,7 +22,7 @@ class AuthService:
         self.sessions = UserSessionRepository()
         self.blacklist = TokenBlacklistRepository()
 
-    async def signup(self, email: str, password: str, name: str, payday_day: Optional[int] = None, currency: Optional[str] = None) -> dict:
+    async def signup(self, email: str, password: str, name: str, payday_day: Optional[int] = None, currency: Optional[str] = None, work_week: Optional[int] = None) -> dict:
         pw = password
         if len(pw) < 8:
             raise HTTPException(400, "Password must be at least 8 characters")
@@ -46,6 +46,7 @@ class AuthService:
             "currency": currency or "USD",
             "theme": "light",
             "payday_day": payday_day if payday_day and 1 <= payday_day <= 31 else None,
+            "work_week": work_week if work_week in (5, 6, 7) else 5,
             "created_at": now_utc(),
         }
         await self.users.insert_one(doc)
@@ -104,7 +105,7 @@ class AuthService:
 
     async def update_profile(self, authorization: Optional[str], body: dict) -> dict:
         user = await self.get_current_user(authorization)
-        allowed = {k: v for k, v in body.items() if k in {"name", "currency", "theme", "picture", "payday_day"}}
+        allowed = {k: v for k, v in body.items() if k in {"name", "currency", "theme", "picture", "payday_day", "work_week"}}
         if allowed:
             await self.users.update_profile(user["user_id"], allowed)
         updated = await self.users.find_by_user_id(user["user_id"])

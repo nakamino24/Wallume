@@ -96,7 +96,7 @@ export default function EditWallet() {
             <Card style={{ marginBottom: spacing.md }}>
               <Label>Current balance</Label>
               <Body style={{ fontSize: 24, fontFamily: 'SpaceGrotesk-Bold', marginTop: 4 }}>
-                {formatMoneyFull(wallet.balance || 0, wallet.currency || cur)}
+                {formatMoneyFull(wallet.converted_balance ?? (wallet.balance || 0), wallet.home_currency || cur)}
               </Body>
             </Card>
 

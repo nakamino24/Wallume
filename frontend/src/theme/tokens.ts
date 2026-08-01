@@ -121,3 +121,10 @@ export function formatMoneyFull(amount: number, currency: string = 'USD') {
   const decimals = ZERO_DECIMAL_CURRENCIES.has(currency) ? 0 : 2;
   return `${sign}${sym}${abs.toLocaleString(undefined, { maximumFractionDigits: decimals, minimumFractionDigits: decimals })}`;
 }
+
+// Picks the backend-converted (home-currency) value for an entity field, falling
+// back to the original stored value. The backend adds `converted_<field>` when a
+// stored item's currency differs from the user's home currency.
+export function cv(item: any, field: string): number {
+  return Number(item?.[`converted_${field}`] ?? item?.[field] ?? 0);
+}

@@ -60,20 +60,22 @@ export type InvMetrics = {
 
 // The single source of truth for "how much is this worth / what did it cost".
 // Every screen (list, detail, dashboard) should call this instead of computing inline.
+// Prefers backend-converted (home-currency) fields when present.
 export function computeInvestmentMetrics(iv: InvestmentDoc): InvMetrics {
+  const cVal = (field: string) => (iv as any)?.[`converted_${field}`] ?? (iv as any)?.[field];
   if (iv.kind === 'bond') {
-    const cost = iv.purchase_price ?? 0;
-    const value = iv.current_value ?? cost;
+    const cost = cVal('purchase_price') ?? 0;
+    const value = cVal('current_value') ?? cost;
     const pl = value - cost;
     return { value, cost, pl, returnPct: cost > 0 ? (pl / cost) * 100 : 0 };
   }
   if (iv.kind === 'cash') {
-    const value = iv.current_price ?? 0;
+    const value = cVal('current_price') ?? 0;
     return { value, cost: value, pl: 0, returnPct: 0 };
   }
   const qty = iv.quantity || 0;
-  const value = qty * (iv.current_price || 0);
-  const cost = qty * (iv.avg_cost || 0);
+  const value = qty * (cVal('current_price') || 0);
+  const cost = qty * (cVal('avg_cost') || 0);
   const pl = value - cost;
   return { value, cost, pl, returnPct: cost > 0 ? (pl / cost) * 100 : 0 };
 }

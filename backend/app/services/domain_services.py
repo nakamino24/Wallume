@@ -40,6 +40,27 @@ class FxService:
         rate = rates.get(from_ccy)
         return amount / rate if rate else amount
 
+    @staticmethod
+    async def convert_item(item: dict, home_ccy: str, fields: list[str]) -> dict:
+        """Convert monetary `fields` on a single doc from its own currency to
+        the user's home currency. Adds `converted_<field>` + `home_currency`."""
+        from app.utils.money import round_money
+        item_ccy = item.get("currency") or home_ccy
+        for f in fields:
+            val = item.get(f)
+            if val is not None:
+                item[f"converted_{f}"] = round_money(
+                    await FxService.convert(float(val), item_ccy, home_ccy)
+                )
+        item["home_currency"] = home_ccy
+        return item
+
+    @staticmethod
+    async def convert_items(items: list[dict], home_ccy: str, fields: list[str]) -> list[dict]:
+        for it in items:
+            await FxService.convert_item(it, home_ccy, fields)
+        return items
+
 
 class AnalyticsService:
     def __init__(self) -> None:
@@ -68,9 +89,16 @@ class AnalyticsService:
             wallet_total += await FxService.convert(
                 float(w.get("balance", 0.0)), w.get("currency", home_ccy), home_ccy
             )
-        debt_total = sum(float(d.get("remaining", 0.0)) for d in debts_list)
-        inv_total = sum(float(i.get("quantity", 0.0)) * float(i.get("current_price", 0.0)) for i in investments)
-        asset_total = sum(float(a.get("value", 0.0)) for a in assets_list)
+        debt_total = 0.0
+        for d in debts_list:
+            debt_total += await FxService.convert(float(d.get("remaining", 0.0)), d.get("currency", home_ccy), home_ccy)
+        inv_total = 0.0
+        for i in investments:
+            val = float(i.get("quantity", 0.0)) * float(i.get("current_price", 0.0))
+            inv_total += await FxService.convert(val, i.get("currency", home_ccy), home_ccy)
+        asset_total = 0.0
+        for a in assets_list:
+            asset_total += await FxService.convert(float(a.get("value", 0.0)), a.get("currency", home_ccy), home_ccy)
         net_worth = wallet_total + inv_total + asset_total - debt_total
 
         month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)

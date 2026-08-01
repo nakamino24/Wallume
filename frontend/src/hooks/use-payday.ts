@@ -1,33 +1,39 @@
 import { useCallback, useEffect, useState } from 'react';
 import { isIndonesianHoliday } from '@/src/lib/indonesian-holidays';
 
-function isWeekend(date: Date): boolean {
-  const day = date.getDay();
-  return day === 0 || day === 6;
+// workWeek = number of working days per week (5, 6, or 7).
+// 5: Sat-Sun off, 6: Sunday off, 7: no weekend off (holidays only).
+function isWeekendDay(day: number, workWeek: number): boolean {
+  if (workWeek === 7) return false;
+  if (workWeek === 6) return day === 0; // Sunday only
+  return day === 0 || day === 6; // Sat + Sun
 }
 
-function isNonBusinessDay(date: Date): boolean {
-  return isWeekend(date) || isIndonesianHoliday(date);
+function isNonBusinessDay(date: Date, workWeek: number): boolean {
+  return isWeekendDay(date.getDay(), workWeek) || isIndonesianHoliday(date);
 }
 
-function getPreviousBusinessDay(date: Date): Date {
+function getPreviousBusinessDay(date: Date, workWeek: number): Date {
   const prev = new Date(date);
   prev.setDate(prev.getDate() - 1);
-  while (isNonBusinessDay(prev)) {
+  while (isNonBusinessDay(prev, workWeek)) {
     prev.setDate(prev.getDate() - 1);
   }
   return prev;
 }
 
-export function calculateNextPayday(paydayDay: number): { nextDate: Date; daysRemaining: number; isPaydayToday: boolean } {
+// Wallume convention: if payday falls on a non-working day, it is paid on the
+// previous working day (matches the original requirement — paid on Friday when
+// the 25th falls on a weekend, or the day before a holiday).
+export function calculateNextPayday(paydayDay: number, workWeek: number = 5): { nextDate: Date; daysRemaining: number; isPaydayToday: boolean } {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth();
   const currentDay = now.getDate();
 
   let paydayThisMonth = new Date(currentYear, currentMonth, paydayDay);
-  if (isNonBusinessDay(paydayThisMonth)) {
-    paydayThisMonth = getPreviousBusinessDay(paydayThisMonth);
+  if (isNonBusinessDay(paydayThisMonth, workWeek)) {
+    paydayThisMonth = getPreviousBusinessDay(paydayThisMonth, workWeek);
   }
 
   if (paydayThisMonth < new Date(currentYear, currentMonth, currentDay)) {
@@ -38,8 +44,8 @@ export function calculateNextPayday(paydayDay: number): { nextDate: Date; daysRe
       nextYear += 1;
     }
     let paydayNext = new Date(nextYear, nextMonth, paydayDay);
-    if (isNonBusinessDay(paydayNext)) {
-      paydayNext = getPreviousBusinessDay(paydayNext);
+    if (isNonBusinessDay(paydayNext, workWeek)) {
+      paydayNext = getPreviousBusinessDay(paydayNext, workWeek);
     }
     return {
       nextDate: paydayNext,
@@ -57,8 +63,9 @@ export function calculateNextPayday(paydayDay: number): { nextDate: Date; daysRe
   };
 }
 
-export function usePayday(paydayDayFromProfile?: number | null) {
+export function usePayday(paydayDayFromProfile?: number | null, workWeekFromProfile?: number | null) {
   const [paydayDay, setPaydayDay] = useState<number>(25);
+  const [workWeek, setWorkWeek] = useState<number>(5);
 
   useEffect(() => {
     if (paydayDayFromProfile && paydayDayFromProfile >= 1 && paydayDayFromProfile <= 31) {
@@ -66,7 +73,13 @@ export function usePayday(paydayDayFromProfile?: number | null) {
     }
   }, [paydayDayFromProfile]);
 
-  const info = calculateNextPayday(paydayDay);
+  useEffect(() => {
+    if (workWeekFromProfile === 5 || workWeekFromProfile === 6 || workWeekFromProfile === 7) {
+      setWorkWeek(workWeekFromProfile);
+    }
+  }, [workWeekFromProfile]);
 
-  return { paydayDay, info };
+  const info = calculateNextPayday(paydayDay, workWeek);
+
+  return { paydayDay, workWeek, setPaydayDay, setWorkWeek, info };
 }

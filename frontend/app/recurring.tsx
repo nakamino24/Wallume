@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney } from '@/src/theme/tokens';
+import { spacing, radius, font, formatMoney, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, Button, EmptyState } from '@/src/components/ui';
 
@@ -38,7 +38,7 @@ export default function Recurring() {
     .filter((i) => i.active && i.type === 'expense')
     .reduce((sum, i) => {
       const mult = i.frequency === 'weekly' ? 4.33 : i.frequency === 'yearly' ? 1 / 12 : 1;
-      return sum + i.amount * mult;
+      return sum + cv(i, 'amount') * mult;
     }, 0);
 
   const markPaid = async (id: string, name: string) => {
@@ -89,7 +89,7 @@ export default function Recurring() {
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Body style={{ fontFamily: font.displayBold, color: r.type === 'income' ? colors.success : colors.onSurface }}>
-                      {r.type === 'income' ? '+' : '-'}{formatMoney(r.amount, cur)}
+                      {r.type === 'income' ? '+' : '-'}{formatMoney(cv(r, 'amount'), cur)}
                     </Body>
                     <Body muted style={{ fontSize: 11, marginTop: 2 }}>{FREQ_LABEL[r.frequency]}</Body>
                   </View>

@@ -7,7 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { usePayday } from '@/src/hooks/use-payday';
-import { spacing, radius, font, formatMoneyFull, formatMoney } from '@/src/theme/tokens';
+import { spacing, radius, font, formatMoneyFull, formatMoney, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { storage } from '@/src/utils/storage';
 import { Screen, Card, H1, H2, Body, Label, DisplayNumber, ProgressRing, Chip, EmptyState, Caption } from '@/src/components/ui';
@@ -41,7 +41,7 @@ export default function Home() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
-  const { info: payday } = usePayday(user?.payday_day);
+  const { info: payday } = usePayday(user?.payday_day, user?.work_week);
 
   const load = useCallback(async (useCache = true) => {
     if (useCache) {
@@ -90,7 +90,7 @@ export default function Home() {
 
   const cur = user?.currency || 'USD';
   const shownTxs = filter === 'all' ? txs : txs.filter((t) => t.type === filter);
-  const walletBalance = wallets.reduce((sum: number, wallet: any) => sum + (Number(wallet.balance) || 0), 0);
+  const walletBalance = wallets.reduce((sum: number, wallet: any) => sum + (Number(wallet.converted_balance ?? wallet.balance) || 0), 0);
   const monthIncome = txs.reduce((sum: number, tx: any) => sum + ((tx.type === 'income' && Number(tx.amount)) || 0), 0);
   const monthExpense = txs.reduce((sum: number, tx: any) => sum + ((tx.type === 'expense' && Number(tx.amount)) || 0), 0);
   const derivedSummary = {
@@ -323,7 +323,7 @@ export default function Home() {
                         <Body style={{ fontFamily: font.textMedium }}>{r.name}</Body>
                         <Body style={{ fontSize: 12, marginTop: 2, color: dueColor }}>{dueText}</Body>
                       </View>
-                      <Body style={{ fontFamily: font.displayBold }}>{formatMoney(r.amount, cur)}</Body>
+                      <Body style={{ fontFamily: font.displayBold }}>{formatMoney(cv(r, 'amount'), cur)}</Body>
                     </TouchableOpacity>
                   );
                 })}

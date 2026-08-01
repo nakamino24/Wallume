@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, font, formatMoney, formatMoneyFull } from '@/src/theme/tokens';
+import { spacing, font, formatMoney, formatMoneyFull, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, Button, Input, ProgressBar, DisplayNumber } from '@/src/components/ui';
 
@@ -27,8 +27,10 @@ export default function GoalDetail() {
   if (!goal) return <Screen><SafeAreaView><Body style={{ padding: spacing.xl }}>Loading…</Body></SafeAreaView></Screen>;
 
   const cur = user?.currency || 'USD';
-  const p = goal.target_amount > 0 ? Math.min(1, goal.saved_amount / goal.target_amount) : 0;
-  const remaining = Math.max(0, goal.target_amount - goal.saved_amount);
+  const saved = cv(goal, 'saved_amount');
+  const target = cv(goal, 'target_amount');
+  const p = target > 0 ? Math.min(1, saved / target) : 0;
+  const remaining = Math.max(0, target - saved);
 
   const contribute = async () => {
     const v = parseFloat(amt);
@@ -55,8 +57,8 @@ export default function GoalDetail() {
         <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.md }}>
           <Card>
             <Label>Saved</Label>
-            <DisplayNumber size={38} style={{ marginTop: 6 }}>{formatMoneyFull(goal.saved_amount, cur)}</DisplayNumber>
-            <Body muted style={{ marginTop: 6 }}>of {formatMoneyFull(goal.target_amount, cur)} target</Body>
+            <DisplayNumber size={38} style={{ marginTop: 6 }}>{formatMoneyFull(saved, cur)}</DisplayNumber>
+            <Body muted style={{ marginTop: 6 }}>of {formatMoneyFull(target, cur)} target</Body>
             <View style={{ marginTop: spacing.md }}>
               <ProgressBar progress={p} height={10} />
             </View>

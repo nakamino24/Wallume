@@ -11,7 +11,7 @@ from app.repositories.repos import (
     CategoryRepository,
 )
 from app.services.auth_service import AuthService
-from app.services.domain_services import DebtService
+from app.services.domain_services import DebtService, FxService
 from app.utils.helpers import new_id, now_utc, advance_date
 
 auth_service = AuthService()
@@ -25,6 +25,7 @@ tx_repo = TransactionRepository()
 @budgets_router.get("")
 async def list_budgets(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
+    home_ccy = u.get("currency", "USD")
     items = await budgets_repo.find_by_user(u["user_id"])
     month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     month_key = month_start.strftime("%Y-%m-%d")
@@ -41,13 +42,15 @@ async def list_budgets(authorization: Optional[str] = Header(None)):
     spent = {r["_id"]: round(r["total"], 2) for r in await tx_repo.aggregate(pipeline)}
     for b in items:
         b["spent"] = spent.get(b["category"], 0.0)
+    await FxService.convert_items(items, home_ccy, ["amount", "spent"])
     return {"success": True, "data": {"budgets": items}}
 
 
 @budgets_router.post("")
 async def create_budget(payload: BudgetCreate, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    doc = {"id": new_id("bud"), "user_id": u["user_id"], **payload.model_dump(), "created_at": now_utc()}
+    doc = {"id": new_id("bud"), "user_id": u["user_id"], "currency": payload.currency or u.get("currency", "USD"),
+           **payload.model_dump(exclude={"currency"}), "created_at": now_utc()}
     await budgets_repo.insert_one(doc)
     return {"success": True, "data": {"budget": {k: v for k, v in doc.items() if k != "_id"}}}
 
@@ -68,13 +71,15 @@ goals_repo = GoalRepository()
 async def list_goals(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     items = await goals_repo.find_by_user(u["user_id"])
+    await FxService.convert_items(items, u.get("currency", "USD"), ["saved_amount", "target_amount"])
     return {"success": True, "data": {"goals": items}}
 
 
 @goals_router.post("")
 async def create_goal(payload: GoalCreate, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    doc = {"id": new_id("goal"), "user_id": u["user_id"], **payload.model_dump(), "created_at": now_utc()}
+    doc = {"id": new_id("goal"), "user_id": u["user_id"], "currency": payload.currency or u.get("currency", "USD"),
+           **payload.model_dump(exclude={"currency"}), "created_at": now_utc()}
     await goals_repo.insert_one(doc)
     return {"success": True, "data": {"goal": {k: v for k, v in doc.items() if k != "_id"}}}
 
@@ -109,7 +114,14 @@ _PLAN_TEMPLATES = {
 @plans_router.get("")
 async def list_plans(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
+    home_ccy = u.get("currency", "USD")
     items = await plans_repo.find_by_user(u["user_id"])
+    for p in items:
+        await FxService.convert_item(p, home_ccy, ["total_budget"])
+        p_ccy = p.get("currency") or home_ccy
+        for it in p.get("items", []):
+            it["currency"] = p_ccy
+            await FxService.convert_item(it, home_ccy, ["amount", "paid"])
     return {"success": True, "data": {"plans": items}}
 
 
@@ -118,7 +130,8 @@ async def create_plan(payload: PlanCreate, authorization: Optional[str] = Header
     u = await auth_service.get_current_user(authorization)
     items = [{"id": new_id("it"), "label": lbl, "amount": 0.0, "paid": 0.0, "done": False}
              for lbl in _PLAN_TEMPLATES.get(payload.kind, [])]
-    doc = {"id": new_id("plan"), "user_id": u["user_id"], **payload.model_dump(), "items": items, "created_at": now_utc()}
+    doc = {"id": new_id("plan"), "user_id": u["user_id"], "currency": payload.currency or u.get("currency", "USD"),
+           **payload.model_dump(exclude={"currency"}), "items": items, "created_at": now_utc()}
     await plans_repo.insert_one(doc)
     return {"success": True, "data": {"plan": {k: v for k, v in doc.items() if k != "_id"}}}
 
@@ -149,13 +162,15 @@ wallets_repo = WalletRepository()
 async def list_debts(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     items = await debts_repo.find_by_user(u["user_id"])
+    await FxService.convert_items(items, u.get("currency", "USD"), ["remaining", "principal"])
     return {"success": True, "data": {"debts": items}}
 
 
 @debts_router.post("")
 async def create_debt(payload: DebtCreate, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    doc = {"id": new_id("debt"), "user_id": u["user_id"], **payload.model_dump(), "created_at": now_utc()}
+    doc = {"id": new_id("debt"), "user_id": u["user_id"], "currency": payload.currency or u.get("currency", "USD"),
+           **payload.model_dump(exclude={"currency"}), "created_at": now_utc()}
     await debts_repo.insert_one(doc)
     return {"success": True, "data": {"debt": {k: v for k, v in doc.items() if k != "_id"}}}
 
@@ -185,10 +200,18 @@ async def delete_debt(debt_id: str, authorization: Optional[str] = Header(None))
 @debts_router.get("/payoff-plan")
 async def debts_payoff_plan(extra_monthly: float = 0.0, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
+    home_ccy = u.get("currency", "USD")
     debts = await debts_repo.find_by_user(u["user_id"])
     svc = DebtService()
     if not debts:
         return {"success": True, "data": {"avalanche": None, "snowball": None, "has_debts": False}}
+    # Convert each debt into the user's home currency so the simulation's
+    # interest/balance figures are all in the displayed currency.
+    await FxService.convert_items(debts, home_ccy, ["remaining", "principal", "monthly_payment"])
+    for d in debts:
+        d["remaining"] = d.get("converted_remaining", d.get("remaining"))
+        d["principal"] = d.get("converted_principal", d.get("principal"))
+        d["monthly_payment"] = d.get("converted_monthly_payment", d.get("monthly_payment"))
     avalanche = svc.simulate_payoff(debts, "avalanche", extra_monthly)
     snowball = svc.simulate_payoff(debts, "snowball", extra_monthly)
     return {
@@ -211,13 +234,15 @@ investments_repo = InvestmentRepository()
 async def list_investments(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     items = await investments_repo.find_by_user(u["user_id"])
+    await FxService.convert_items(items, u.get("currency", "USD"), ["avg_cost", "current_price"])
     return {"success": True, "data": {"investments": items}}
 
 
 @investments_router.post("")
 async def create_investment(payload: InvestmentCreate, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    doc = {"id": new_id("inv"), "user_id": u["user_id"], **payload.model_dump(), "created_at": now_utc()}
+    doc = {"id": new_id("inv"), "user_id": u["user_id"], "currency": payload.currency or u.get("currency", "USD"),
+           **payload.model_dump(exclude={"currency"}), "created_at": now_utc()}
     await investments_repo.insert_one(doc)
     return {"success": True, "data": {"investment": {k: v for k, v in doc.items() if k != "_id"}}}
 
@@ -253,13 +278,15 @@ assets_repo = AssetRepository()
 async def list_assets(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     items = await assets_repo.find_by_user(u["user_id"])
+    await FxService.convert_items(items, u.get("currency", "USD"), ["value"])
     return {"success": True, "data": {"assets": items}}
 
 
 @assets_router.post("")
 async def create_asset(payload: AssetCreate, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    doc = {"id": new_id("as"), "user_id": u["user_id"], **payload.model_dump(), "created_at": now_utc()}
+    doc = {"id": new_id("as"), "user_id": u["user_id"], "currency": payload.currency or u.get("currency", "USD"),
+           **payload.model_dump(exclude={"currency"}), "created_at": now_utc()}
     await assets_repo.insert_one(doc)
     return {"success": True, "data": {"asset": {k: v for k, v in doc.items() if k != "_id"}}}
 
@@ -280,6 +307,7 @@ recurring_repo = RecurringRepository()
 async def list_recurring(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     items = await recurring_repo.find_by_user(u["user_id"])
+    await FxService.convert_items(items, u.get("currency", "USD"), ["amount"])
     today = now_utc().date()
     for r in items:
         try:
@@ -293,7 +321,8 @@ async def list_recurring(authorization: Optional[str] = Header(None)):
 @recurring_router.post("")
 async def create_recurring(payload: RecurringCreate, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    doc = {"id": new_id("rec"), "user_id": u["user_id"], **payload.model_dump(), "created_at": now_utc()}
+    doc = {"id": new_id("rec"), "user_id": u["user_id"], "currency": payload.currency or u.get("currency", "USD"),
+           **payload.model_dump(exclude={"currency"}), "created_at": now_utc()}
     await recurring_repo.insert_one(doc)
     return {"success": True, "data": {"recurring": {k: v for k, v in doc.items() if k != "_id"}}}
 

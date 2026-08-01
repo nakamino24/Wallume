@@ -9,6 +9,7 @@ class SignupRequest(BaseModel):
     name: str
     payday_day: Optional[int] = None
     currency: Optional[str] = None
+    work_week: Optional[int] = None
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -27,6 +28,7 @@ class UserUpdateRequest(BaseModel):
     theme: Optional[str] = None
     picture: Optional[str] = None
     payday_day: Optional[int] = None
+    work_week: Optional[int] = None
 
 # --- Category ---
 class CategoryCreate(BaseModel):
@@ -40,7 +42,7 @@ class WalletCreate(BaseModel):
     name: str
     type: Literal["cash", "bank", "credit_card", "e_wallet", "savings", "investment"]
     balance: float = 0.0
-    currency: str = "USD"
+    currency: Optional[str] = None
     color: Optional[str] = None
     icon: Optional[str] = None
 
@@ -61,6 +63,7 @@ class BudgetCreate(BaseModel):
     period: Literal["monthly", "weekly", "yearly"] = "monthly"
     icon: Optional[str] = None
     color: Optional[str] = None
+    currency: Optional[str] = None
 
 # --- Goal ---
 class GoalCreate(BaseModel):
@@ -71,6 +74,7 @@ class GoalCreate(BaseModel):
     icon: Optional[str] = None
     color: Optional[str] = None
     kind: Literal["general", "emergency", "car", "vacation", "education", "gadget", "business"] = "general"
+    currency: Optional[str] = None
 
 class GoalContribute(BaseModel):
     amount: float
@@ -82,6 +86,7 @@ class PlanCreate(BaseModel):
     total_budget: float
     target_date: Optional[str] = None
     notes: Optional[str] = ""
+    currency: Optional[str] = None
 
 # --- Debt ---
 class DebtCreate(BaseModel):
@@ -92,6 +97,7 @@ class DebtCreate(BaseModel):
     monthly_payment: float = 0.0
     due_day: Optional[int] = None
     kind: Literal["loan", "credit_card", "mortgage", "personal", "other"] = "loan"
+    currency: Optional[str] = None
 
 # --- Investment ---
 class InvestmentCreate(BaseModel):
@@ -108,12 +114,14 @@ class InvestmentCreate(BaseModel):
     broker: Optional[str] = None
     purchase_date: Optional[str] = None
     notes: Optional[str] = None
+    currency: Optional[str] = None
 
 # --- Asset ---
 class AssetCreate(BaseModel):
     name: str
     value: float
     kind: Literal["real_estate", "vehicle", "gadget", "cash", "receivable", "other"] = "other"
+    currency: Optional[str] = None
 
 # --- Recurring ---
 class RecurringCreate(BaseModel):
@@ -126,6 +134,7 @@ class RecurringCreate(BaseModel):
     next_date: str
     note: Optional[str] = ""
     active: bool = True
+    currency: Optional[str] = None
 
 # --- Coach ---
 class CoachChatRequest(BaseModel):

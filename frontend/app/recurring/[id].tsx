@@ -7,7 +7,7 @@ import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney } from '@/src/theme/tokens';
+import { spacing, radius, font, formatMoney, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, Divider } from '@/src/components/ui';
 
@@ -88,7 +88,7 @@ export default function RecurringDetail() {
           <Card style={{ marginTop: spacing.lg }}>
             <Label>Amount</Label>
             <H1 style={{ marginTop: 4, color: item.type === 'income' ? colors.success : colors.onSurface }}>
-              {item.type === 'income' ? '+' : '-'}{formatMoney(item.amount, cur)}
+              {item.type === 'income' ? '+' : '-'}{formatMoney(cv(item, 'amount'), cur)}
             </H1>
             <Body style={{ color: dueColor, fontFamily: font.textBold, marginTop: spacing.sm }}>{dueText}</Body>
 
