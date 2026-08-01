@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ViewStyle,
 import type { TextProps } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, radius, font } from '@/src/theme/tokens';
+import { scale } from '@/src/utils/responsive';
 import Svg, { Circle } from 'react-native-svg';
 
 export function Screen({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
@@ -40,7 +41,7 @@ export function DisplayNumber({ children, size = 40, style, color }: {
       style={[{
         color: color || colors.onSurface,
         fontFamily: font.displayBold,
-        fontSize: size,
+        fontSize: scale(size),
         letterSpacing: -0.5,
         fontWeight: '600',
       }, style]}
@@ -50,23 +51,23 @@ export function DisplayNumber({ children, size = 40, style, color }: {
 
 export function H1({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
   const { colors } = useTheme();
-  return <Text style={[{ color: colors.onSurface, fontFamily: font.displayBold, fontSize: font.sizes.xl, fontWeight: '600', letterSpacing: -0.3 }, style]}>{children}</Text>;
+  return <Text style={[{ color: colors.onSurface, fontFamily: font.displayBold, fontSize: scale(font.sizes.xl), fontWeight: '600', letterSpacing: -0.3, lineHeight: scale(32) }, style]}>{children}</Text>;
 }
 export function H2({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
   const { colors } = useTheme();
-  return <Text style={[{ color: colors.onSurface, fontFamily: font.displayBold, fontSize: font.sizes.lg, fontWeight: '600', letterSpacing: -0.2 }, style]}>{children}</Text>;
+  return <Text style={[{ color: colors.onSurface, fontFamily: font.displayBold, fontSize: scale(font.sizes.lg), fontWeight: '600', letterSpacing: -0.2, lineHeight: scale(22) }, style]}>{children}</Text>;
 }
 export function Body({ children, style, muted, testID, ...rest }: TextProps & { children: React.ReactNode; style?: StyleProp<TextStyle>; muted?: boolean; testID?: string }) {
   const { colors } = useTheme();
-  return <Text testID={testID} style={[{ color: muted ? colors.muted : colors.onSurface2, fontFamily: font.text, fontSize: font.sizes.base, lineHeight: 22 }, style]} {...rest}>{children}</Text>;
+  return <Text testID={testID} style={[{ color: muted ? colors.muted : colors.onSurface2, fontFamily: font.text, fontSize: scale(font.sizes.base), lineHeight: scale(22) }, style]} {...rest}>{children}</Text>;
 }
 export function Caption({ children, style, muted }: { children: React.ReactNode; style?: StyleProp<TextStyle>; muted?: boolean }) {
   const { colors } = useTheme();
-  return <Text style={[{ color: muted ? colors.muted : colors.onSurface3, fontFamily: font.text, fontSize: font.sizes.sm }, style]}>{children}</Text>;
+  return <Text style={[{ color: muted ? colors.muted : colors.onSurface3, fontFamily: font.text, fontSize: scale(font.sizes.sm), lineHeight: scale(16) }, style]}>{children}</Text>;
 }
 export function Label({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
   const { colors } = useTheme();
-  return <Text style={[{ color: colors.muted, fontFamily: font.textMedium, fontSize: 11, letterSpacing: 0.5 }, style]}>{children}</Text>;
+  return <Text style={[{ color: colors.muted, fontFamily: font.textMedium, fontSize: scale(11), letterSpacing: 0.5, lineHeight: scale(14) }, style]}>{children}</Text>;
 }
 
 // Button

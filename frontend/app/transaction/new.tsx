@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
+import { scale } from '@/src/utils/responsive';
 import { api } from '@/src/api/client';
 import { Screen, H1, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { ErrorBanner } from '@/src/components/ErrorBanner';
@@ -116,7 +117,7 @@ export default function NewTransaction() {
             <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
               <Label>Amount</Label>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: spacing.sm }}>
-                <Body style={{ fontSize: 24, marginRight: 4, fontFamily: font.displayBold }}>{currencySymbol(cur)}</Body>
+                <Body style={{ fontSize: scale(24), marginRight: 4, fontFamily: font.displayBold }}>{currencySymbol(cur)}</Body>
                 <Input
                   testID="tx-amount"
                   keyboardType="decimal-pad"
@@ -124,7 +125,7 @@ export default function NewTransaction() {
                   onChangeText={setAmount}
                   placeholder="0"
                   autoFocus
-                  style={{ fontSize: 44, fontFamily: font.displayBold, textAlign: 'center', backgroundColor: 'transparent', borderWidth: 0, minWidth: 160, paddingVertical: 4 }}
+                  style={{ fontSize: scale(44), fontFamily: font.displayBold, textAlign: 'center', backgroundColor: 'transparent', borderWidth: 0, minWidth: 160, paddingVertical: 4 }}
                 />
               </View>
             </View>

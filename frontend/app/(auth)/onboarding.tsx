@@ -10,6 +10,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { useOnboarding } from '@/src/hooks/use-onboarding';
 import { font, spacing, radius } from '@/src/theme/tokens';
+import { scale } from '@/src/utils/responsive';
 import { Button, Body, Chip } from '@/src/components/ui';
 
 const { width } = Dimensions.get('window');
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: scale(28),
     textAlign: 'center',
     marginBottom: spacing.md,
   },

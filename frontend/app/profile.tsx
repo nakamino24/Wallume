@@ -14,6 +14,7 @@ import { api } from '@/src/api/client';
 import { t, setLocale } from '@/src/lib/i18n';
 import { getNotifSettings, setNotifSettings, requestNotificationPermission, type NotifSettings } from '@/src/utils/notifications';
 import { spacing, radius, font, CURRENCIES } from '@/src/theme/tokens';
+import { scale } from '@/src/utils/responsive';
 import { Screen, Card, H1, H2, Body, Label, Button, Chip } from '@/src/components/ui';
 
 export default function Profile() {
@@ -94,7 +95,7 @@ export default function Profile() {
         <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.md, paddingBottom: 60 }}>
           <Card style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
             <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
-              <Body style={{ color: colors.onBrand, fontFamily: font.displayBold, fontSize: 28 }}>{(user?.name || 'M')[0].toUpperCase()}</Body>
+              <Body style={{ color: colors.onBrand, fontFamily: font.displayBold, fontSize: scale(28) }}>{(user?.name || 'M')[0].toUpperCase()}</Body>
             </View>
             <H1 style={{ marginTop: spacing.md }}>{user?.name}</H1>
             <Body muted>{user?.email}</Body>

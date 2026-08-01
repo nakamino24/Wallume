@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { font, spacing } from '@/src/theme/tokens';
+import { scale } from '@/src/utils/responsive';
 import { Screen, Body, Button, Input } from '@/src/components/ui';
 
 export default function Login() {
@@ -72,7 +73,7 @@ export default function Login() {
               <View style={[styles.logoBadge, { backgroundColor: colors.brand }]}>
                 <Body style={{ color: '#FFFFFF', fontFamily: font.displayBold, fontSize: 20, fontWeight: '600', letterSpacing: -0.5 }}>W</Body>
               </View>
-              <Body style={{ fontFamily: font.displayBold, fontSize: font.sizes.xl, color: colors.onSurface, fontWeight: '600', letterSpacing: -0.3 }}>
+              <Body style={{ fontFamily: font.displayBold, fontSize: scale(24), color: colors.onSurface, fontWeight: '600', letterSpacing: -0.3 }}>
                 Welcome back.
               </Body>
               <Body muted style={{ marginTop: spacing.xs, fontSize: font.sizes.base }}>Sign in to Wallume</Body>

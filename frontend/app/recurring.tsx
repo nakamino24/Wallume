@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, formatMoney, cv } from '@/src/theme/tokens';
+import { scale } from '@/src/utils/responsive';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, Button, EmptyState } from '@/src/components/ui';
 
@@ -65,8 +66,8 @@ export default function Recurring() {
         <View style={{ padding: spacing.xl, paddingBottom: 0 }}>
           <Card style={{ backgroundColor: colors.inverse }}>
             <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Recurring spend</Label>
-            <Text style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 26, lineHeight: 32, marginTop: 4 }}>
-              {formatMoney(monthlyTotal, cur)}<Text style={{ color: colors.onInverse, opacity: 0.6, fontSize: 14, lineHeight: 18 }}> /month equiv.</Text>
+            <Text style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: scale(26), lineHeight: scale(32), marginTop: 4 }}>
+              {formatMoney(monthlyTotal, cur)}<Text style={{ color: colors.onInverse, opacity: 0.6, fontSize: scale(14), lineHeight: scale(18) }}> /month equiv.</Text>
             </Text>
           </Card>
         </View>

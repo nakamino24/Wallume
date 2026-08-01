@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, formatMoneyFull } from '@/src/theme/tokens';
+import { scale } from '@/src/utils/responsive';
 import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip, Card } from '@/src/components/ui';
 import { confirmAction } from '@/src/utils/confirm';
@@ -95,7 +96,7 @@ export default function EditWallet() {
           <ScrollView contentContainerStyle={{ padding: spacing.xl }} keyboardShouldPersistTaps="handled">
             <Card style={{ marginBottom: spacing.md }}>
               <Label>Current balance</Label>
-              <Body style={{ fontSize: 24, fontFamily: 'SpaceGrotesk-Bold', marginTop: 4 }}>
+              <Body style={{ fontSize: scale(24), fontFamily: 'SpaceGrotesk-Bold', marginTop: 4 }}>
                 {formatMoneyFull(wallet.converted_balance ?? (wallet.balance || 0), wallet.home_currency || cur)}
               </Body>
             </Card>

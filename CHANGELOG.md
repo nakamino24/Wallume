@@ -2,6 +2,12 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.1a] — 2026-08-01
+
+### Fixed
+- Responsive layout: text and components now scale with screen width via a `scale()` utility (design reference 390dp). Typography in the shared design system and large inline values (transaction amount, net-worth hero, payday/title sizes) scale across common Android aspect ratios (18:9, 19.5:9, 20:9), preventing clipped/overlapping text on tall or narrow screens (e.g. Samsung).
+- Bottom navigation bar now respects the system navigation bar inset (`useSafeAreaInsets`). The tab bar height and padding include `insets.bottom`, so icons are no longer covered by the device's 3-button or gesture navigation bar.
+
 ## [1.0.0-beta] — 2026-08-01 (revision 2)
 
 ### Changed

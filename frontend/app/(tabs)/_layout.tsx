@@ -3,6 +3,7 @@ import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { View, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
@@ -12,6 +13,7 @@ export default function TabsLayout() {
   const { colors } = useTheme();
   const { user, loading } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!loading && !user) router.replace('/(auth)/login');
@@ -34,8 +36,8 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface2,
           borderTopColor: colors.border,
-          height: Platform.OS === 'ios' ? 88 : 60,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 8,
+          height: (Platform.OS === 'ios' ? 60 : 56) + insets.bottom,
+          paddingBottom: insets.bottom + (Platform.OS === 'ios' ? 18 : 8),
           paddingTop: 8,
         },
       }}

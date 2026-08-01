@@ -5,6 +5,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useOnboarding } from '@/src/hooks/use-onboarding';
 import { font, radius, spacing } from '@/src/theme/tokens';
+import { scale } from '@/src/utils/responsive';
 
 export default function Index() {
   const { user, loading } = useAuth();
@@ -51,13 +52,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   logoText: {
-    fontSize: 24,
+    fontSize: scale(24),
     fontFamily: font.displayBold,
     color: '#FFFFFF',
     fontWeight: '600',
   },
   title: {
-    fontSize: font.sizes.xl,
+    fontSize: scale(24),
     letterSpacing: -0.3,
     marginBottom: spacing.xs,
   },

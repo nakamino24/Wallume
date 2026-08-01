@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font } from '@/src/theme/tokens';
+import { scale } from '@/src/utils/responsive';
 import { Screen, Body, Button, Input } from '@/src/components/ui';
 
 export default function Signup() {
@@ -41,7 +42,7 @@ export default function Signup() {
               <View style={[{ width: 44, height: 44, borderRadius: 8, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg }]}>
                 <Body style={{ color: '#FFFFFF', fontFamily: font.displayBold, fontSize: 20, fontWeight: '600', letterSpacing: -0.5 }}>W</Body>
               </View>
-              <Body style={{ fontFamily: font.displayBold, fontSize: font.sizes.xl, color: colors.onSurface, fontWeight: '600', letterSpacing: -0.3 }}>
+              <Body style={{ fontFamily: font.displayBold, fontSize: scale(24), color: colors.onSurface, fontWeight: '600', letterSpacing: -0.3 }}>
                 Create your account.
               </Body>
               <Body muted style={{ marginTop: spacing.xs }}>Start tracking your finances in seconds.</Body>
