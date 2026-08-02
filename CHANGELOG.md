@@ -2,6 +2,13 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.2a] — 2026-08-02
+
+### Added
+- **Income Template Engine**: 18 occupation templates (Office Employee, Government/BUMN, Factory Worker, Nurse, Doctor, Pharmacist, Retail/SPG, Sales Executive, Freelancer, Consultant, Driver, Teacher/Lecturer, Business Owner, Content Creator, Investor, Student, Unemployed, Custom) stored as JSON config — profession-agnostic engine with 14 calculation methods, 8 frequencies, payment-date + weekend/holiday rules.
+- Onboarding income wizard (template pick → edit sources → schedule → forecast preview) with AI template suggestions via Groq.
+- Income source CRUD + reorder + forecast API, income sources visible/manageable from Profile.
+
 ## [1.0.1b] — 2026-08-01
 
 ### Added

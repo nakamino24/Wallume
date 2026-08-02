@@ -210,6 +210,16 @@ export default function Profile() {
             </View>
           </Card>
 
+          <Card onPress={() => router.push('/income-setup?mode=manage' as any)}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View>
+                <Body style={{ fontFamily: font.textBold }}>Income setup</Body>
+                <Body muted style={{ marginTop: 2, fontSize: 12 }}>Manage your income sources & forecast</Body>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+            </View>
+          </Card>
+
           <Card onPress={() => router.push('/reports')}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View>

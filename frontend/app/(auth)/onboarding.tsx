@@ -59,7 +59,7 @@ export default function Onboarding() {
         try { await updateProfile({ payday_day: paydayDay, work_week: workWeek }); } catch {}
       }
       await markDone();
-      router.replace('/(tabs)/home');
+      router.replace('/income-setup' as any);
     } else {
       scrollRef.current?.scrollTo({ x: width * (step + 1), animated: true });
       setStep((p) => p + 1);
