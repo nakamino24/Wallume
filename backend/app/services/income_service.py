@@ -40,14 +40,50 @@ class IncomeService:
         return items
 
     async def list_templates(self) -> list[dict]:
-        # Templates live as JSON config files — the DB is only for admin overrides.
-        return self._load_template_files()
+        # Base = JSON config files. DB overrides (admin CRUD) win by id.
+        items = self._load_template_files()
+        coll = await self.templates._collection()
+        db_items = await coll.find({}, {"_id": 0}).to_list(500)
+        by_id = {i["id"]: i for i in db_items}
+        merged = {i["id"]: i for i in items}
+        merged.update(by_id)
+        return sorted(merged.values(), key=lambda t: t.get("name", ""))
 
     async def get_template(self, template_id: str) -> dict:
+        coll = await self.templates._collection()
+        db_t = await coll.find_one({"id": template_id}, {"_id": 0})
+        if db_t:
+            return db_t
         for t in self._load_template_files():
             if t.get("id") == template_id:
                 return t
         raise HTTPException(404, "Template not found")
+
+    # ----- Admin template CRUD (gated by admin email) -----
+    async def _require_admin(self, authorization: Optional[str]) -> dict:
+        u = await self.auth.get_current_user(authorization)
+        if u.get("email") not in settings.admin_emails:
+            raise HTTPException(403, "Admin access required")
+        return u
+
+    async def admin_create_template(self, authorization: Optional[str], body: dict) -> dict:
+        await self._require_admin(authorization)
+        tid = body.get("id") or new_id("tmpl")
+        doc = {**body, "id": tid, "created_at": now_utc()}
+        await self.templates.insert_one(doc)
+        return {k: v for k, v in doc.items() if k != "_id"}
+
+    async def admin_update_template(self, authorization: Optional[str], template_id: str, body: dict) -> dict:
+        await self._require_admin(authorization)
+        await self.templates.update_one({"id": template_id}, {"$set": body})
+        doc = await self.templates.find_one({"id": template_id})
+        if not doc:
+            raise HTTPException(404, "Template not found")
+        return doc
+
+    async def admin_delete_template(self, authorization: Optional[str], template_id: str) -> None:
+        await self._require_admin(authorization)
+        await self.templates.delete_one({"id": template_id}, hard=True)
 
     # ----- Apply template -> user income sources -----
     async def apply_template(self, authorization: Optional[str], template_id: str, override_sources: Optional[list[dict]], work_week: Optional[int], payday_day: Optional[int]) -> dict:

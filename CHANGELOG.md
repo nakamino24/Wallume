@@ -8,6 +8,7 @@ All notable changes to Wallume are documented here. Format based on [Keep a Chan
 - **Income Template Engine**: 18 occupation templates (Office Employee, Government/BUMN, Factory Worker, Nurse, Doctor, Pharmacist, Retail/SPG, Sales Executive, Freelancer, Consultant, Driver, Teacher/Lecturer, Business Owner, Content Creator, Investor, Student, Unemployed, Custom) stored as JSON config — profession-agnostic engine with 14 calculation methods, 8 frequencies, payment-date + weekend/holiday rules.
 - Onboarding income wizard (template pick → edit sources → schedule → forecast preview) with AI template suggestions via Groq.
 - Income source CRUD + reorder + forecast API, income sources visible/manageable from Profile.
+- Admin template CRUD (create/update/delete) via `/api/admin/income-templates`, gated by `ADMIN_EMAILS` env; DB overrides merge over JSON templates.
 
 ## [1.0.1b] — 2026-08-01
 

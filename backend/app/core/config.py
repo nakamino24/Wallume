@@ -29,6 +29,9 @@ class Settings(BaseSettings):
         "http://localhost:8001",
     ]
 
+    # Admin (template management) — comma-separated emails in env ADMIN_EMAILS
+    admin_emails: list[str] = []
+
     model_config = {"env_file": Path(__file__).parent.parent.parent / ".env", "env_file_encoding": "utf-8"}
 
 

@@ -93,6 +93,17 @@ Rules, Currency, Tax Status, Recurring or One-Time**.
 3. To verify: `GET /api/income/templates` should list it, and
    `POST /api/income/templates/apply?template_id=<your_id>` should apply it.
 
+### Runtime admin CRUD (DB overrides)
+
+Templates can also be managed at runtime (DB overrides win over JSON by `id`).
+Gated to admin emails set via the `ADMIN_EMAILS` env var (comma-separated):
+
+```
+POST   /api/admin/income-templates           create
+PATCH  /api/admin/income-templates/{id}      update
+DELETE /api/admin/income-templates/{id}      delete
+```
+
 The engine's profession-agnostic guarantee is tested in
 `tests/test_income_engine.py::TestEngineIsProfessionAgnostic`.
 

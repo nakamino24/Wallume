@@ -69,3 +69,25 @@ async def reorder_sources(body: dict[str, Any], authorization: Optional[str] = H
 async def forecast(from_date: Optional[str] = None, authorization: Optional[str] = Header(None)):
     result = await svc.forecast(authorization, from_date)
     return {"success": True, "data": result}
+
+
+# ----- Admin template CRUD (email-gated) -----
+admin_router = APIRouter(prefix="/admin/income-templates")
+
+
+@admin_router.post("")
+async def admin_create_template(body: dict[str, Any], authorization: Optional[str] = Header(None)):
+    doc = await svc.admin_create_template(authorization, body)
+    return {"success": True, "data": {"template": doc}}
+
+
+@admin_router.patch("/{template_id}")
+async def admin_update_template(template_id: str, body: dict[str, Any], authorization: Optional[str] = Header(None)):
+    doc = await svc.admin_update_template(authorization, template_id, body)
+    return {"success": True, "data": {"template": doc}}
+
+
+@admin_router.delete("/{template_id}")
+async def admin_delete_template(template_id: str, authorization: Optional[str] = Header(None)):
+    await svc.admin_delete_template(authorization, template_id)
+    return {"success": True, "data": None}
