@@ -21,15 +21,24 @@ async def _load():
 
 
 class TestTemplateLoading:
-    def test_all_18_templates_present(self, templates):
+    def test_all_25_templates_present(self, templates):
         ids = {t["id"] for t in templates}
         expected = {
-            "office_employee", "government_bumn", "factory_worker", "nurse",
-            "doctor", "pharmacist", "retail_spg", "sales_executive", "freelancer",
-            "consultant", "driver", "teacher_lecturer", "business_owner",
-            "content_creator", "investor", "student", "unemployed", "custom",
+            "office_employee", "government_asn", "bumn_employee", "bank_employee",
+            "factory_worker", "healthcare_worker", "doctor", "nurse", "pharmacist",
+            "retail_spg", "store_crew", "sales_executive", "customer_service",
+            "teacher", "lecturer", "freelancer", "consultant", "software_engineer",
+            "driver_courier", "business_owner", "content_creator", "investor",
+            "student", "unemployed", "other",
         }
         assert expected.issubset(ids)
+
+    def test_every_template_has_metadata(self, templates):
+        for t in templates:
+            assert "confidence" in t and 0 <= t["confidence"] <= 100, t["id"]
+            assert t.get("country") == "ID", t["id"]
+            assert t.get("category"), t["id"]
+            assert t.get("icon"), t["id"]
 
     def test_every_source_has_required_fields(self, templates):
         for t in templates:
@@ -38,9 +47,10 @@ class TestTemplateLoading:
                               "expectedPaymentDate", "currency", "taxStatus", "recurring"):
                     assert field in s, f"{t['id']}/{s.get('name')} missing {field}"
 
-    def test_custom_template_is_empty(self, templates):
-        custom = next(t for t in templates if t["id"] == "custom")
-        assert custom["incomeSources"] == []
+    def test_other_template_is_empty(self, templates):
+        other = next(t for t in templates if t["id"] == "other")
+        assert other["incomeSources"] == []
+        assert other["confidence"] < 50
 
 
 class TestCalculationMethods:
@@ -85,6 +95,16 @@ class TestNextPaymentDate:
         d = next_payment_date({"type": "fixed_date", "day": 21}, 7, date(2026, 8, 2))
         # Aug 21 2026 is a Friday, no adjustment needed either way
         assert d == date(2026, 8, 21)
+
+    def test_weekend_rule_applies_to_user_edited_date(self):
+        # User overrides salary date to day 30. Aug 30 2026 is a Sunday; the
+        # weekend rule must still shift it to the previous business day (Fri 28).
+        from app.services.income_engine import apply_weekend_rule
+        adjusted = apply_weekend_rule(
+            date(2026, 8, 30),
+            {"type": "weekend_rule", "value": "previous_business_day"}, 5,
+        )
+        assert adjusted == date(2026, 8, 28)
 
 
 class TestEngineIsProfessionAgnostic:

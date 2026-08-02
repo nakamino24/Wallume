@@ -1,12 +1,16 @@
 {
-  "id": "teacher_lecturer",
-  "name": "Teacher / Lecturer",
-  "description": "Academic with salary plus teaching hours.",
+  "id": "government_asn",
+  "name": "Government Employee (ASN)",
+  "description": "Government Employee (ASN) preset.",
+  "country": "ID",
+  "category": "Government",
+  "icon": "business",
+  "confidence": 90,
   "workWeekDefault": 5,
   "paydayDayDefault": 25,
   "incomeSources": [
     {
-      "name": "Monthly Salary",
+      "name": "Base Salary",
       "calculationMethod": "fixed_amount",
       "frequency": "monthly",
       "expectedPaymentDate": {
@@ -22,33 +26,10 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 5500000
+      "recurring": true
     },
     {
-      "name": "Teaching Hours",
-      "calculationMethod": "hourly",
-      "frequency": "monthly",
-      "expectedPaymentDate": {
-        "type": "fixed_date",
-        "day": 25
-      },
-      "adjustmentRules": [
-        {
-          "type": "weekend_rule",
-          "value": "previous_business_day"
-        }
-      ],
-      "forecastRules": {
-        "avgHoursPerMonth": 24
-      },
-      "currency": "IDR",
-      "taxStatus": "taxable",
-      "recurring": true,
-      "hourlyRate": 75000
-    },
-    {
-      "name": "Honorarium",
+      "name": "Position Allowance",
       "calculationMethod": "fixed_amount",
       "frequency": "monthly",
       "expectedPaymentDate": {
@@ -64,11 +45,29 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 1000000
+      "recurring": true
     },
     {
-      "name": "Certification Allowance",
+      "name": "Performance Allowance",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true
+    },
+    {
+      "name": "Meal Allowance",
       "calculationMethod": "fixed_amount",
       "frequency": "monthly",
       "expectedPaymentDate": {
@@ -84,8 +83,7 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "nontaxable",
-      "recurring": true,
-      "amount": 250000
+      "recurring": true
     }
   ]
 }

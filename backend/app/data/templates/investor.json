@@ -1,7 +1,11 @@
 {
   "id": "investor",
   "name": "Investor",
-  "description": "Passive investment income.",
+  "description": "Investor preset.",
+  "country": "ID",
+  "category": "Self-Employed / Owner",
+  "icon": "pie-chart",
+  "confidence": 30,
   "workWeekDefault": 7,
   "paydayDayDefault": 25,
   "incomeSources": [
@@ -12,45 +16,16 @@
       "expectedPaymentDate": {
         "type": "company_policy"
       },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "avgPerQuarter": 3000000
-      },
-      "currency": "IDR",
-      "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 3000000
-    },
-    {
-      "name": "Bond Coupon",
-      "calculationMethod": "percentage",
-      "frequency": "annually",
-      "expectedPaymentDate": {
-        "type": "company_policy"
-      },
-      "adjustmentRules": [],
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "percentage": 6,
-      "percentageOf": "gross"
-    },
-    {
-      "name": "Interest",
-      "calculationMethod": "manual",
-      "frequency": "monthly",
-      "expectedPaymentDate": {
-        "type": "company_policy"
-      },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "avgPerMonth": 500000
-      },
-      "currency": "IDR",
-      "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 500000
+      "recurring": true
     },
     {
       "name": "Rental Income",
@@ -69,22 +44,25 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 4000000
+      "recurring": true
     },
     {
-      "name": "Capital Gain",
+      "name": "Interest",
       "calculationMethod": "manual",
-      "frequency": "custom",
+      "frequency": "monthly",
       "expectedPaymentDate": {
-        "type": "manual"
+        "type": "company_policy"
       },
-      "adjustmentRules": [],
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": false,
-      "amount": 0
+      "recurring": true
     }
   ]
 }

@@ -1,33 +1,30 @@
-import React, { useCallback, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Modal } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, H1, H2, Body, Label, Button, Input, Chip, EmptyState } from '@/src/components/ui';
+import { storage } from '@/src/utils/storage';
+import { Screen, H1, H2, Body, Label, Button, Chip } from '@/src/components/ui';
 import { useToast } from '@/src/components/Toast';
 
-type Step = 'pick' | 'suggest' | 'edit' | 'schedule' | 'preview';
+type Template = {
+  id: string; name: string; category: string; icon?: string;
+  confidence: number; workWeekDefault?: number; paydayDayDefault?: number;
+  incomeSources?: any[];
+};
 
-type Source = {
-  id?: string;
-  name: string;
-  calculationMethod: string;
-  frequency: string;
-  amount?: number;
-  hourlyRate?: number;
-  perVisit?: number;
-  perShift?: number;
-  perSale?: number;
-  perProject?: number;
-  percentage?: number;
-  percentageOf?: string;
-  forecastRules?: Record<string, number>;
-  recurring: boolean;
+const FAV_KEY = 'mf.incomeFavs';
+const RECENT_KEY = 'mf.incomeRecent';
+const CATEGORY_ICON: Record<string, string> = {
+  'Office / Professional': 'briefcase', Government: 'business', 'Blue Collar / Shift': 'construct',
+  Healthcare: 'medkit', Retail: 'cart', Education: 'school', 'Freelance / Gig': 'laptop',
+  'Self-Employed / Owner': 'storefront', 'Student / Other': 'book',
 };
 
 export default function IncomeSetup() {
@@ -38,16 +35,16 @@ export default function IncomeSetup() {
   const mode = params.mode === 'manage' ? 'manage' : 'onboarding';
   const toast = useToast();
 
-  const [step, setStep] = useState<Step>('pick');
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [jobText, setJobText] = useState('');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [selected, setSelected] = useState<any>(null);
-  const [sources, setSources] = useState<Source[]>([]);
-  const [workWeek, setWorkWeek] = useState<number>(user?.work_week || 5);
-  const [paydayDay, setPaydayDay] = useState<number>(user?.payday_day || 25);
+  const [step, setStep] = useState<'pick' | 'preview'>('pick');
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [query, setQuery] = useState('');
+  const [favs, setFavs] = useState<string[]>([]);
+  const [recent, setRecent] = useState<string[]>([]);
+  const [selected, setSelected] = useState<Template | null>(null);
+  const [applied, setApplied] = useState<any>(null);
   const [forecast, setForecast] = useState<any>(null);
+  const [paydayDay, setPaydayDay] = useState<number>(25);
+  const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const loadTemplates = useCallback(async () => {
@@ -56,51 +53,75 @@ export default function IncomeSetup() {
       setTemplates(r.templates || []);
     } catch {}
   }, []);
-  React.useEffect(() => { loadTemplates(); }, [loadTemplates]);
+  useEffect(() => { loadTemplates(); }, [loadTemplates]);
+  useEffect(() => {
+    (async () => {
+      const f = await storage.getItem<string>(FAV_KEY, '[]');
+      const rc = await storage.getItem<string>(RECENT_KEY, '[]');
+      try { setFavs(JSON.parse(f || '[]')); } catch { setFavs([]); }
+      try { setRecent(JSON.parse(rc || '[]')); } catch { setRecent([]); }
+    })();
+  }, []);
 
-  const suggest = async () => {
-    if (!jobText.trim()) return;
-    setLoading(true);
-    try {
-      const r = await api.suggestIncomeTemplates(jobText.trim());
-      setSuggestions(r.templates || []);
-    } catch { toast.show('Could not suggest templates', 'error'); }
-    finally { setLoading(false); }
+  const toggleFav = async (id: string) => {
+    const next = favs.includes(id) ? favs.filter((x) => x !== id) : [...favs, id];
+    setFavs(next);
+    await storage.setItem(FAV_KEY, JSON.stringify(next));
   };
 
-  const choose = (t: any) => {
+  const recordRecent = async (id: string) => {
+    const next = [id, ...recent.filter((x) => x !== id)].slice(0, 5);
+    setRecent(next);
+    await storage.setItem(RECENT_KEY, JSON.stringify(next));
+  };
+
+  // STEP 2 — auto-configuration: apply the preset immediately (no input).
+  const choose = async (t: Template) => {
     setSelected(t);
-    setSources((t.incomeSources || []).map((s: any) => ({ ...s })));
-    if (t.workWeekDefault) setWorkWeek(t.workWeekDefault);
-    if (t.paydayDayDefault) setPaydayDay(t.paydayDayDefault);
-    setStep('edit');
-  };
-
-  const updateSource = (idx: number, patch: Partial<Source>) => {
-    setSources((s) => s.map((x, i) => (i === idx ? { ...x, ...patch } : x)));
-  };
-
-  const applyAndPreview = async () => {
     setLoading(true);
     try {
-      await api.applyIncomeTemplate(selected.id, {
-        work_week: workWeek,
-        payday_day: paydayDay,
-        override_sources: sources,
-      });
-      await updateProfile({ work_week: workWeek, payday_day: paydayDay });
+      const pd = t.paydayDayDefault || 25;
+      setPaydayDay(pd);
+      await api.applyIncomeTemplate(t.id, { work_week: t.workWeekDefault || 5, payday_day: pd });
+      await updateProfile({ work_week: t.workWeekDefault || 5, payday_day: pd });
+      recordRecent(t.id);
       const f = await api.incomeForecast();
       setForecast(f);
+      setApplied(t);
       setStep('preview');
     } catch (e: any) {
-      toast.show(e.message || 'Could not apply template', 'error');
+      toast.show(e.message || 'Could not apply preset', 'error');
     } finally { setLoading(false); }
+  };
+
+  // Editable salary date — persists; adjustment still runs on the edited date.
+  const setPayday = async (day: number) => {
+    setPaydayDay(day);
+    await updateProfile({ payday_day: day });
+    await api.applyIncomeTemplate(selected!.id, { work_week: selected!.workWeekDefault || 5, payday_day: day });
+    const f = await api.incomeForecast();
+    setForecast(f);
   };
 
   const finish = () => {
     if (mode === 'onboarding') router.replace('/(tabs)/home');
     else router.back();
   };
+
+  // ----- filtering for STEP 1 -----
+  const q = query.trim().toLowerCase();
+  const filtered = q ? templates.filter((t) => t.name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q)) : templates;
+  const favTemplates = filtered.filter((t) => favs.includes(t.id));
+  const recentTemplates = recent.map((id) => templates.find((t) => t.id === id)).filter(Boolean) as Template[];
+  const byCategory = filtered.filter((t) => !favs.includes(t.id) && !recent.includes(t.id));
+  const groups = byCategory.reduce<Record<string, Template[]>>((acc, t) => {
+    (acc[t.category] = acc[t.category] || []).push(t);
+    return acc;
+  }, {});
+
+  // ----- confidence note -----
+  const lowConfidence = (selected?.confidence ?? 100) < 80;
+  const workingDays = selected?.workWeekDefault === 7 ? 'Mon-Sun' : selected?.workWeekDefault === 6 ? 'Mon-Sat' : 'Mon-Fri';
 
   return (
     <Screen>
@@ -113,132 +134,119 @@ export default function IncomeSetup() {
             )}
           </View>
 
-          <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 120 }}>
-            {/* Step 1: pick template */}
+          <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
+            {/* ---------- STEP 1: occupation pick ---------- */}
             {step === 'pick' && (
               <>
                 <H1>What do you do?</H1>
-                <Body muted style={{ marginTop: 4, marginBottom: spacing.lg }}>Pick your occupation type to pre-fill your income sources.</Body>
+                <Body muted style={{ marginTop: 4, marginBottom: spacing.lg }}>Pick your occupation. We&apos;ll auto-set up your income — under 30 seconds.</Body>
 
-                {/* Dropdown to pick one of the 18 templates directly */}
-                <Label>Occupation type</Label>
-                <TouchableOpacity testID="income-dropdown" onPress={() => setDropdownOpen(true)} activeOpacity={0.7}
-                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: 14, marginTop: spacing.xs }}>
-                  <Body style={{ fontSize: 15 }}>{selected ? selected.name : 'Select your occupation…'}</Body>
-                  <Ionicons name="chevron-down" size={18} color={colors.muted} />
-                </TouchableOpacity>
-
-                {/* Optional AI suggestion helper */}
-                <View style={{ marginTop: spacing.lg }}>
-                  <Label>Not sure? Describe your job (optional)</Label>
-                  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
-                    <Input testID="income-suggest-input" value={jobText} onChangeText={setJobText} placeholder="e.g. I work at a hospital" style={{ flex: 1 }} />
-                    <Button testID="income-suggest-btn" label="Suggest" onPress={suggest} loading={loading} style={{ marginBottom: spacing.md, paddingHorizontal: spacing.md }} />
-                  </View>
-                  {suggestions.length > 0 && (
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm }}>
-                      {suggestions.map((s) => (
-                        <Chip key={s.id} testID={`income-suggest-${s.id}`} label={s.name} onPress={() => choose(s)} />
-                      ))}
-                    </View>
-                  )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, marginBottom: spacing.lg }}>
+                  <Ionicons name="search" size={18} color={colors.muted} />
+                  <TextInput testID="income-search" value={query} onChangeText={setQuery} placeholder="Search occupation…"
+                    placeholderTextColor={colors.muted} style={{ flex: 1, color: colors.onSurface, fontFamily: font.text, fontSize: 15, paddingVertical: 12, marginLeft: spacing.sm }} />
                 </View>
-              </>
-            )}
 
-            {/* Dropdown modal listing all 18 templates */}
-            <Modal visible={dropdownOpen} transparent animationType="slide" onRequestClose={() => setDropdownOpen(false)}>
-              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
-                <SafeAreaView style={{ backgroundColor: colors.surface2, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, maxHeight: '75%' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm }}>
-                    <Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>Choose occupation</Body>
-                    <TouchableOpacity testID="income-dropdown-close" onPress={() => setDropdownOpen(false)} style={{ padding: 4 }}>
-                      <Ionicons name="close" size={22} color={colors.muted} />
-                    </TouchableOpacity>
+                {recentTemplates.length > 0 && (
+                  <GroupTitle icon="time" label="Recently used" colors={colors} />
+                )}
+                {recentTemplates.map((t) => <Row key={t.id} t={t} colors={colors} onPress={() => choose(t)} onFav={() => toggleFav(t.id)} fav={favs.includes(t.id)} />)}
+
+                {favTemplates.length > 0 && (
+                  <GroupTitle icon="star" label="Favorites" colors={colors} />
+                )}
+                {favTemplates.map((t) => <Row key={t.id} t={t} colors={colors} onPress={() => choose(t)} onFav={() => toggleFav(t.id)} fav />)}
+
+                {Object.keys(groups).map((cat) => (
+                  <View key={cat}>
+                    <GroupTitle icon={CATEGORY_ICON[cat] || 'briefcase'} label={cat} colors={colors} />
+                    {groups[cat].map((t) => <Row key={t.id} t={t} colors={colors} onPress={() => choose(t)} onFav={() => toggleFav(t.id)} fav={favs.includes(t.id)} />)}
                   </View>
-                  <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl }}>
-                    {templates.map((t) => (
-                      <TouchableOpacity key={t.id} testID={`income-dropdown-${t.id}`} onPress={() => { setDropdownOpen(false); choose(t); }} activeOpacity={0.7}
-                        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                        <View style={{ flex: 1 }}>
-                          <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{t.name}</Body>
-                          <Body muted style={{ fontSize: 12, marginTop: 2 }}>{t.incomeSources?.length || 0} sources</Body>
-                        </View>
-                        <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </SafeAreaView>
-              </View>
-            </Modal>
-
-            {/* Step 2: edit sources */}
-            {step === 'edit' && selected && (
-              <>
-                <H1>{selected.name}</H1>
-                <Body muted style={{ marginTop: 4, marginBottom: spacing.md }}>Edit, remove, add, or reorder your income sources.</Body>
-                {sources.map((s, idx) => (
-                  <CardRow key={idx} idx={idx} source={s} colors={colors} onChange={(p) => updateSource(idx, p)}
-                    onRemove={() => setSources((arr) => arr.filter((_, i) => i !== idx))} />
                 ))}
-                <Button testID="income-add-source" label="+ Add income source" variant="secondary" onPress={() => setSources((arr) => [...arr, { name: 'New source', calculationMethod: 'fixed_amount', frequency: 'monthly', amount: 0, recurring: true }])} style={{ marginTop: spacing.md }} />
-                <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg }}>
-                  <Button label="Back" variant="secondary" onPress={() => setStep('pick')} style={{ flex: 1 }} />
-                  <Button testID="income-edit-next" label="Continue" onPress={() => setStep('schedule')} style={{ flex: 2 }} />
-                </View>
               </>
             )}
 
-            {/* Step 3: schedule + calendar */}
-            {step === 'schedule' && (
+            {/* ---------- STEP 3: preview summary ---------- */}
+            {step === 'preview' && selected && (
               <>
-                <H1>Payment schedule</H1>
-                <Body muted style={{ marginTop: 4, marginBottom: spacing.lg }}>Work schedule decides which days count as non-working for payday.</Body>
-
-                <Label>Work week</Label>
-                <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
-                  {([5, 6, 7] as const).map((w) => (
-                    <Chip key={w} testID={`income-workweek-${w}`} label={`${w}-day`} active={workWeek === w} onPress={() => setWorkWeek(w)} />
-                  ))}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+                  <TouchableOpacity testID="income-back-pick" onPress={() => setStep('pick')} style={{ padding: 4 }}>
+                    <Ionicons name="chevron-back" size={22} color={colors.onSurface} />
+                  </TouchableOpacity>
+                  <Body style={{ fontFamily: font.displayBold, fontSize: 18, marginLeft: spacing.sm }}>{selected.name}</Body>
                 </View>
 
-                <Label style={{ marginTop: spacing.lg }}>Payday day of month</Label>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs }}>
-                  {[5, 10, 15, 20, 25, 28, 31].map((d) => (
-                    <Chip key={d} testID={`income-payday-${d}`} label={`Every ${d}th`} active={paydayDay === d} onPress={() => setPaydayDay(d)} />
-                  ))}
-                </View>
-
-                <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg }}>
-                  <Button label="Back" variant="secondary" onPress={() => setStep('edit')} style={{ flex: 1 }} />
-                  <Button testID="income-schedule-next" label="Apply template" onPress={applyAndPreview} loading={loading} style={{ flex: 2 }} />
-                </View>
-              </>
-            )}
-
-            {/* Step 4: preview forecast */}
-            {step === 'preview' && forecast && (
-              <>
-                <H1>Next expected income</H1>
-                <View style={{ backgroundColor: colors.inverse, borderRadius: radius.md, padding: spacing.lg, marginTop: spacing.md }}>
-                  <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Total expected</Label>
-                  <Body style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 26, lineHeight: 32 }}>{forecast.total_expected?.toLocaleString()}</Body>
-                  {forecast.next_payment_date && (
-                    <Body style={{ color: colors.onInverse, opacity: 0.7, fontSize: 12, marginTop: 4 }}>Next payment: {forecast.next_payment_date}</Body>
+                {/* Primary income */}
+                <Card>
+                  <Label>Primary income</Label>
+                  <Body style={{ fontFamily: font.displayBold, fontSize: 18, marginTop: 4 }}>
+                    {(selected.incomeSources || []).length > 1 ? 'Multiple income sources' : (selected.incomeSources?.[0]?.name || '—')}
+                  </Body>
+                  {selected.incomeSources && selected.incomeSources.length > 1 && (
+                    <Body muted style={{ fontSize: 12, marginTop: 4 }}>
+                      {selected.incomeSources.map((s: any) => s.name).join(' · ')}
+                    </Body>
                   )}
-                </View>
-                <View style={{ gap: spacing.sm, marginTop: spacing.md }}>
-                  {(forecast.sources || []).map((s: any) => (
-                    <View key={s.id || s.name} style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md }}>
-                      <View style={{ flex: 1 }}>
-                        <Body style={{ fontFamily: font.textBold, fontSize: 14 }}>{s.name}</Body>
-                        <Body muted style={{ fontSize: 11, marginTop: 2 }}>{s.next_payment_date || 'manual'} · {s.calculation_method}</Body>
-                      </View>
-                      <Body style={{ fontFamily: font.displayBold }}>{s.amount?.toLocaleString()}</Body>
+                  <Body muted style={{ fontSize: 12, marginTop: 6, fontStyle: 'italic' }}>
+                    Based on common payroll practices in Indonesian {selected.category.toLowerCase()} institutions.
+                  </Body>
+                </Card>
+
+                {/* Salary date (editable) */}
+                <Card>
+                  <Label>Salary date</Label>
+                  <TouchableOpacity testID="income-salary-date" onPress={() => setShowPicker(true)}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm }}>
+                    <Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>Every {paydayDay}th</Body>
+                    <Ionicons name="calendar-outline" size={20} color={colors.brandPrimary} />
+                  </TouchableOpacity>
+                  {showPicker && (
+                    <DateTimePicker
+                      value={new Date(new Date().getFullYear(), new Date().getMonth(), paydayDay)}
+                      mode="date" maximumDate={new Date(2100, 11, 31)}
+                      onChange={(event: DateTimePickerEvent, date?: Date) => {
+                        if (Platform.OS === 'android') setShowPicker(false);
+                        if (event.type === 'set' && date) setPayday(date.getDate());
+                      }}
+                    />
+                  )}
+                  <Body muted style={{ fontSize: 11, marginTop: 4 }}>
+                    Shifts to the previous working day if it falls on a weekend or holiday.
+                  </Body>
+                </Card>
+
+                {/* Working days + adjustment */}
+                <Card>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <View>
+                      <Label>Working days</Label>
+                      <Body style={{ fontFamily: font.textBold, marginTop: 2 }}>{workingDays}</Body>
                     </View>
-                  ))}
-                </View>
-                <Button testID="income-finish" label={mode === 'onboarding' ? 'Finish & start using Wallume' : 'Done'} onPress={finish} style={{ marginTop: spacing.xl }} />
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Label>Weekend adjustment</Label>
+                      <Body style={{ fontFamily: font.textBold, marginTop: 2 }}>
+                        {(selected.incomeSources?.[0]?.adjustmentRules?.[0]?.value || 'previous_business_day').replace(/_/g, ' ')}
+                      </Body>
+                    </View>
+                  </View>
+                </Card>
+
+                {/* Confidence note */}
+                {lowConfidence && (
+                  <View style={{ backgroundColor: colors.warning + '1A', borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm }}>
+                    <Body style={{ fontSize: 12, color: colors.warning, lineHeight: 18 }}>
+                      This is an estimated configuration based on common industry practices. You can customize it at any time.
+                    </Body>
+                  </View>
+                )}
+
+                <Body muted style={{ fontSize: 11, textAlign: 'center', marginTop: spacing.md }}>
+                  You can change these later in Settings.
+                </Body>
+
+                <Button testID="income-customize" label="Customize income sources" variant="secondary" onPress={() => router.push('/income-sources' as any)} style={{ marginTop: spacing.md }} />
+
+                <Button testID="income-finish" label={mode === 'onboarding' ? 'Finish & start using Wallume' : 'Done'} onPress={finish} loading={loading} style={{ marginTop: spacing.md }} />
               </>
             )}
           </ScrollView>
@@ -248,31 +256,34 @@ export default function IncomeSetup() {
   );
 }
 
-function CardRow({ idx, source, colors, onChange, onRemove }: {
-  idx: number; source: Source; colors: any;
-  onChange: (patch: Partial<Source>) => void; onRemove: () => void;
-}) {
-  const [name, setName] = useState(source.name);
-  const [amount, setAmount] = useState(String(source.amount ?? ''));
-  const method = source.calculationMethod;
-  const methodLabel = method.replace(/_/g, ' ');
+function Card({ children }: { children: React.ReactNode }) {
+  const { colors } = useTheme();
+  return <View style={{ backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginBottom: spacing.md }}>{children}</View>;
+}
 
-  const commit = () => onChange({ name, amount: parseFloat(amount) || 0 });
-
+function GroupTitle({ icon, label, colors }: { icon: string; label: string; colors: any }) {
   return (
-    <View style={{ backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.sm }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ flex: 1, marginRight: spacing.sm }}>
-          <TextInput value={name} onChangeText={(v) => { setName(v); onChange({ name: v }); }}
-            placeholder="Source name" placeholderTextColor={colors.muted}
-            style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 14, borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 4 }} />
-        </View>
-        <TouchableOpacity onPress={onRemove} style={{ padding: 4 }}><Ionicons name="close-circle" size={20} color={colors.error} /></TouchableOpacity>
-      </View>
-      <Body muted style={{ fontSize: 11, textTransform: 'capitalize', marginTop: 4 }}>{methodLabel} · {source.frequency}</Body>
-      <TextInput value={amount} onChangeText={(v) => { setAmount(v); }}
-        onEndEditing={commit} keyboardType="numeric" placeholder="Amount" placeholderTextColor={colors.muted}
-        style={{ color: colors.onSurface, fontFamily: font.displayBold, fontSize: 18, marginTop: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 4 }} />
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.lg, marginBottom: spacing.sm }}>
+      <Ionicons name={icon as any} size={14} color={colors.muted} />
+      <Label style={{ marginLeft: 6 }}>{label}</Label>
     </View>
+  );
+}
+
+function Row({ t, colors, onPress, onFav, fav }: { t: Template; colors: any; onPress: () => void; onFav: () => void; fav: boolean }) {
+  return (
+    <TouchableOpacity testID={`income-occupation-${t.id}`} onPress={onPress} activeOpacity={0.85}
+      style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, marginBottom: spacing.sm }}>
+      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
+        <Ionicons name={(t.icon || 'briefcase') as any} size={17} color={colors.onBrandSoft} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{t.name}</Body>
+        <Body muted style={{ fontSize: 11, marginTop: 1 }}>{t.incomeSources?.length || 0} income source{t.incomeSources?.length === 1 ? '' : 's'}</Body>
+      </View>
+      <TouchableOpacity onPress={onFav} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Ionicons name={fav ? 'star' : 'star-outline'} size={18} color={fav ? colors.secondary || '#F4A261' : colors.muted} />
+      </TouchableOpacity>
+    </TouchableOpacity>
   );
 }

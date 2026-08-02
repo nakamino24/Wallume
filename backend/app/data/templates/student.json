@@ -1,7 +1,11 @@
 {
   "id": "student",
   "name": "Student",
-  "description": "Student income from allowance and part-time work.",
+  "description": "Student preset.",
+  "country": "ID",
+  "category": "Student / Other",
+  "icon": "book",
+  "confidence": 85,
   "workWeekDefault": 5,
   "paydayDayDefault": 25,
   "incomeSources": [
@@ -22,8 +26,7 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "nontaxable",
-      "recurring": true,
-      "amount": 1500000
+      "recurring": true
     },
     {
       "name": "Scholarship",
@@ -42,24 +45,26 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "nontaxable",
-      "recurring": true,
-      "amount": 2500000
+      "recurring": true
     },
     {
       "name": "Part-time Job",
       "calculationMethod": "hourly",
       "frequency": "monthly",
       "expectedPaymentDate": {
-        "type": "company_policy"
+        "type": "fixed_date",
+        "day": 25
       },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "avgHoursPerMonth": 40
-      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "hourlyRate": 25000
+      "recurring": true
     }
   ]
 }

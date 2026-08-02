@@ -1,7 +1,11 @@
 {
   "id": "content_creator",
   "name": "Content Creator",
-  "description": "Creator income from multiple platforms.",
+  "description": "Content Creator preset.",
+  "country": "ID",
+  "category": "Freelance / Gig",
+  "icon": "videocam",
+  "confidence": 35,
   "workWeekDefault": 7,
   "paydayDayDefault": 25,
   "incomeSources": [
@@ -12,14 +16,16 @@
       "expectedPaymentDate": {
         "type": "company_policy"
       },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "avgPerMonth": 3000000
-      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 3000000
+      "recurring": true
     },
     {
       "name": "Sponsorship",
@@ -28,14 +34,16 @@
       "expectedPaymentDate": {
         "type": "company_policy"
       },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "projectsPerMonth": 2
-      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "perProject": 5000000
+      "recurring": true
     },
     {
       "name": "Affiliate",
@@ -44,14 +52,16 @@
       "expectedPaymentDate": {
         "type": "company_policy"
       },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "salesPerMonth": 20
-      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "perSale": 25000
+      "recurring": true
     },
     {
       "name": "Donation",
@@ -60,30 +70,16 @@
       "expectedPaymentDate": {
         "type": "manual"
       },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "avgPerMonth": 1000000
-      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "nontaxable",
-      "recurring": true,
-      "amount": 1000000
-    },
-    {
-      "name": "Brand Deals",
-      "calculationMethod": "per_project",
-      "frequency": "monthly",
-      "expectedPaymentDate": {
-        "type": "company_policy"
-      },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "projectsPerMonth": 1
-      },
-      "currency": "IDR",
-      "taxStatus": "taxable",
-      "recurring": true,
-      "perProject": 8000000
+      "recurring": true
     }
   ]
 }

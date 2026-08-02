@@ -1,16 +1,16 @@
 {
-  "id": "nurse",
-  "name": "Nurse",
-  "description": "Nurse preset.",
+  "id": "bumn_employee",
+  "name": "BUMN Employee",
+  "description": "BUMN Employee preset.",
   "country": "ID",
-  "category": "Healthcare",
-  "icon": "medkit",
-  "confidence": 70,
+  "category": "Government",
+  "icon": "business",
+  "confidence": 85,
   "workWeekDefault": 5,
   "paydayDayDefault": 25,
   "incomeSources": [
     {
-      "name": "Base Salary",
+      "name": "Monthly Salary",
       "calculationMethod": "fixed_amount",
       "frequency": "monthly",
       "expectedPaymentDate": {
@@ -29,8 +29,8 @@
       "recurring": true
     },
     {
-      "name": "Shift Allowance",
-      "calculationMethod": "per_shift",
+      "name": "Position Allowance",
+      "calculationMethod": "fixed_amount",
       "frequency": "monthly",
       "expectedPaymentDate": {
         "type": "fixed_date",
@@ -48,8 +48,8 @@
       "recurring": true
     },
     {
-      "name": "Night Shift",
-      "calculationMethod": "per_shift",
+      "name": "Meal Allowance",
+      "calculationMethod": "fixed_amount",
       "frequency": "monthly",
       "expectedPaymentDate": {
         "type": "fixed_date",
@@ -63,12 +63,12 @@
       ],
       "forecastRules": {},
       "currency": "IDR",
-      "taxStatus": "taxable",
+      "taxStatus": "nontaxable",
       "recurring": true
     },
     {
-      "name": "Holiday Shift",
-      "calculationMethod": "per_shift",
+      "name": "Transport Allowance",
+      "calculationMethod": "fixed_amount",
       "frequency": "monthly",
       "expectedPaymentDate": {
         "type": "fixed_date",
@@ -82,7 +82,7 @@
       ],
       "forecastRules": {},
       "currency": "IDR",
-      "taxStatus": "taxable",
+      "taxStatus": "nontaxable",
       "recurring": true
     }
   ]

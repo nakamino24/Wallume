@@ -1,7 +1,11 @@
 {
   "id": "sales_executive",
   "name": "Sales Executive",
-  "description": "B2B sales professional with layered commissions.",
+  "description": "Sales Executive preset.",
+  "country": "ID",
+  "category": "Office / Professional",
+  "icon": "trending-up",
+  "confidence": 75,
   "workWeekDefault": 5,
   "paydayDayDefault": 25,
   "incomeSources": [
@@ -22,8 +26,7 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 5000000
+      "recurring": true
     },
     {
       "name": "Commission",
@@ -42,9 +45,7 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "percentage": 5,
-      "percentageOf": "gross"
+      "recurring": true
     },
     {
       "name": "Monthly Incentive",
@@ -63,49 +64,7 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 1000000
-    },
-    {
-      "name": "Quarterly Bonus",
-      "calculationMethod": "fixed_amount",
-      "frequency": "quarterly",
-      "expectedPaymentDate": {
-        "type": "last_calendar_day"
-      },
-      "adjustmentRules": [
-        {
-          "type": "weekend_rule",
-          "value": "previous_business_day"
-        }
-      ],
-      "forecastRules": {},
-      "currency": "IDR",
-      "taxStatus": "taxable",
-      "recurring": false,
-      "amount": 3000000
-    },
-    {
-      "name": "Annual Bonus",
-      "calculationMethod": "percentage",
-      "frequency": "annually",
-      "expectedPaymentDate": {
-        "type": "fixed_date",
-        "day": 15,
-        "month": 12
-      },
-      "adjustmentRules": [
-        {
-          "type": "weekend_rule",
-          "value": "previous_business_day"
-        }
-      ],
-      "forecastRules": {},
-      "currency": "IDR",
-      "taxStatus": "taxable",
-      "recurring": false,
-      "percentage": 100,
-      "percentageOf": "base_salary"
+      "recurring": true
     }
   ]
 }

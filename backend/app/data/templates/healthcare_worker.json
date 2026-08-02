@@ -1,16 +1,16 @@
 {
-  "id": "factory_worker",
-  "name": "Factory Worker",
-  "description": "Factory Worker preset.",
+  "id": "healthcare_worker",
+  "name": "Healthcare Worker",
+  "description": "Healthcare Worker preset.",
   "country": "ID",
-  "category": "Blue Collar / Shift",
-  "icon": "construct",
-  "confidence": 95,
-  "workWeekDefault": 6,
+  "category": "Healthcare",
+  "icon": "medkit",
+  "confidence": 70,
+  "workWeekDefault": 5,
   "paydayDayDefault": 25,
   "incomeSources": [
     {
-      "name": "Base Salary",
+      "name": "Monthly Salary",
       "calculationMethod": "fixed_amount",
       "frequency": "monthly",
       "expectedPaymentDate": {
@@ -30,25 +30,6 @@
     },
     {
       "name": "Shift Allowance",
-      "calculationMethod": "fixed_amount",
-      "frequency": "monthly",
-      "expectedPaymentDate": {
-        "type": "fixed_date",
-        "day": 25
-      },
-      "adjustmentRules": [
-        {
-          "type": "weekend_rule",
-          "value": "previous_business_day"
-        }
-      ],
-      "forecastRules": {},
-      "currency": "IDR",
-      "taxStatus": "nontaxable",
-      "recurring": true
-    },
-    {
-      "name": "Attendance Bonus",
       "calculationMethod": "fixed_amount",
       "frequency": "monthly",
       "expectedPaymentDate": {

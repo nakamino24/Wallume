@@ -1,7 +1,11 @@
 {
   "id": "pharmacist",
   "name": "Pharmacist",
-  "description": "Pharmacy professional with shift-based pay.",
+  "description": "Pharmacist preset.",
+  "country": "ID",
+  "category": "Healthcare",
+  "icon": "flask",
+  "confidence": 75,
   "workWeekDefault": 5,
   "paydayDayDefault": 25,
   "incomeSources": [
@@ -22,8 +26,7 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 5000000
+      "recurring": true
     },
     {
       "name": "Shift Allowance",
@@ -39,33 +42,10 @@
           "value": "previous_business_day"
         }
       ],
-      "forecastRules": {
-        "shiftsPerMonth": 18
-      },
-      "currency": "IDR",
-      "taxStatus": "taxable",
-      "recurring": true,
-      "perShift": 50000
-    },
-    {
-      "name": "Incentive",
-      "calculationMethod": "fixed_amount",
-      "frequency": "monthly",
-      "expectedPaymentDate": {
-        "type": "fixed_date",
-        "day": 25
-      },
-      "adjustmentRules": [
-        {
-          "type": "weekend_rule",
-          "value": "previous_business_day"
-        }
-      ],
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 350000
+      "recurring": true
     }
   ]
 }

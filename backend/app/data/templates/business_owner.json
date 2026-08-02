@@ -1,56 +1,49 @@
 {
   "id": "business_owner",
   "name": "Business Owner",
-  "description": "Business income from operations and distributions.",
+  "description": "Business Owner preset.",
+  "country": "ID",
+  "category": "Self-Employed / Owner",
+  "icon": "storefront",
+  "confidence": 40,
   "workWeekDefault": 5,
   "paydayDayDefault": 25,
   "incomeSources": [
     {
-      "name": "Revenue",
+      "name": "Business Revenue",
       "calculationMethod": "manual",
       "frequency": "monthly",
       "expectedPaymentDate": {
         "type": "company_policy"
       },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "avgPerMonth": 15000000
-      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 15000000
+      "recurring": true
     },
     {
       "name": "Profit Distribution",
-      "calculationMethod": "percentage",
+      "calculationMethod": "manual",
       "frequency": "quarterly",
       "expectedPaymentDate": {
         "type": "last_calendar_day"
       },
-      "adjustmentRules": [],
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "percentage": 30,
-      "percentageOf": "gross"
-    },
-    {
-      "name": "Dividend",
-      "calculationMethod": "manual",
-      "frequency": "annually",
-      "expectedPaymentDate": {
-        "type": "company_policy"
-      },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "avgPerYear": 20000000
-      },
-      "currency": "IDR",
-      "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 20000000
+      "recurring": true
     },
     {
       "name": "Owner Draw",
@@ -59,12 +52,16 @@
       "expectedPaymentDate": {
         "type": "manual"
       },
-      "adjustmentRules": [],
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
       "forecastRules": {},
       "currency": "IDR",
-      "taxStatus": "nontaxable",
-      "recurring": false,
-      "amount": 0
+      "taxStatus": "taxable",
+      "recurring": true
     }
   ]
 }

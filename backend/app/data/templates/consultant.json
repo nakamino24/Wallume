@@ -1,7 +1,11 @@
 {
   "id": "consultant",
   "name": "Consultant",
-  "description": "Daily and hourly consulting income.",
+  "description": "Consultant preset.",
+  "country": "ID",
+  "category": "Freelance / Gig",
+  "icon": "analytics",
+  "confidence": 55,
   "workWeekDefault": 5,
   "paydayDayDefault": 25,
   "incomeSources": [
@@ -12,14 +16,16 @@
       "expectedPaymentDate": {
         "type": "company_policy"
       },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "daysPerMonth": 12
-      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "dailyRate": 1500000
+      "recurring": true
     },
     {
       "name": "Hourly Rate",
@@ -28,14 +34,16 @@
       "expectedPaymentDate": {
         "type": "company_policy"
       },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "avgHoursPerMonth": 20
-      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "hourlyRate": 250000
+      "recurring": true
     },
     {
       "name": "Retainer",
@@ -54,8 +62,7 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 8000000
+      "recurring": true
     }
   ]
 }

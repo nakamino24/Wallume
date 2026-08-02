@@ -2,7 +2,7 @@
   "expo": {
     "name": "Wallume",
     "slug": "frontend",
-    "version": "1.0.2c",
+    "version": "1.0.3a",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "wallume",
@@ -80,5 +80,6 @@
     }
   }
 }
+
 
 

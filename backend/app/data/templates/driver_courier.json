@@ -1,12 +1,12 @@
 {
-  "id": "nurse",
-  "name": "Nurse",
-  "description": "Nurse preset.",
+  "id": "driver_courier",
+  "name": "Driver / Courier",
+  "description": "Driver / Courier preset.",
   "country": "ID",
-  "category": "Healthcare",
-  "icon": "medkit",
-  "confidence": 70,
-  "workWeekDefault": 5,
+  "category": "Blue Collar / Shift",
+  "icon": "bicycle",
+  "confidence": 60,
+  "workWeekDefault": 6,
   "paydayDayDefault": 25,
   "incomeSources": [
     {
@@ -29,8 +29,8 @@
       "recurring": true
     },
     {
-      "name": "Shift Allowance",
-      "calculationMethod": "per_shift",
+      "name": "Trip Incentive",
+      "calculationMethod": "per_sale",
       "frequency": "monthly",
       "expectedPaymentDate": {
         "type": "fixed_date",
@@ -48,12 +48,11 @@
       "recurring": true
     },
     {
-      "name": "Night Shift",
-      "calculationMethod": "per_shift",
-      "frequency": "monthly",
+      "name": "Tips",
+      "calculationMethod": "manual",
+      "frequency": "custom",
       "expectedPaymentDate": {
-        "type": "fixed_date",
-        "day": 25
+        "type": "manual"
       },
       "adjustmentRules": [
         {
@@ -63,26 +62,7 @@
       ],
       "forecastRules": {},
       "currency": "IDR",
-      "taxStatus": "taxable",
-      "recurring": true
-    },
-    {
-      "name": "Holiday Shift",
-      "calculationMethod": "per_shift",
-      "frequency": "monthly",
-      "expectedPaymentDate": {
-        "type": "fixed_date",
-        "day": 25
-      },
-      "adjustmentRules": [
-        {
-          "type": "weekend_rule",
-          "value": "previous_business_day"
-        }
-      ],
-      "forecastRules": {},
-      "currency": "IDR",
-      "taxStatus": "taxable",
+      "taxStatus": "nontaxable",
       "recurring": true
     }
   ]

@@ -1,12 +1,16 @@
 {
-  "id": "driver",
-  "name": "Driver",
-  "description": "Driver with trip incentives and tips.",
-  "workWeekDefault": 6,
+  "id": "lecturer",
+  "name": "Lecturer",
+  "description": "Lecturer preset.",
+  "country": "ID",
+  "category": "Education",
+  "icon": "school",
+  "confidence": 75,
+  "workWeekDefault": 5,
   "paydayDayDefault": 25,
   "incomeSources": [
     {
-      "name": "Base Salary",
+      "name": "Monthly Salary",
       "calculationMethod": "fixed_amount",
       "frequency": "monthly",
       "expectedPaymentDate": {
@@ -22,12 +26,11 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 2500000
+      "recurring": true
     },
     {
-      "name": "Trip Incentive",
-      "calculationMethod": "per_sale",
+      "name": "Teaching Hours",
+      "calculationMethod": "hourly",
       "frequency": "monthly",
       "expectedPaymentDate": {
         "type": "fixed_date",
@@ -39,49 +42,48 @@
           "value": "previous_business_day"
         }
       ],
-      "forecastRules": {
-        "salesPerMonth": 40
-      },
+      "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "perSale": 15000
+      "recurring": true
     },
     {
-      "name": "Tips",
-      "calculationMethod": "manual",
-      "frequency": "custom",
+      "name": "Honorarium",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
       "expectedPaymentDate": {
-        "type": "manual"
+        "type": "fixed_date",
+        "day": 25
       },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "avgPerMonth": 500000
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true
+    },
+    {
+      "name": "Certification Allowance",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
       },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "nontaxable",
-      "recurring": true,
-      "amount": 500000
-    },
-    {
-      "name": "Bonus",
-      "calculationMethod": "fixed_amount",
-      "frequency": "monthly",
-      "expectedPaymentDate": {
-        "type": "fixed_date",
-        "day": 25
-      },
-      "adjustmentRules": [
-        {
-          "type": "weekend_rule",
-          "value": "previous_business_day"
-        }
-      ],
-      "forecastRules": {},
-      "currency": "IDR",
-      "taxStatus": "taxable",
-      "recurring": false,
-      "amount": 200000
+      "recurring": true
     }
   ]
 }

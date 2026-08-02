@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Wallume API",
-        version="1.0.2c",
+        version="1.0.3a",
         docs_url="/docs",
         lifespan=lifespan,
     )
@@ -56,12 +56,13 @@ def create_app() -> FastAPI:
 
     @app.get("/api/")
     async def root():
-        return {"success": True, "data": {"app": "Wallume", "status": "ok", "version": "1.0.2c"}}
+        return {"success": True, "data": {"app": "Wallume", "status": "ok", "version": "1.0.3a"}}
 
     return app
 
 
 app = create_app()
+
 
 
 

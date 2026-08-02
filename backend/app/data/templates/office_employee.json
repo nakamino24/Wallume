@@ -1,15 +1,70 @@
 {
   "id": "office_employee",
   "name": "Office Employee",
-  "description": "Salaried office worker with monthly allowances.",
+  "description": "Office Employee preset.",
+  "country": "ID",
+  "category": "Office / Professional",
+  "icon": "briefcase",
+  "confidence": 90,
   "workWeekDefault": 5,
   "paydayDayDefault": 25,
   "incomeSources": [
-    { "name": "Base Salary", "calculationMethod": "fixed_amount", "frequency": "monthly", "expectedPaymentDate": { "type": "fixed_date", "day": 25 }, "adjustmentRules": [{ "type": "weekend_rule", "value": "previous_business_day" }], "forecastRules": {}, "currency": "IDR", "taxStatus": "taxable", "recurring": true, "amount": 5000000 },
-    { "name": "Meal Allowance", "calculationMethod": "fixed_amount", "frequency": "monthly", "expectedPaymentDate": { "type": "fixed_date", "day": 25 }, "adjustmentRules": [{ "type": "weekend_rule", "value": "previous_business_day" }], "forecastRules": {}, "currency": "IDR", "taxStatus": "nontaxable", "recurring": true, "amount": 750000 },
-    { "name": "Transport Allowance", "calculationMethod": "fixed_amount", "frequency": "monthly", "expectedPaymentDate": { "type": "fixed_date", "day": 25 }, "adjustmentRules": [{ "type": "weekend_rule", "value": "previous_business_day" }], "forecastRules": {}, "currency": "IDR", "taxStatus": "nontaxable", "recurring": true, "amount": 500000 },
-    { "name": "Overtime", "calculationMethod": "hourly", "frequency": "monthly", "expectedPaymentDate": { "type": "fixed_date", "day": 25 }, "adjustmentRules": [{ "type": "weekend_rule", "value": "previous_business_day" }], "forecastRules": { "avgHoursPerMonth": 20 }, "currency": "IDR", "taxStatus": "taxable", "recurring": true, "hourlyRate": 35000 },
-    { "name": "Bonus", "calculationMethod": "percentage", "frequency": "monthly", "expectedPaymentDate": { "type": "fixed_date", "day": 25 }, "adjustmentRules": [{ "type": "weekend_rule", "value": "previous_business_day" }], "forecastRules": {}, "currency": "IDR", "taxStatus": "taxable", "recurring": false, "percentage": 10, "percentageOf": "base_salary" },
-    { "name": "THR", "calculationMethod": "fixed_amount", "frequency": "annually", "expectedPaymentDate": { "type": "fixed_date", "day": 15, "month": 6 }, "adjustmentRules": [{ "type": "weekend_rule", "value": "previous_business_day" }], "forecastRules": {}, "currency": "IDR", "taxStatus": "taxable", "recurring": false, "amount": 5000000 }
+    {
+      "name": "Monthly Salary",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true
+    },
+    {
+      "name": "Meal Allowance",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "nontaxable",
+      "recurring": true
+    },
+    {
+      "name": "Transport Allowance",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "nontaxable",
+      "recurring": true
+    }
   ]
 }

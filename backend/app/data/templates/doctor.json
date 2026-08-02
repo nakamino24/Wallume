@@ -1,7 +1,11 @@
 {
   "id": "doctor",
   "name": "Doctor",
-  "description": "Mixed fixed retainer plus per-visit fees.",
+  "description": "Doctor preset.",
+  "country": "ID",
+  "category": "Healthcare",
+  "icon": "medical",
+  "confidence": 60,
   "workWeekDefault": 5,
   "paydayDayDefault": 25,
   "incomeSources": [
@@ -22,8 +26,7 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 10000000
+      "recurring": true
     },
     {
       "name": "Consultation Fee",
@@ -39,61 +42,14 @@
           "value": "previous_business_day"
         }
       ],
-      "forecastRules": {
-        "visitsPerMonth": 150
-      },
+      "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "perVisit": 50000
+      "recurring": true
     },
     {
-      "name": "Surgery Fee",
+      "name": "Operation Fee",
       "calculationMethod": "per_project",
-      "frequency": "monthly",
-      "expectedPaymentDate": {
-        "type": "fixed_date",
-        "day": 25
-      },
-      "adjustmentRules": [
-        {
-          "type": "weekend_rule",
-          "value": "previous_business_day"
-        }
-      ],
-      "forecastRules": {
-        "projectsPerMonth": 8
-      },
-      "currency": "IDR",
-      "taxStatus": "taxable",
-      "recurring": true,
-      "perProject": 750000
-    },
-    {
-      "name": "On Call Fee",
-      "calculationMethod": "per_shift",
-      "frequency": "monthly",
-      "expectedPaymentDate": {
-        "type": "fixed_date",
-        "day": 25
-      },
-      "adjustmentRules": [
-        {
-          "type": "weekend_rule",
-          "value": "previous_business_day"
-        }
-      ],
-      "forecastRules": {
-        "shiftsPerMonth": 4
-      },
-      "currency": "IDR",
-      "taxStatus": "taxable",
-      "recurring": true,
-      "perShift": 350000
-    },
-    {
-      "name": "Incentive",
-      "calculationMethod": "percentage",
       "frequency": "monthly",
       "expectedPaymentDate": {
         "type": "fixed_date",
@@ -108,9 +64,26 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "percentage": 20,
-      "percentageOf": "gross"
+      "recurring": true
+    },
+    {
+      "name": "On Call",
+      "calculationMethod": "per_shift",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true
     }
   ]
 }

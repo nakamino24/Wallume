@@ -1,7 +1,11 @@
 {
   "id": "unemployed",
   "name": "Unemployed",
-  "description": "Support and withdrawals while between jobs.",
+  "description": "Unemployed preset.",
+  "country": "ID",
+  "category": "Student / Other",
+  "icon": "hourglass",
+  "confidence": 90,
   "workWeekDefault": 7,
   "paydayDayDefault": 25,
   "incomeSources": [
@@ -12,12 +16,16 @@
       "expectedPaymentDate": {
         "type": "manual"
       },
-      "adjustmentRules": [],
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "nontaxable",
-      "recurring": false,
-      "amount": 0
+      "recurring": true
     },
     {
       "name": "Family Support",
@@ -36,28 +44,7 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "nontaxable",
-      "recurring": true,
-      "amount": 1000000
-    },
-    {
-      "name": "Government Assistance",
-      "calculationMethod": "fixed_amount",
-      "frequency": "monthly",
-      "expectedPaymentDate": {
-        "type": "fixed_date",
-        "day": 5
-      },
-      "adjustmentRules": [
-        {
-          "type": "weekend_rule",
-          "value": "previous_business_day"
-        }
-      ],
-      "forecastRules": {},
-      "currency": "IDR",
-      "taxStatus": "nontaxable",
-      "recurring": true,
-      "amount": 500000
+      "recurring": true
     }
   ]
 }

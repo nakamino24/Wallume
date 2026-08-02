@@ -198,27 +198,36 @@ class IncomeService:
 
     def _keyword_suggest(self, job: str, templates: list[dict]) -> list[dict]:
         keywords = {
-            "office_employee": ["office", "admin", "administrasi", "staff", "kantor"],
-            "government_bumn": ["government", "pns", "bumn", "civil", "pegawai"],
-            "factory_worker": ["factory", "pabrik", "operator", "produksi"],
+            "office_employee": ["office", "admin", "administrasi", "staff", "kantor", "clerk"],
+            "government_asn": ["government", "pns", "asn", "civil", "pegawai negeri"],
+            "bumn_employee": ["bumn", "state company", "bumn"],
+            "bank_employee": ["bank", "teller", "bankir"],
+            "factory_worker": ["factory", "pabrik", "operator", "produksi", "assembly"],
+            "healthcare_worker": ["healthcare", "tenaga kesehatan", "medis", "clinic"],
             "nurse": ["nurse", "perawat", "hospital", "rumah sakit", "klinik"],
-            "doctor": ["doctor", "dokter", "hospital"],
+            "doctor": ["doctor", "dokter", "hospital", "specialist"],
             "pharmacist": ["pharmacist", "apotek", "farmasi"],
-            "retail_spg": ["retail", "spg", "store", "indomaret", "alfamart", "sales promotion"],
-            "sales_executive": ["sales", "marketing", "account executive"],
-            "freelancer": ["freelance", "freelancer", "remote"],
-            "consultant": ["consultant", "konsultan"],
-            "driver": ["driver", "sopir", "ojek", "gojek", "grab"],
-            "teacher_lecturer": ["teacher", "guru", "lecturer", "dosen", "pendidik"],
-            "content_creator": ["content", "creator", "youtube", "tiktok", "influencer"],
-            "investor": ["investor", "saham", "investasi", "dividend"],
-            "student": ["student", "mahasiswa", "pelajar"],
-            "unemployed": ["unemployed", "pengangguran"],
+            "retail_spg": ["retail", "spg", "indomaret", "alfamart", "sales promotion", "promotor"],
+            "store_crew": ["store crew", "crew", "kasir", "cashier", "minimarket"],
+            "sales_executive": ["sales", "marketing", "account executive", "ae"],
+            "customer_service": ["customer service", "cs", "call center", "helpdesk"],
+            "teacher": ["teacher", "guru", "pendidik", "sekolah"],
+            "lecturer": ["lecturer", "dosen", "universitas", "kampus"],
+            "freelancer": ["freelance", "freelancer", "remote", "sampingan"],
+            "consultant": ["consultant", "konsultan", "advisory"],
+            "software_engineer": ["software", "engineer", "developer", "programmer", "it", "coding", "tech"],
+            "driver_courier": ["driver", "sopir", "ojek", "gojek", "grab", "courier", "kurir", "antar"],
+            "business_owner": ["owner", "usaha", "wiraswasta", "bisnis", "umkm", "toko"],
+            "content_creator": ["content", "creator", "youtube", "tiktok", "influencer", "konten"],
+            "investor": ["investor", "saham", "investasi", "dividend", "crypto"],
+            "student": ["student", "mahasiswa", "pelajar", "kuliah"],
+            "unemployed": ["unemployed", "pengangguran", "nganggur", "antara kerja"],
+            "other": [],
         }
         low = job.lower()
         scored = []
-        for tid, template in enumerate(templates):
-            score = sum(1 for kw in keywords.get(template["id"], []) if kw in low)
+        for template in templates:
+            score = sum(1 for kw in keywords.get(template.get("id", ""), []) if kw in low)
             if score:
                 scored.append((score, template))
         scored.sort(key=lambda x: -x[0])

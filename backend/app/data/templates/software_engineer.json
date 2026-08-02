@@ -1,16 +1,16 @@
 {
-  "id": "factory_worker",
-  "name": "Factory Worker",
-  "description": "Factory Worker preset.",
+  "id": "software_engineer",
+  "name": "Software Engineer",
+  "description": "Software Engineer preset.",
   "country": "ID",
-  "category": "Blue Collar / Shift",
-  "icon": "construct",
-  "confidence": 95,
-  "workWeekDefault": 6,
+  "category": "Freelance / Gig",
+  "icon": "code-slash",
+  "confidence": 75,
+  "workWeekDefault": 5,
   "paydayDayDefault": 25,
   "incomeSources": [
     {
-      "name": "Base Salary",
+      "name": "Monthly Salary",
       "calculationMethod": "fixed_amount",
       "frequency": "monthly",
       "expectedPaymentDate": {
@@ -29,26 +29,7 @@
       "recurring": true
     },
     {
-      "name": "Shift Allowance",
-      "calculationMethod": "fixed_amount",
-      "frequency": "monthly",
-      "expectedPaymentDate": {
-        "type": "fixed_date",
-        "day": 25
-      },
-      "adjustmentRules": [
-        {
-          "type": "weekend_rule",
-          "value": "previous_business_day"
-        }
-      ],
-      "forecastRules": {},
-      "currency": "IDR",
-      "taxStatus": "nontaxable",
-      "recurring": true
-    },
-    {
-      "name": "Attendance Bonus",
+      "name": "Performance Bonus",
       "calculationMethod": "fixed_amount",
       "frequency": "monthly",
       "expectedPaymentDate": {

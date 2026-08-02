@@ -2,6 +2,18 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.3a] — 2026-08-02
+
+### Changed
+- **Income Setup redesigned** into fast occupation-based smart onboarding (under 30s, no nominal input at setup):
+  - Step 1: searchable occupation picker (25 presets) with search, favorites, and recently-used.
+  - Step 2: smart auto-configuration reusing the existing Income Engine — no forms or salary input; multi-income occupations (Doctor, Freelancer…) auto-generate several sources.
+  - Step 3: clean preview summary (primary income, expected payday, working days, weekend adjustment, source list) with confidence note for low-confidence presets and a "You can change these later" hint.
+- **Confidence system**: each preset carries a confidence score; presets < 80% show an "estimated configuration" note.
+- **Editable salary date**: preset date is only a default; user can edit it with a date picker on the preview. The edit persists as the user's `payday_day`, and the Weekend/Holiday rule still applies to the user-provided date.
+- **25 occupation presets** (Bank Employee, Government ASN, BUMN, Factory Worker, Doctor, Nurse, Retail/SPG, etc.), config-only JSON with `country`, `category`, `icon`, `confidence` — adding a new country/occupation requires only a new JSON file.
+- New **Income sources** management screen (`/income-sources`) for editing the generated config later.
+
 ## [1.0.2c] — 2026-08-02
 
 ### Changed

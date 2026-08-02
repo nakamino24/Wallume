@@ -1,8 +1,12 @@
 {
   "id": "retail_spg",
   "name": "Retail / SPG",
-  "description": "Sales promotion girl with commission.",
-  "workWeekDefault": 6,
+  "description": "Retail / SPG preset.",
+  "country": "ID",
+  "category": "Retail",
+  "icon": "cart",
+  "confidence": 70,
+  "workWeekDefault": 7,
   "paydayDayDefault": 25,
   "incomeSources": [
     {
@@ -22,8 +26,7 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 2800000
+      "recurring": true
     },
     {
       "name": "Sales Commission",
@@ -39,13 +42,10 @@
           "value": "previous_business_day"
         }
       ],
-      "forecastRules": {
-        "salesPerMonth": 30
-      },
+      "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "perSale": 50000
+      "recurring": true
     },
     {
       "name": "Attendance Bonus",
@@ -64,29 +64,7 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 200000
-    },
-    {
-      "name": "Sales Target Bonus",
-      "calculationMethod": "percentage",
-      "frequency": "monthly",
-      "expectedPaymentDate": {
-        "type": "fixed_date",
-        "day": 25
-      },
-      "adjustmentRules": [
-        {
-          "type": "weekend_rule",
-          "value": "previous_business_day"
-        }
-      ],
-      "forecastRules": {},
-      "currency": "IDR",
-      "taxStatus": "taxable",
-      "recurring": false,
-      "percentage": 10,
-      "percentageOf": "gross"
+      "recurring": true
     }
   ]
 }

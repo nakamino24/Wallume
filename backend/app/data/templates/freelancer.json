@@ -1,7 +1,11 @@
 {
   "id": "freelancer",
   "name": "Freelancer",
-  "description": "Flexible project and hourly work.",
+  "description": "Freelancer preset.",
+  "country": "ID",
+  "category": "Freelance / Gig",
+  "icon": "laptop",
+  "confidence": 50,
   "workWeekDefault": 5,
   "paydayDayDefault": 25,
   "incomeSources": [
@@ -12,30 +16,34 @@
       "expectedPaymentDate": {
         "type": "company_policy"
       },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "projectsPerMonth": 2
-      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "perProject": 4000000
+      "recurring": true
     },
     {
-      "name": "Hourly Rate",
+      "name": "Hourly Income",
       "calculationMethod": "hourly",
       "frequency": "custom",
       "expectedPaymentDate": {
         "type": "company_policy"
       },
-      "adjustmentRules": [],
-      "forecastRules": {
-        "avgHoursPerMonth": 30
-      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "hourlyRate": 150000
+      "recurring": true
     },
     {
       "name": "Retainer",
@@ -54,22 +62,7 @@
       "forecastRules": {},
       "currency": "IDR",
       "taxStatus": "taxable",
-      "recurring": true,
-      "amount": 5000000
-    },
-    {
-      "name": "Bonus",
-      "calculationMethod": "fixed_amount",
-      "frequency": "custom",
-      "expectedPaymentDate": {
-        "type": "manual"
-      },
-      "adjustmentRules": [],
-      "forecastRules": {},
-      "currency": "IDR",
-      "taxStatus": "taxable",
-      "recurring": false,
-      "amount": 0
+      "recurring": true
     }
   ]
 }
