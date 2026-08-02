@@ -7,7 +7,11 @@ import { formatMoney } from '@/src/theme/tokens';
 const BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 // 3x2 ≈ ~140dp tall, 6x4 ≈ ~280dp tall. Anything taller than this is the large variant.
-const LARGE_HEIGHT_DP = 170;
+export const LARGE_HEIGHT_DP = 170;
+
+export function widgetIsLarge(height?: number): boolean {
+  return (height ?? 0) > LARGE_HEIGHT_DP;
+}
 
 function bytesToBase64(bytes: Uint8Array): string {
   const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -24,7 +28,7 @@ function bytesToBase64(bytes: Uint8Array): string {
   return out;
 }
 
-async function fetchWidgetData(): Promise<NetWorthWidgetData> {
+export async function fetchWidgetData(): Promise<NetWorthWidgetData> {
   const token = await getToken();
   if (!token) return { signedOut: true, netWorth: '', income: '', healthScore: 0, chartUri: undefined, categories: [], updatedAt: '' };
 
@@ -63,7 +67,7 @@ async function fetchWidgetData(): Promise<NetWorthWidgetData> {
 
 export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
   const data = await fetchWidgetData();
-  const isLarge = (props.widgetInfo?.height ?? 0) > LARGE_HEIGHT_DP;
+  const isLarge = widgetIsLarge(props.widgetInfo?.height);
   switch (props.widgetAction) {
     case 'WIDGET_ADDED':
     case 'WIDGET_UPDATE':

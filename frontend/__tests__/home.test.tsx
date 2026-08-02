@@ -63,6 +63,7 @@ jest.mock('expo-router', () => ({
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: ({ children }: any) => children }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }));
+jest.mock('@/src/widgets/refresh-widget', () => ({ refreshNetWorthWidget: jest.fn() }));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children, style }: any) => {
     const React = require('react');

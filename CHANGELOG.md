@@ -2,6 +2,11 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.2b] — 2026-08-02
+
+### Changed
+- Home-screen widget now syncs immediately: the app pushes a widget update via `requestWidgetUpdate` whenever the Home screen loads data and whenever the app returns to the foreground (Android only auto-updates widgets every 30 min, so previously the widget lagged behind the app).
+
 ## [1.0.2a] — 2026-08-02
 
 ### Added

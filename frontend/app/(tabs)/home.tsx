@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -13,6 +13,7 @@ import { storage } from '@/src/utils/storage';
 import { Screen, Card, H1, H2, Body, Label, DisplayNumber, ProgressRing, Chip, EmptyState, Caption } from '@/src/components/ui';
 import { Skeleton, SkeletonCard, SkeletonRow } from '@/src/components/Skeleton';
 import { ErrorBanner } from '@/src/components/ErrorBanner';
+import { refreshNetWorthWidget } from '@/src/widgets/refresh-widget';
 
 const CATEGORY_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
@@ -78,6 +79,7 @@ export default function Home() {
       setLastSyncedAt(updatedAt);
       await storage.setItem(HOME_CACHE_KEY, JSON.stringify({ summary: nextSummary, txs: nextTxs, wallets: nextWallets, updatedAt }));
       setInitialLoading(false);
+      refreshNetWorthWidget();
     } catch {
       if (!summary) setLoadError('Could not load your data');
       setInitialLoading(false);
@@ -85,6 +87,14 @@ export default function Home() {
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // Sync the home-screen widget when the app returns to the foreground.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') refreshNetWorthWidget();
+    });
+    return () => sub.remove();
+  }, []);
 
   const onRefresh = useCallback(async () => { setRefreshing(true); await load(true); setRefreshing(false); }, [load]);
 
