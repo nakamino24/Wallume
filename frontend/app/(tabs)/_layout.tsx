@@ -33,11 +33,15 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.brandPrimary,
         tabBarInactiveTintColor: colors.muted,
         tabBarLabelStyle: { fontFamily: font.textMedium, fontSize: 11 },
+        tabBarItemStyle: { paddingVertical: 4 },
         tabBarStyle: {
           backgroundColor: colors.surface2,
           borderTopColor: colors.border,
+          // 'relative' keeps the bar in normal flow so screens and floating
+          // buttons (e.g. the Home "+") never scroll under / overlap it.
+          position: 'relative',
           height: (Platform.OS === 'ios' ? 60 : 56) + insets.bottom,
-          paddingBottom: insets.bottom + (Platform.OS === 'ios' ? 18 : 8),
+          paddingBottom: insets.bottom + (Platform.OS === 'ios' ? 18 : 6),
           paddingTop: 8,
         },
       }}

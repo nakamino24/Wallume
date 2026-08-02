@@ -4,6 +4,10 @@ All notable changes to Wallume are documented here. Format based on [Keep a Chan
 
 ## [1.0.3b] — 2026-08-02
 
+### Fixed
+- **Bottom navigation bar overlap (regression)**: the tab bar is now forced to normal flow (`position: 'relative'`) so screen content and floating buttons (e.g. the Home "+") never scroll under or overlap it, while keeping the safe-area bottom inset in the bar height/padding so it renders fully above the system gesture/3-button navigation bar on all Android devices.
+- **Keyboard covers text inputs**: `plan/[id].tsx` (Wedding Plan checklist "Add item") and `goal/[id].tsx` (contribute amount) now use a shared `KeyboardScroll` wrapper (KeyboardAvoidingView + ScrollView + dismiss-on-drag), matching the pattern already used by every other form (transaction, budget, recurring, categories, etc.).
+
 ### Removed
 - Occupation-based income setup flow (occupation picker, income-source wizard) removed per simplification. Income setup is now just: choose work schedule (5/6/7-day) + payday date.
 
