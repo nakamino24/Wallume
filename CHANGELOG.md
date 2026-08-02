@@ -2,6 +2,15 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.3b] — 2026-08-02
+
+### Removed
+- Occupation-based income setup flow (occupation picker, income-source wizard) removed per simplification. Income setup is now just: choose work schedule (5/6/7-day) + payday date.
+
+### Fixed
+- Payday date picker: the calendar no longer rolls the 31st over to the 1st in 30-day months (picker now displays in January, which always has 31 days).
+- Payday calculation clarified (unchanged logic, already correct): 5-day work → non-working-day payday paid on Friday (last working day); 6-day → paid on Saturday; 7-day → paid on the chosen date. National-holiday paydays shift to the previous day in all cases.
+
 ## [1.0.3a] — 2026-08-02
 
 ### Changed

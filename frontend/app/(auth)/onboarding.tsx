@@ -59,7 +59,7 @@ export default function Onboarding() {
         try { await updateProfile({ payday_day: paydayDay, work_week: workWeek }); } catch {}
       }
       await markDone();
-      router.replace('/income-setup' as any);
+      router.replace('/(tabs)/home');
     } else {
       scrollRef.current?.scrollTo({ x: width * (step + 1), animated: true });
       setStep((p) => p + 1);
@@ -105,8 +105,9 @@ export default function Onboarding() {
               {showPicker && (
                 <DateTimePicker
                   testID="onboarding-payday-datepicker"
-                  value={new Date(new Date().getFullYear(), new Date().getMonth(), paydayDay)}
+                  value={new Date(new Date().getFullYear(), 0, Math.min(paydayDay, 31))}
                   mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   onChange={(event: DateTimePickerEvent, date?: Date) => {
                     if (Platform.OS === 'android') setShowPicker(false);
                     if (event.type === 'set' && date) setPaydayDay(date.getDate());

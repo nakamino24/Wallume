@@ -154,8 +154,11 @@ export default function Profile() {
             {showPicker && (
               <DateTimePicker
                 testID="profile-payday-datepicker"
-                value={new Date(new Date().getFullYear(), new Date().getMonth(), user?.payday_day || 25)}
+                // Use January (month 0, always 31 days) so a payday of e.g. the
+                // 31st never rolls over to the 1st in a 30-day month.
+                value={new Date(new Date().getFullYear(), 0, Math.min(user?.payday_day || 25, 31))}
                 mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={(event: DateTimePickerEvent, date?: Date) => {
                   if (Platform.OS === 'android') setShowPicker(false);
                   if (event.type === 'set' && date) {
@@ -205,26 +208,6 @@ export default function Profile() {
               <View>
                 <Body style={{ fontFamily: font.textBold }}>Categories</Body>
                 <Body muted style={{ marginTop: 2, fontSize: 12 }}>Add your own category names</Body>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-            </View>
-          </Card>
-
-          <Card onPress={() => router.push('/income-setup?mode=manage' as any)}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View>
-                <Body style={{ fontFamily: font.textBold }}>Income setup</Body>
-                <Body muted style={{ marginTop: 2, fontSize: 12 }}>Manage your income sources & forecast</Body>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-            </View>
-          </Card>
-
-          <Card onPress={() => router.push('/income-sources' as any)}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View>
-                <Body style={{ fontFamily: font.textBold }}>Income sources</Body>
-                <Body muted style={{ marginTop: 2, fontSize: 12 }}>Edit generated income config</Body>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.muted} />
             </View>
