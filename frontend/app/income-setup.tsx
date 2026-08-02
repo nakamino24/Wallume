@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,6 +42,7 @@ export default function IncomeSetup() {
   const [templates, setTemplates] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [jobText, setJobText] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [selected, setSelected] = useState<any>(null);
   const [sources, setSources] = useState<Source[]>([]);
   const [workWeek, setWorkWeek] = useState<number>(user?.work_week || 5);
@@ -117,37 +118,59 @@ export default function IncomeSetup() {
             {step === 'pick' && (
               <>
                 <H1>What do you do?</H1>
-                <Body muted style={{ marginTop: 4, marginBottom: spacing.lg }}>Pick an occupation template or describe your job for suggestions.</Body>
+                <Body muted style={{ marginTop: 4, marginBottom: spacing.lg }}>Pick your occupation type to pre-fill your income sources.</Body>
 
-                <Label>Describe your job (optional)</Label>
-                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                  <Input testID="income-suggest-input" value={jobText} onChangeText={setJobText} placeholder="e.g. I work at a hospital" style={{ flex: 1 }} />
-                  <Button testID="income-suggest-btn" label="Suggest" onPress={suggest} loading={loading} style={{ marginBottom: spacing.md, paddingHorizontal: spacing.md }} />
-                </View>
+                {/* Dropdown to pick one of the 18 templates directly */}
+                <Label>Occupation type</Label>
+                <TouchableOpacity testID="income-dropdown" onPress={() => setDropdownOpen(true)} activeOpacity={0.7}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: 14, marginTop: spacing.xs }}>
+                  <Body style={{ fontSize: 15 }}>{selected ? selected.name : 'Select your occupation…'}</Body>
+                  <Ionicons name="chevron-down" size={18} color={colors.muted} />
+                </TouchableOpacity>
 
-                {suggestions.length > 0 && (
-                  <>
-                    <Label style={{ marginTop: spacing.lg }}>Suggested for you</Label>
+                {/* Optional AI suggestion helper */}
+                <View style={{ marginTop: spacing.lg }}>
+                  <Label>Not sure? Describe your job (optional)</Label>
+                  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+                    <Input testID="income-suggest-input" value={jobText} onChangeText={setJobText} placeholder="e.g. I work at a hospital" style={{ flex: 1 }} />
+                    <Button testID="income-suggest-btn" label="Suggest" onPress={suggest} loading={loading} style={{ marginBottom: spacing.md, paddingHorizontal: spacing.md }} />
+                  </View>
+                  {suggestions.length > 0 && (
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm }}>
                       {suggestions.map((s) => (
                         <Chip key={s.id} testID={`income-suggest-${s.id}`} label={s.name} onPress={() => choose(s)} />
                       ))}
                     </View>
-                  </>
-                )}
-
-                <Label style={{ marginTop: spacing.xl }}>All templates</Label>
-                <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
-                  {templates.map((t) => (
-                    <TouchableOpacity key={t.id} testID={`income-template-${t.id}`} onPress={() => choose(t)} activeOpacity={0.85}
-                      style={{ backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md }}>
-                      <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{t.name}</Body>
-                      <Body muted style={{ fontSize: 12, marginTop: 2 }}>{t.description} · {t.incomeSources?.length || 0} sources</Body>
-                    </TouchableOpacity>
-                  ))}
+                  )}
                 </View>
               </>
             )}
+
+            {/* Dropdown modal listing all 18 templates */}
+            <Modal visible={dropdownOpen} transparent animationType="slide" onRequestClose={() => setDropdownOpen(false)}>
+              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
+                <SafeAreaView style={{ backgroundColor: colors.surface2, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, maxHeight: '75%' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm }}>
+                    <Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>Choose occupation</Body>
+                    <TouchableOpacity testID="income-dropdown-close" onPress={() => setDropdownOpen(false)} style={{ padding: 4 }}>
+                      <Ionicons name="close" size={22} color={colors.muted} />
+                    </TouchableOpacity>
+                  </View>
+                  <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl }}>
+                    {templates.map((t) => (
+                      <TouchableOpacity key={t.id} testID={`income-dropdown-${t.id}`} onPress={() => { setDropdownOpen(false); choose(t); }} activeOpacity={0.7}
+                        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                        <View style={{ flex: 1 }}>
+                          <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{t.name}</Body>
+                          <Body muted style={{ fontSize: 12, marginTop: 2 }}>{t.incomeSources?.length || 0} sources</Body>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </SafeAreaView>
+              </View>
+            </Modal>
 
             {/* Step 2: edit sources */}
             {step === 'edit' && selected && (

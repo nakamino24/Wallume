@@ -2,6 +2,11 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.2c] — 2026-08-02
+
+### Changed
+- Income setup: occupation selection is now a direct dropdown of the 18 templates. The AI job-description suggestion remains available as an optional helper.
+
 ## [1.0.2b] — 2026-08-02
 
 ### Changed
