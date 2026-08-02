@@ -1,0 +1,90 @@
+{
+  "id": "investor",
+  "name": "Investor",
+  "description": "Passive investment income.",
+  "workWeekDefault": 7,
+  "paydayDayDefault": 25,
+  "incomeSources": [
+    {
+      "name": "Dividend",
+      "calculationMethod": "manual",
+      "frequency": "quarterly",
+      "expectedPaymentDate": {
+        "type": "company_policy"
+      },
+      "adjustmentRules": [],
+      "forecastRules": {
+        "avgPerQuarter": 3000000
+      },
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "amount": 3000000
+    },
+    {
+      "name": "Bond Coupon",
+      "calculationMethod": "percentage",
+      "frequency": "annually",
+      "expectedPaymentDate": {
+        "type": "company_policy"
+      },
+      "adjustmentRules": [],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "percentage": 6,
+      "percentageOf": "gross"
+    },
+    {
+      "name": "Interest",
+      "calculationMethod": "manual",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "company_policy"
+      },
+      "adjustmentRules": [],
+      "forecastRules": {
+        "avgPerMonth": 500000
+      },
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "amount": 500000
+    },
+    {
+      "name": "Rental Income",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 1
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "amount": 4000000
+    },
+    {
+      "name": "Capital Gain",
+      "calculationMethod": "manual",
+      "frequency": "custom",
+      "expectedPaymentDate": {
+        "type": "manual"
+      },
+      "adjustmentRules": [],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": false,
+      "amount": 0
+    }
+  ]
+}

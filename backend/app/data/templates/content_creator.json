@@ -1,0 +1,89 @@
+{
+  "id": "content_creator",
+  "name": "Content Creator",
+  "description": "Creator income from multiple platforms.",
+  "workWeekDefault": 7,
+  "paydayDayDefault": 25,
+  "incomeSources": [
+    {
+      "name": "Adsense",
+      "calculationMethod": "manual",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "company_policy"
+      },
+      "adjustmentRules": [],
+      "forecastRules": {
+        "avgPerMonth": 3000000
+      },
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "amount": 3000000
+    },
+    {
+      "name": "Sponsorship",
+      "calculationMethod": "per_project",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "company_policy"
+      },
+      "adjustmentRules": [],
+      "forecastRules": {
+        "projectsPerMonth": 2
+      },
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "perProject": 5000000
+    },
+    {
+      "name": "Affiliate",
+      "calculationMethod": "per_sale",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "company_policy"
+      },
+      "adjustmentRules": [],
+      "forecastRules": {
+        "salesPerMonth": 20
+      },
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "perSale": 25000
+    },
+    {
+      "name": "Donation",
+      "calculationMethod": "manual",
+      "frequency": "custom",
+      "expectedPaymentDate": {
+        "type": "manual"
+      },
+      "adjustmentRules": [],
+      "forecastRules": {
+        "avgPerMonth": 1000000
+      },
+      "currency": "IDR",
+      "taxStatus": "nontaxable",
+      "recurring": true,
+      "amount": 1000000
+    },
+    {
+      "name": "Brand Deals",
+      "calculationMethod": "per_project",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "company_policy"
+      },
+      "adjustmentRules": [],
+      "forecastRules": {
+        "projectsPerMonth": 1
+      },
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "perProject": 8000000
+    }
+  ]
+}

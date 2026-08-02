@@ -1,0 +1,91 @@
+{
+  "id": "teacher_lecturer",
+  "name": "Teacher / Lecturer",
+  "description": "Academic with salary plus teaching hours.",
+  "workWeekDefault": 5,
+  "paydayDayDefault": 25,
+  "incomeSources": [
+    {
+      "name": "Monthly Salary",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "amount": 5500000
+    },
+    {
+      "name": "Teaching Hours",
+      "calculationMethod": "hourly",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {
+        "avgHoursPerMonth": 24
+      },
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "hourlyRate": 75000
+    },
+    {
+      "name": "Honorarium",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "amount": 1000000
+    },
+    {
+      "name": "Certification Allowance",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "nontaxable",
+      "recurring": true,
+      "amount": 250000
+    }
+  ]
+}

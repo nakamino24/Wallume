@@ -1,0 +1,61 @@
+{
+  "id": "consultant",
+  "name": "Consultant",
+  "description": "Daily and hourly consulting income.",
+  "workWeekDefault": 5,
+  "paydayDayDefault": 25,
+  "incomeSources": [
+    {
+      "name": "Daily Rate",
+      "calculationMethod": "daily",
+      "frequency": "custom",
+      "expectedPaymentDate": {
+        "type": "company_policy"
+      },
+      "adjustmentRules": [],
+      "forecastRules": {
+        "daysPerMonth": 12
+      },
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "dailyRate": 1500000
+    },
+    {
+      "name": "Hourly Rate",
+      "calculationMethod": "hourly",
+      "frequency": "custom",
+      "expectedPaymentDate": {
+        "type": "company_policy"
+      },
+      "adjustmentRules": [],
+      "forecastRules": {
+        "avgHoursPerMonth": 20
+      },
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "hourlyRate": 250000
+    },
+    {
+      "name": "Retainer",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 1
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "amount": 8000000
+    }
+  ]
+}

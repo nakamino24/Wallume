@@ -136,6 +136,68 @@ class RecurringCreate(BaseModel):
     active: bool = True
     currency: Optional[str] = None
 
+
+# --- Income / Payroll ---
+CalculationMethod = Literal[
+    "fixed_amount", "hourly", "daily", "weekly", "monthly", "semi_monthly",
+    "biweekly", "per_shift", "per_visit", "per_sale", "per_project",
+    "percentage", "formula", "manual",
+]
+IncomeFrequency = Literal[
+    "daily", "weekly", "biweekly", "semi_monthly", "monthly", "quarterly", "annually", "custom",
+]
+
+
+class PaymentDateRule(BaseModel):
+    type: Literal["fixed_date", "last_calendar_day", "last_business_day",
+                  "first_business_day", "nth_weekday", "manual", "company_policy"] = "fixed_date"
+    day: Optional[int] = None
+    month: Optional[int] = None
+    weekday: Optional[int] = None
+    nth: Optional[int] = None
+
+
+class AdjustmentRule(BaseModel):
+    type: Literal["weekend_rule"] = "weekend_rule"
+    value: Literal["previous_business_day", "next_business_day", "no_adjustment"] = "previous_business_day"
+
+
+class IncomeSourceIn(BaseModel):
+    name: str
+    calculation_method: CalculationMethod = "fixed_amount"
+    frequency: IncomeFrequency = "monthly"
+    expected_payment_date: PaymentDateRule = PaymentDateRule()
+    adjustment_rules: list[AdjustmentRule] = []
+    forecast_rules: dict = {}
+    currency: Optional[str] = None
+    tax_status: Literal["taxable", "nontaxable"] = "taxable"
+    recurring: bool = True
+    amount: Optional[float] = None
+    hourly_rate: Optional[float] = None
+    daily_rate: Optional[float] = None
+    per_shift: Optional[float] = None
+    per_visit: Optional[float] = None
+    per_sale: Optional[float] = None
+    per_project: Optional[float] = None
+    percentage: Optional[float] = None
+    percentage_of: Optional[str] = None
+    formula: Optional[str] = None
+
+
+class TemplateApplyRequest(BaseModel):
+    work_week: Optional[int] = None
+    payday_day: Optional[int] = None
+    override_sources: Optional[list[IncomeSourceIn]] = None
+
+
+class ForecastRequest(BaseModel):
+    from_date: Optional[str] = None  # YYYY-MM-DD
+    horizon_months: int = 1
+
+
+class TemplateSuggestRequest(BaseModel):
+    job_description: str
+
 # --- Coach ---
 class CoachChatRequest(BaseModel):
     session_id: str

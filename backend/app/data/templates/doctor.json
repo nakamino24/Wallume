@@ -1,0 +1,116 @@
+{
+  "id": "doctor",
+  "name": "Doctor",
+  "description": "Mixed fixed retainer plus per-visit fees.",
+  "workWeekDefault": 5,
+  "paydayDayDefault": 25,
+  "incomeSources": [
+    {
+      "name": "Monthly Retainer",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "amount": 10000000
+    },
+    {
+      "name": "Consultation Fee",
+      "calculationMethod": "per_visit",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {
+        "visitsPerMonth": 150
+      },
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "perVisit": 50000
+    },
+    {
+      "name": "Surgery Fee",
+      "calculationMethod": "per_project",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {
+        "projectsPerMonth": 8
+      },
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "perProject": 750000
+    },
+    {
+      "name": "On Call Fee",
+      "calculationMethod": "per_shift",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {
+        "shiftsPerMonth": 4
+      },
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "perShift": 350000
+    },
+    {
+      "name": "Incentive",
+      "calculationMethod": "percentage",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "percentage": 20,
+      "percentageOf": "gross"
+    }
+  ]
+}

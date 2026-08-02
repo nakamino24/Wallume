@@ -1,0 +1,63 @@
+{
+  "id": "unemployed",
+  "name": "Unemployed",
+  "description": "Support and withdrawals while between jobs.",
+  "workWeekDefault": 7,
+  "paydayDayDefault": 25,
+  "incomeSources": [
+    {
+      "name": "Savings Withdrawal",
+      "calculationMethod": "manual",
+      "frequency": "custom",
+      "expectedPaymentDate": {
+        "type": "manual"
+      },
+      "adjustmentRules": [],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "nontaxable",
+      "recurring": false,
+      "amount": 0
+    },
+    {
+      "name": "Family Support",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 1
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "nontaxable",
+      "recurring": true,
+      "amount": 1000000
+    },
+    {
+      "name": "Government Assistance",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 5
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "nontaxable",
+      "recurring": true,
+      "amount": 500000
+    }
+  ]
+}

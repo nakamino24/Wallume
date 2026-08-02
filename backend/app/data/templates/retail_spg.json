@@ -1,0 +1,92 @@
+{
+  "id": "retail_spg",
+  "name": "Retail / SPG",
+  "description": "Sales promotion girl with commission.",
+  "workWeekDefault": 6,
+  "paydayDayDefault": 25,
+  "incomeSources": [
+    {
+      "name": "Base Salary",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "amount": 2800000
+    },
+    {
+      "name": "Sales Commission",
+      "calculationMethod": "per_sale",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {
+        "salesPerMonth": 30
+      },
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "perSale": 50000
+    },
+    {
+      "name": "Attendance Bonus",
+      "calculationMethod": "fixed_amount",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": true,
+      "amount": 200000
+    },
+    {
+      "name": "Sales Target Bonus",
+      "calculationMethod": "percentage",
+      "frequency": "monthly",
+      "expectedPaymentDate": {
+        "type": "fixed_date",
+        "day": 25
+      },
+      "adjustmentRules": [
+        {
+          "type": "weekend_rule",
+          "value": "previous_business_day"
+        }
+      ],
+      "forecastRules": {},
+      "currency": "IDR",
+      "taxStatus": "taxable",
+      "recurring": false,
+      "percentage": 10,
+      "percentageOf": "gross"
+    }
+  ]
+}
