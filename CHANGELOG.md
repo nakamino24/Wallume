@@ -2,6 +2,19 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.4a] — 2026-08-02 (interaction redesign)
+
+### Added
+- **MoneyInput** — reusable smart currency input (Rupiah live formatting, cursor-safe, leading-zero safe, empty stays empty, never remounts/loses focus). Reuses the existing `money.ts` formatter; no duplicated logic.
+- **FormLayout** — shared safe-area + keyboard + scroll-aware form layout (header/back, KeyboardAvoidingView, ScrollView, dynamic bottom padding).
+- **KeyboardAwareContainer** — centralized keyboard manager: any focused `Input`/`MoneyInput` auto-scrolls fully into view above the keyboard via a shared context. Replaces the ad-hoc `KeyboardScroll`.
+- Centralized auto-scroll wired into the shared `Input` component — every form using it gets scroll-to-focused for free.
+
+### Migrated
+- Transaction form and Budget form → `FormLayout` + `MoneyInput`.
+- Wedding Plan checklist (`plan/[id]`) and Goal detail (`goal/[id]`) → centralized `KeyboardAwareContainer` (confirmed the "Add item" field is covered).
+- Removed the ad-hoc `KeyboardScroll` component (replaced by the centralized system).
+
 ## [1.0.4a] — 2026-08-02
 
 ### Added
