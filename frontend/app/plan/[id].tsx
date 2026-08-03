@@ -10,7 +10,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, formatMoney, formatMoneyFull, images, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, Button, Input, ProgressBar, DisplayNumber } from '@/src/components/ui';
-import { KeyboardScroll } from '@/src/components/KeyboardScroll';
+import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 
 const HERO: Record<string, string> = { wedding: images.wedding, house: images.house, car: images.car, vacation: images.vacation };
 
@@ -75,7 +75,7 @@ export default function PlanDetail() {
   return (
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
-        <KeyboardScroll contentContainerStyle={{ paddingBottom: 100 }}>
+        <KeyboardAwareContainer contentContainerStyle={{ paddingBottom: 100 }}>
           <ImageBackground source={{ uri: HERO[plan.kind] }} style={{ height: 260 }}>
             <LinearGradient colors={['#00000088', 'transparent', '#000000ee']} style={{ flex: 1, padding: spacing.xl, justifyContent: 'space-between' }}>
               <SafeAreaView edges={['top']}>
@@ -160,8 +160,9 @@ export default function PlanDetail() {
               <Button testID="add-item-btn" label="Add checklist item" onPress={addItem} />
             </Card>
           </View>
-        </KeyboardScroll>
+        </KeyboardAwareContainer>
       </SafeAreaView>
     </Screen>
   );
 }
+

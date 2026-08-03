@@ -9,7 +9,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font, formatMoney, formatMoneyFull, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, Button, Input, ProgressBar, DisplayNumber } from '@/src/components/ui';
-import { KeyboardScroll } from '@/src/components/KeyboardScroll';
+import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 
 export default function GoalDetail() {
   const { colors } = useTheme();
@@ -55,7 +55,7 @@ export default function GoalDetail() {
           <H2 style={{ marginLeft: spacing.md, flex: 1 }}>{goal.name}</H2>
           <TouchableOpacity onPress={remove}><Ionicons name="trash" size={20} color={colors.error} /></TouchableOpacity>
         </View>
-        <KeyboardScroll contentContainerStyle={{ padding: spacing.xl, gap: spacing.md }}>
+        <KeyboardAwareContainer contentContainerStyle={{ padding: spacing.xl, gap: spacing.md }}>
           <Card>
             <Label>Saved</Label>
             <DisplayNumber size={38} style={{ marginTop: 6 }}>{formatMoneyFull(saved, cur)}</DisplayNumber>
@@ -81,8 +81,9 @@ export default function GoalDetail() {
               <Body style={{ fontFamily: font.textBold, marginTop: 4 }}>{goal.target_date}</Body>
             </Card>
           )}
-        </KeyboardScroll>
+        </KeyboardAwareContainer>
       </SafeAreaView>
     </Screen>
   );
 }
+
