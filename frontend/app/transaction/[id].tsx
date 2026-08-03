@@ -8,6 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
+import { formatInputDigits, stripFormatting } from '@/src/lib/money';
 import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
@@ -120,8 +121,8 @@ export default function EditTransaction() {
                 <Input
                   testID="edit-tx-amount"
                   keyboardType="decimal-pad"
-                  value={amount}
-                  onChangeText={setAmount}
+                  value={formatInputDigits(amount)}
+                  onChangeText={(t) => setAmount(stripFormatting(t))}
                   placeholder="0"
                   style={{ fontSize: scale(44), fontFamily: font.displayBold, textAlign: 'center', backgroundColor: 'transparent', borderWidth: 0, minWidth: 160, paddingVertical: 4 }}
                 />

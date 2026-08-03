@@ -1,3 +1,5 @@
+import * as moneyMoney from '@/src/lib/money';
+
 export const palette = {
   light: {
     surface: '#F8F7F4',
@@ -97,29 +99,24 @@ export const CURRENCIES = [
 ];
 
 export function currencySymbol(code: string) {
-  return CURRENCIES.find((c) => c.code === code)?.symbol || code;
+  // Centralized Indonesian formatter is the single source of truth now.
+  return moneyMoney.currencySymbol(code) || CURRENCIES.find((c) => c.code === code)?.symbol || code;
 }
 
 const ZERO_DECIMAL_CURRENCIES = new Set(['IDR', 'JPY', 'KRW', 'VND', 'CLP', 'ISK', 'HUF']);
 
 export function formatMoney(amount: number, currency: string = 'USD') {
-  const sym = currencySymbol(currency);
-  const abs = Math.abs(amount);
-  const formatted =
-    abs >= 1_000_000
-      ? (amount / 1_000_000).toFixed(abs >= 10_000_000 ? 1 : 2) + 'M'
-      : abs >= 10_000
-      ? (amount / 1000).toFixed(1) + 'k'
-      : amount.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 0 });
-  return `${sym}${formatted}`;
+  // Indonesian full format, no compact — e.g. "Rp4.200.000".
+  return moneyMoney.formatMoneyFull(amount, currency);
 }
 
 export function formatMoneyFull(amount: number, currency: string = 'USD') {
-  const sym = currencySymbol(currency);
-  const abs = Math.abs(amount);
-  const sign = amount < 0 ? '-' : '';
-  const decimals = ZERO_DECIMAL_CURRENCIES.has(currency) ? 0 : 2;
-  return `${sign}${sym}${abs.toLocaleString(undefined, { maximumFractionDigits: decimals, minimumFractionDigits: decimals })}`;
+  return moneyMoney.formatMoneyFull(amount, currency);
+}
+
+export function formatMoneyCompact(amount: number, currency: string = 'USD') {
+  // Analytics / charts only — compact "Rp4,2M".
+  return moneyMoney.formatMoneyCompact(amount, currency);
 }
 
 // Picks the backend-converted (home-currency) value for an entity field, falling

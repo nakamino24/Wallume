@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, AppState } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 
@@ -31,6 +31,7 @@ type HomeCachePayload = {
 
 export default function Home() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const router = useRouter();
   const [summary, setSummary] = useState<any>(null);
@@ -391,7 +392,7 @@ export default function Home() {
         testID="home-fab"
         onPress={() => router.push('/transaction/new')}
         activeOpacity={0.9}
-        style={[styles.fab, { backgroundColor: colors.brandPrimary }]}
+        style={[styles.fab, { backgroundColor: colors.brandPrimary, bottom: insets.bottom + spacing.xl }]}
       >
         <Ionicons name="add" size={28} color={colors.onBrand} />
       </TouchableOpacity>

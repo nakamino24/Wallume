@@ -8,6 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
+import { formatInputDigits, stripFormatting } from '@/src/lib/money';
 import { api } from '@/src/api/client';
 import { Screen, H1, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { ErrorBanner } from '@/src/components/ErrorBanner';
@@ -122,8 +123,8 @@ export default function NewTransaction() {
                 <Input
                   testID="tx-amount"
                   keyboardType="decimal-pad"
-                  value={amount}
-                  onChangeText={setAmount}
+                  value={formatInputDigits(amount)}
+                  onChangeText={(t) => setAmount(stripFormatting(t))}
                   placeholder="0"
                   autoFocus
                   style={{ fontSize: scale(44), fontFamily: font.displayBold, textAlign: 'center', backgroundColor: 'transparent', borderWidth: 0, minWidth: 160, paddingVertical: 4 }}

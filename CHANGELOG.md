@@ -2,6 +2,16 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.4a] — 2026-08-02
+
+### Added
+- **Centralized Indonesian money formatter** (`src/lib/money.ts`): single source of truth for all currency display. `formatMoney`/`formatMoneyFull` in tokens now delegate to it app-wide (e.g. `Rp4.200.000`, dot thousands, comma decimals only when required). `formatMoneyCompact` for analytics/charts (e.g. `Rp4,2M`). Live input formatting (`formatInputDigits`) applied to the transaction amount fields with cursor-safe digit handling.
+- **Safe-area spacing hook** (`useBottomSpacing`/`useTopSpacing`): Home FAB and Toast now position themselves using `insets.bottom + designSpacing` instead of hardcoded pixels.
+
+### Fixed
+- Keyboard covering text inputs: `plan/[id].tsx` (Wedding checklist "Add item") and `goal/[id].tsx` use the shared `KeyboardScroll` wrapper (KeyboardAvoidingView + ScrollView + dismiss-on-drag), consistent with every other form.
+- Bottom nav bar forced to normal flow (`position: relative`) so screens and floating buttons never overlap it, while keeping the safe-area inset in bar height/padding.
+
 ## [1.0.3b] — 2026-08-02
 
 ### Fixed

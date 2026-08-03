@@ -3,6 +3,7 @@ import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, radius, font } from '@/src/theme/tokens';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -14,6 +15,7 @@ const Ctx = createContext<ToastCtx | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState('');
   const [type, setType] = useState<ToastType>('success');
@@ -42,7 +44,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={{ show }}>
       {children}
       {visible && (
-        <Animated.View style={[styles.container, { opacity, backgroundColor: bgColor, bottom: 100 }]}>
+        <Animated.View style={[styles.container, { opacity, backgroundColor: bgColor, bottom: insets.bottom + 80 }]}>
           <Ionicons name={icon} size={18} color="#FFFFFF" />
           <Text style={styles.text}>{message}</Text>
         </Animated.View>

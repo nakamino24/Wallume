@@ -7,7 +7,7 @@ import Svg, { Rect, Circle as SvgCircle, G, Text as SvgText } from 'react-native
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney, formatMoneyFull } from '@/src/theme/tokens';
+import { spacing, radius, font, formatMoney, formatMoneyFull, formatMoneyCompact } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, DisplayNumber, EmptyState, Input } from '@/src/components/ui';
 import { DateField } from '@/src/components/DateField';
@@ -119,7 +119,7 @@ export default function Reports() {
                     <View key={c.category} style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: CAT_COLORS[i % CAT_COLORS.length], marginRight: 8 }} />
                       <Body style={{ flex: 1 }}>{c.category}</Body>
-                      <Body style={{ fontFamily: font.textBold }}>{formatMoney(c.amount, cur)}</Body>
+                      <Body style={{ fontFamily: font.textBold }}>{formatMoneyCompact(c.amount, cur)}</Body>
                     </View>
                   ))}
                 </View>
