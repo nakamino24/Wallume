@@ -20,7 +20,8 @@ export function currencySymbol(code: string): string {
 
 // Groups an unsigned integer string with "." separators, e.g. "4200000" -> "4.200.000".
 function groupThousands(intStr: string): string {
-  const s = intStr.replace(/^0+/, '') || '0';
+  const s = intStr.replace(/^0+/, '');
+  if (s === '') return intStr === '' ? '' : '0'; // empty stays empty; lone "0" stays "0"
   return s.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 

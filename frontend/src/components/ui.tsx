@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ViewStyle, TextStyle, StyleProp } from 'react-native';
 import type { TextProps } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
@@ -212,16 +212,21 @@ export function EmptyState({
 
 // Input
 import { TextInput, TextInputProps } from 'react-native';
+import { useKeyboardScroll } from '@/src/components/KeyboardAwareContainer';
 
 export function Input(props: TextInputProps & { label?: string; testID?: string }) {
   const { colors } = useTheme();
-  const { label, style, testID, ...rest } = props;
+  const { label, style, testID, onFocus, ...rest } = props;
+  const { focusToInput } = useKeyboardScroll();
+  const ref = useRef<TextInput>(null);
   return (
     <View style={{ marginBottom: spacing.md }}>
       {label && <Label style={{ marginBottom: 6 }}>{label}</Label>}
       <TextInput
+        ref={ref}
         testID={testID}
         placeholderTextColor={colors.muted}
+        onFocus={(e) => { focusToInput(ref.current); if (onFocus) onFocus(e); }}
         {...rest}
         style={[{
           backgroundColor: colors.surface2,
@@ -232,7 +237,7 @@ export function Input(props: TextInputProps & { label?: string; testID?: string 
           borderWidth: 1,
           borderColor: colors.border,
           fontFamily: font.text,
-          fontSize: font.sizes.base,
+          fontSize: 15,
         }, style]}
       />
     </View>

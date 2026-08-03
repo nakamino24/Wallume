@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, ScrollView, TouchableOpacity, Keyboard } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -8,14 +7,15 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
-import { formatInputDigits, stripFormatting } from '@/src/lib/money';
 import { api } from '@/src/api/client';
-import { Screen, H1, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
+import { Button, Body, Label, Chip, Input } from '@/src/components/ui';
 import { ErrorBanner } from '@/src/components/ErrorBanner';
 import { useToast } from '@/src/components/Toast';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
 import { DateField } from '@/src/components/DateField';
 import { CategorySelector } from '@/src/components/CategorySelector';
+import { FormLayout } from '@/src/components/FormLayout';
+import { MoneyInput } from '@/src/components/MoneyInput';
 
 export default function NewTransaction() {
   const { colors } = useTheme();
@@ -78,19 +78,10 @@ export default function NewTransaction() {
   const cur = user?.currency || 'USD';
 
   return (
-    <Screen>
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-            <TouchableOpacity testID="new-tx-back" onPress={() => router.back()} style={{ padding: 4 }}>
-              <Ionicons name="close" size={24} color={colors.onSurface} />
-            </TouchableOpacity>
-            <H2 style={{ marginLeft: spacing.md }}>New transaction</H2>
-          </View>
+    <FormLayout title="New transaction" onBack={() => router.back()}>
 
-          <ScrollView ref={scrollRef} contentContainerStyle={{ padding: spacing.xl, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
-            {/* Type selector */}
-            <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.md, padding: 4, marginBottom: spacing.xl }}>
+      {/* Type selector */}
+      <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.md, padding: 4, marginBottom: spacing.xl }}>
               {(['expense', 'income', 'transfer'] as const).map((t) => (
                 <TouchableOpacity
                   key={t}
@@ -120,14 +111,12 @@ export default function NewTransaction() {
               <Label>Amount</Label>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: spacing.sm }}>
                 <Body style={{ fontSize: scale(24), marginRight: 4, fontFamily: font.displayBold }}>{currencySymbol(cur)}</Body>
-                <Input
+                <MoneyInput
                   testID="tx-amount"
-                  keyboardType="decimal-pad"
-                  value={formatInputDigits(amount)}
-                  onChangeText={(t) => setAmount(stripFormatting(t))}
-                  placeholder="0"
+                  value={amount}
+                  onChange={setAmount}
                   autoFocus
-                  style={{ fontSize: scale(44), fontFamily: font.displayBold, textAlign: 'center', backgroundColor: 'transparent', borderWidth: 0, minWidth: 160, paddingVertical: 4 }}
+                  style={{ flex: 1, alignSelf: 'stretch' }}
                 />
               </View>
             </View>
@@ -163,9 +152,6 @@ export default function NewTransaction() {
             {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
 
             <Button testID="tx-save" label="Save transaction" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Screen>
+    </FormLayout>
   );
 }
