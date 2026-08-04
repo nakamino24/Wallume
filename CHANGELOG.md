@@ -11,8 +11,8 @@ All notable changes to Wallume are documented here. Format based on [Keep a Chan
 - Centralized auto-scroll wired into the shared `Input` component — every form using it gets scroll-to-focused for free.
 
 ### Migrated
-- Transaction form and Budget form → `FormLayout` + `MoneyInput`.
-- Wedding Plan checklist (`plan/[id]`) and Goal detail (`goal/[id]`) → centralized `KeyboardAwareContainer` (confirmed the "Add item" field is covered).
+- All forms now use the shared `FormLayout` + `MoneyInput`: Transaction (new + edit), Budget, Goal (new + edit), Debt, Plan, Recurring, Investment, Wallet (new + edit).
+- Wedding Plan checklist (`plan/[id]`) and Goal detail (`goal/[id]`) → centralized `KeyboardAwareContainer`.
 - Removed the ad-hoc `KeyboardScroll` component (replaced by the centralized system).
 
 ## [1.0.4a] — 2026-08-02
