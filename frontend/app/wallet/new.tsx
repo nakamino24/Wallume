@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
+import { Body, Label, Button, Input, Chip } from '@/src/components/ui';
+import { FormLayout } from '@/src/components/FormLayout';
+import { MoneyInput } from '@/src/components/MoneyInput';
 
 const TYPES = [
   { id: 'cash', label: 'Cash' },
@@ -45,27 +45,17 @@ export default function NewWallet() {
   };
 
   return (
-    <Screen>
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-            <TouchableOpacity testID="new-wallet-back" onPress={() => router.back()}><Ionicons name="close" size={24} color={colors.onSurface} /></TouchableOpacity>
-            <H2 style={{ marginLeft: spacing.md }}>New wallet</H2>
-          </View>
-          <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
-            <Input testID="wallet-name" label="Name" value={name} onChangeText={setName} placeholder="Main Bank, Cash, Visa…" />
-            <Label>Type</Label>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-              {TYPES.map((t) => (
-                <Chip key={t.id} testID={`wtype-${t.id}`} label={t.label} active={type === t.id} onPress={() => setType(t.id)} />
-              ))}
-            </ScrollView>
-            <Input testID="wallet-balance" label="Starting balance" keyboardType="decimal-pad" value={balance} onChangeText={setBalance} placeholder="0" />
-            {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
-            <Button testID="wallet-save" label="Add wallet" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Screen>
+    <FormLayout title="New wallet" onBack={() => router.back()}>
+      <Input testID="wallet-name" label="Name" value={name} onChangeText={setName} placeholder="Main Bank, Cash, Visa…" />
+      <Label>Type</Label>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+        {TYPES.map((t) => (
+          <Chip key={t.id} testID={`wtype-${t.id}`} label={t.label} active={type === t.id} onPress={() => setType(t.id)} />
+        ))}
+      </ScrollView>
+      <MoneyInput testID="wallet-balance" label="Starting balance" value={balance} onChange={setBalance} placeholder="0" />
+      {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
+      <Button testID="wallet-save" label="Add wallet" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
+    </FormLayout>
   );
 }

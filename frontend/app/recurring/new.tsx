@@ -1,16 +1,16 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
+import { spacing, radius, font } from '@/src/theme/tokens';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { api } from '@/src/api/client';
-import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
+import { Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
 import { DateField } from '@/src/components/DateField';
+import { FormLayout } from '@/src/components/FormLayout';
+import { MoneyInput } from '@/src/components/MoneyInput';
 
 const FREQUENCIES: { id: 'weekly' | 'monthly' | 'yearly'; label: string }[] = [
   { id: 'weekly', label: 'Weekly' },
@@ -67,60 +67,44 @@ export default function RecurringForm() {
   };
 
   return (
-    <Screen>
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-            <TouchableOpacity testID="recurring-form-back" onPress={() => router.back()}><Ionicons name="close" size={24} color={colors.onSurface} /></TouchableOpacity>
-            <H2 style={{ marginLeft: spacing.md }}>{isEdit ? 'Edit recurring' : 'New recurring'}</H2>
-          </View>
+    <FormLayout title={isEdit ? 'Edit recurring' : 'New recurring'} onBack={() => router.back()}>
+      {/* Type selector */}
+      <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.md, padding: 4, marginBottom: spacing.xl }}>
+        {(['expense', 'income'] as const).map((t) => (
+          <TouchableOpacity key={t} testID={`recurring-type-${t}`} onPress={() => setType(t)}
+            style={{ flex: 1, paddingVertical: 10, borderRadius: radius.md, alignItems: 'center', backgroundColor: type === t ? (t === 'income' ? colors.success : colors.error) : 'transparent' }}>
+            <Body style={{ color: type === t ? '#fff' : colors.onSurface2, fontFamily: font.textBold, textTransform: 'capitalize' }}>{t}</Body>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-          <ScrollView ref={scrollRef} contentContainerStyle={{ padding: spacing.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-            {/* Type selector */}
-            <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.md, padding: 4, marginBottom: spacing.xl }}>
-              {(['expense', 'income'] as const).map((t) => (
-                <TouchableOpacity key={t} testID={`recurring-type-${t}`} onPress={() => setType(t)}
-                  style={{ flex: 1, paddingVertical: 10, borderRadius: radius.md, alignItems: 'center', backgroundColor: type === t ? (t === 'income' ? colors.success : colors.error) : 'transparent' }}>
-                  <Body style={{ color: type === t ? '#fff' : colors.onSurface2, fontFamily: font.textBold, textTransform: 'capitalize' }}>{t}</Body>
-                </TouchableOpacity>
-              ))}
-            </View>
+      <Input testID="recurring-name" label="Name" value={name} onChangeText={setName} placeholder="Netflix, Wifi, Rent…" />
 
-            <Input testID="recurring-name" label="Name" value={name} onChangeText={setName} placeholder="Netflix, Wifi, Rent…" />
+      <MoneyInput testID="recurring-amount" label="Amount" value={amount} onChange={setAmount} placeholder="150000" />
 
-            <Label>Amount</Label>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
-              <Body style={{ fontSize: 20, marginRight: 8, fontFamily: font.displayBold }}>{currencySymbol(cur)}</Body>
-              <Input testID="recurring-amount" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} placeholder="150000" style={{ flex: 1 }} />
-            </View>
+      <Label>Frequency</Label>
+      <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+        {FREQUENCIES.map((f) => (
+          <Chip key={f.id} testID={`recurring-freq-${f.id}`} label={f.label} active={frequency === f.id} onPress={() => setFrequency(f.id)} />
+        ))}
+      </View>
 
-            <Label>Frequency</Label>
-            <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
-              {FREQUENCIES.map((f) => (
-                <Chip key={f.id} testID={`recurring-freq-${f.id}`} label={f.label} active={frequency === f.id} onPress={() => setFrequency(f.id)} />
-              ))}
-            </View>
+      <DateField testID="recurring-next-date" label="Next due date" value={nextDate} onChange={setNextDate} />
 
-            <DateField testID="recurring-next-date" label="Next due date" value={nextDate} onChange={setNextDate} />
+      <Label>Category</Label>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+        {getOptions(type).map((c) => (<Chip key={c} testID={`recurring-cat-${c}`} label={c} active={category === c} onPress={() => setCategory(c)} />))}
+      </ScrollView>
 
-            <Label>Category</Label>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-              {getOptions(type).map((c) => (<Chip key={c} testID={`recurring-cat-${c}`} label={c} active={category === c} onPress={() => setCategory(c)} />))}
-            </ScrollView>
+      <Label>Wallet</Label>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+        {wallets.map((w) => (<Chip key={w.id} testID={`recurring-wallet-${w.id}`} label={w.name} active={walletId === w.id} onPress={() => setWalletId(w.id)} />))}
+      </ScrollView>
 
-            <Label>Wallet</Label>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-              {wallets.map((w) => (<Chip key={w.id} testID={`recurring-wallet-${w.id}`} label={w.name} active={walletId === w.id} onPress={() => setWalletId(w.id)} />))}
-            </ScrollView>
+      <Input testID="recurring-note" label="Note (optional)" value={note} onChangeText={setNote} placeholder="Shared with roommate…" />
 
-            <Input testID="recurring-note" label="Note (optional)" value={note} onChangeText={setNote} placeholder="Shared with roommate…"
-              onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)} />
-
-            {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
-            <Button testID="recurring-save" label={isEdit ? 'Save changes' : 'Add recurring'} onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Screen>
+      {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
+      <Button testID="recurring-save" label={isEdit ? 'Save changes' : 'Add recurring'} onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
+    </FormLayout>
   );
 }

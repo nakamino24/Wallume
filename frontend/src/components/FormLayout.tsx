@@ -15,12 +15,13 @@ import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer'
  * scroll handling of their own.
  */
 export function FormLayout({
-  children, title, onBack, footer, editable = true,
+  children, title, onBack, footer, headerRight, editable = true,
 }: {
   children: ReactNode;
   title?: string;
   onBack?: () => void;
   footer?: ReactNode;
+  headerRight?: ReactNode;
   editable?: boolean;
 }) {
   const { colors } = useTheme();
@@ -34,7 +35,8 @@ export function FormLayout({
                 <Ionicons name="close" size={24} color={colors.onSurface} />
               </TouchableOpacity>
             )}
-            <H2 style={{ marginLeft: spacing.md }}>{title}</H2>
+            <H2 style={{ marginLeft: spacing.md, flex: 1 }}>{title}</H2>
+            {headerRight}
           </View>
         )}
         <KeyboardAwareContainer contentContainerStyle={{ padding: spacing.xl, paddingBottom: footer ? spacing.xxxl : spacing.xxl }}>

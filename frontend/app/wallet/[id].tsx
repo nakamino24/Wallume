@@ -1,6 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -9,8 +8,10 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, formatMoneyFull } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
 import { api } from '@/src/api/client';
-import { Screen, H2, Body, Label, Button, Input, Chip, Card } from '@/src/components/ui';
+import { Body, Label, Button, Input, Chip, Card } from '@/src/components/ui';
 import { confirmAction } from '@/src/utils/confirm';
+import { FormLayout } from '@/src/components/FormLayout';
+import { MoneyInput } from '@/src/components/MoneyInput';
 
 const TYPES = [
   { id: 'cash', label: 'Cash' },
@@ -74,60 +75,42 @@ export default function EditWallet() {
   };
 
   if (!wallet) {
-    return <Screen><SafeAreaView><Body style={{ padding: spacing.xl }}>Loading…</Body></SafeAreaView></Screen>;
+    return <FormLayout title="Edit wallet"><Body style={{ padding: spacing.xl }}>Loading…</Body></FormLayout>;
   }
 
   const cur = user?.currency || 'USD';
 
   return (
-    <Screen>
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-            <TouchableOpacity testID="edit-wallet-back" onPress={() => router.back()}>
-              <Ionicons name="chevron-back" size={24} color={colors.onSurface} />
-            </TouchableOpacity>
-            <H2 style={{ marginLeft: spacing.md, flex: 1 }}>Edit wallet</H2>
-            <TouchableOpacity testID="edit-wallet-delete" onPress={remove}>
-              <Ionicons name="trash" size={20} color={colors.error} />
-            </TouchableOpacity>
-          </View>
+    <FormLayout title="Edit wallet" onBack={() => router.back()}
+      headerRight={
+        <TouchableOpacity testID="edit-wallet-delete" onPress={remove} style={{ padding: 8 }}>
+          <Ionicons name="trash" size={20} color={colors.error} />
+        </TouchableOpacity>
+      }>
+      <Card style={{ marginBottom: spacing.md }}>
+        <Label>Current balance</Label>
+        <Body style={{ fontSize: scale(24), fontFamily: 'SpaceGrotesk-Bold', marginTop: 4 }}>
+          {formatMoneyFull(wallet.converted_balance ?? (wallet.balance || 0), wallet.home_currency || cur)}
+        </Body>
+      </Card>
 
-          <ScrollView contentContainerStyle={{ padding: spacing.xl }} keyboardShouldPersistTaps="handled">
-            <Card style={{ marginBottom: spacing.md }}>
-              <Label>Current balance</Label>
-              <Body style={{ fontSize: scale(24), fontFamily: 'SpaceGrotesk-Bold', marginTop: 4 }}>
-                {formatMoneyFull(wallet.converted_balance ?? (wallet.balance || 0), wallet.home_currency || cur)}
-              </Body>
-            </Card>
+      <Input testID="edit-wallet-name" label="Name" value={name} onChangeText={setName} placeholder="Main Bank" />
 
-            <Input testID="edit-wallet-name" label="Name" value={name} onChangeText={setName} placeholder="Main Bank" />
+      <Label>Type</Label>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+        {TYPES.map((t) => (
+          <Chip key={t.id} testID={`edit-wtype-${t.id}`} label={t.label} active={type === t.id} onPress={() => setType(t.id)} />
+        ))}
+      </ScrollView>
 
-            <Label>Type</Label>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-              {TYPES.map((t) => (
-                <Chip key={t.id} testID={`edit-wtype-${t.id}`} label={t.label} active={type === t.id} onPress={() => setType(t.id)} />
-              ))}
-            </ScrollView>
+      <MoneyInput testID="edit-wallet-balance" label="Balance" value={balance} onChange={setBalance} placeholder="0" />
+      <Body muted style={{ fontSize: 12, marginTop: -spacing.sm, marginBottom: spacing.md }}>
+        Manually set the balance. This does not create a transaction.
+      </Body>
 
-            <Input
-              testID="edit-wallet-balance"
-              label="Balance"
-              keyboardType="decimal-pad"
-              value={balance}
-              onChangeText={setBalance}
-              placeholder="0"
-            />
-            <Body muted style={{ fontSize: 12, marginTop: -spacing.sm, marginBottom: spacing.md }}>
-              Manually set the balance. This does not create a transaction.
-            </Body>
+      {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
 
-            {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
-
-            <Button testID="edit-wallet-save" label="Save changes" onPress={submit} loading={loading} />
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Screen>
+      <Button testID="edit-wallet-save" label="Save changes" onPress={submit} loading={loading} />
+    </FormLayout>
   );
 }

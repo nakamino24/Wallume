@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
+import { Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { DateField } from '@/src/components/DateField';
+import { FormLayout } from '@/src/components/FormLayout';
+import { MoneyInput } from '@/src/components/MoneyInput';
 
 const KINDS = ['wedding', 'house', 'car', 'vacation'] as const;
 
@@ -37,28 +37,18 @@ export default function NewPlan() {
   };
 
   return (
-    <Screen>
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-            <TouchableOpacity onPress={() => router.back()}><Ionicons name="close" size={24} color={colors.onSurface} /></TouchableOpacity>
-            <H2 style={{ marginLeft: spacing.md }}>New plan</H2>
-          </View>
-          <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
-            <Label>Kind</Label>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-              {KINDS.map((k) => (
-                <Chip key={k} testID={`plan-kind-${k}`} label={k[0].toUpperCase() + k.slice(1)} active={kind === k} onPress={() => setKind(k)} />
-              ))}
-            </ScrollView>
-            <Input testID="plan-name" label="Name" value={name} onChangeText={setName} placeholder="Our wedding 2026" />
-            <Input testID="plan-budget" label="Total budget" keyboardType="decimal-pad" value={budget} onChangeText={setBudget} placeholder="25000" />
-            <DateField testID="plan-date" label="Target date (optional)" value={date} onChange={setDate} />
-            {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
-            <Button testID="plan-save" label="Create plan" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Screen>
+    <FormLayout title="New plan" onBack={() => router.back()}>
+      <Label>Kind</Label>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+        {KINDS.map((k) => (
+          <Chip key={k} testID={`plan-kind-${k}`} label={k[0].toUpperCase() + k.slice(1)} active={kind === k} onPress={() => setKind(k)} />
+        ))}
+      </ScrollView>
+      <Input testID="plan-name" label="Name" value={name} onChangeText={setName} placeholder="Our wedding 2026" />
+      <MoneyInput testID="plan-budget" label="Total budget" value={budget} onChange={setBudget} placeholder="25000" />
+      <DateField testID="plan-date" label="Target date (optional)" value={date} onChange={setDate} />
+      {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
+      <Button testID="plan-save" label="Create plan" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
+    </FormLayout>
   );
 }

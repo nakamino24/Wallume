@@ -1,14 +1,14 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useMemo, useState } from 'react';
+import { ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
+import { Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { DateField } from '@/src/components/DateField';
+import { FormLayout } from '@/src/components/FormLayout';
+import { MoneyInput } from '@/src/components/MoneyInput';
 import { INVESTMENT_KINDS, isQtyKind, QTY_KIND_FIELDS, InvKind } from '@/src/lib/investmentKinds';
 
 // Handles both "add new investment" and "edit investment". When editing, the
@@ -44,7 +44,6 @@ export default function InvestmentForm() {
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
-  const scrollRef = useRef<ScrollView>(null);
 
   const qtyFields = QTY_KIND_FIELDS[kind];
 
@@ -98,59 +97,48 @@ export default function InvestmentForm() {
   };
 
   return (
-    <Screen>
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-            <TouchableOpacity testID="inv-back" onPress={() => router.back()}><Ionicons name="close" size={24} color={colors.onSurface} /></TouchableOpacity>
-            <H2 style={{ marginLeft: spacing.md }}>{isEdit ? 'Edit investment' : 'New investment'}</H2>
-          </View>
-          <ScrollView ref={scrollRef} contentContainerStyle={{ padding: spacing.xl, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-            <Input testID="inv-name" label="Name" value={name} onChangeText={setName} placeholder="Apple Inc." />
-            {kind !== 'bond' && kind !== 'cash' && (
-              <Input testID="inv-ticker" label="Ticker (optional)" value={ticker} onChangeText={setTicker} placeholder="AAPL" autoCapitalize="characters" />
-            )}
+    <FormLayout title={isEdit ? 'Edit investment' : 'New investment'} onBack={() => router.back()}>
+      <Input testID="inv-name" label="Name" value={name} onChangeText={setName} placeholder="Apple Inc." />
+      {kind !== 'bond' && kind !== 'cash' && (
+        <Input testID="inv-ticker" label="Ticker (optional)" value={ticker} onChangeText={setTicker} placeholder="AAPL" autoCapitalize="characters" />
+      )}
 
-            <Label>Category</Label>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-              {INVESTMENT_KINDS.map((k) => (
-                <Chip key={k.id} testID={`inv-kind-${k.id}`} label={k.label} active={kind === k.id} onPress={() => setKind(k.id)} />
-              ))}
-            </ScrollView>
+      <Label>Category</Label>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+        {INVESTMENT_KINDS.map((k) => (
+          <Chip key={k.id} testID={`inv-kind-${k.id}`} label={k.label} active={kind === k.id} onPress={() => setKind(k.id)} />
+        ))}
+      </ScrollView>
 
-            {/* --- Dynamic fields based on category --- */}
-            {kind === 'bond' && (
-              <>
-                <Input testID="inv-face-value" label="Face Value" keyboardType="decimal-pad" value={faceValue} onChangeText={setFaceValue} placeholder="10000000" />
-                <Input testID="inv-coupon-rate" label="Coupon Rate (%)" keyboardType="decimal-pad" value={couponRate} onChangeText={setCouponRate} placeholder="6.5" />
-                <Input testID="inv-purchase-price" label="Purchase Price" keyboardType="decimal-pad" value={purchasePrice} onChangeText={setPurchasePrice} placeholder="9800000" />
-                <Input testID="inv-current-value" label="Current Value" keyboardType="decimal-pad" value={currentValue} onChangeText={setCurrentValue} placeholder="10100000" />
-              </>
-            )}
+      {/* --- Dynamic fields based on category --- */}
+      {kind === 'bond' && (
+        <>
+          <MoneyInput testID="inv-face-value" label="Face Value" value={faceValue} onChange={setFaceValue} placeholder="10000000" />
+          <Input testID="inv-coupon-rate" label="Coupon Rate (%)" keyboardType="decimal-pad" value={couponRate} onChangeText={setCouponRate} placeholder="6.5" />
+          <MoneyInput testID="inv-purchase-price" label="Purchase Price" value={purchasePrice} onChange={setPurchasePrice} placeholder="9800000" />
+          <MoneyInput testID="inv-current-value" label="Current Value" value={currentValue} onChange={setCurrentValue} placeholder="10100000" />
+        </>
+      )}
 
-            {kind === 'cash' && (
-              <Input testID="inv-cash-amount" label="Amount" keyboardType="decimal-pad" value={cashAmount} onChangeText={setCashAmount} placeholder="5000000" />
-            )}
+      {kind === 'cash' && (
+        <MoneyInput testID="inv-cash-amount" label="Amount" value={cashAmount} onChange={setCashAmount} placeholder="5000000" />
+      )}
 
-            {isQtyKind(kind) && qtyFields && (
-              <>
-                <Input testID="inv-qty" label={qtyFields.quantityLabel} keyboardType="decimal-pad" value={qty} onChangeText={setQty} placeholder={qtyFields.quantityPlaceholder} />
-                <Input testID="inv-avg-cost" label={qtyFields.avgCostLabel} keyboardType="decimal-pad" value={avgCost} onChangeText={setAvgCost} placeholder="150" />
-                <Input testID="inv-price" label={qtyFields.priceLabel} keyboardType="decimal-pad" value={price} onChangeText={setPrice} placeholder="180" />
-              </>
-            )}
+      {isQtyKind(kind) && qtyFields && (
+        <>
+          <Input testID="inv-qty" label={qtyFields.quantityLabel} keyboardType="decimal-pad" value={qty} onChangeText={setQty} placeholder={qtyFields.quantityPlaceholder} />
+          <MoneyInput testID="inv-avg-cost" label={qtyFields.avgCostLabel} value={avgCost} onChange={setAvgCost} placeholder="150" />
+          <MoneyInput testID="inv-price" label={qtyFields.priceLabel} value={price} onChange={setPrice} placeholder="180" />
+        </>
+      )}
 
-            {/* --- Supporting info, all kinds --- */}
-            <Input testID="inv-broker" label="Broker / Platform (optional)" value={broker} onChangeText={setBroker} placeholder="Bibit, Ajaib, Stockbit…" />
-            <DateField testID="inv-purchase-date" label="Purchase date (optional)" value={purchaseDate} onChange={setPurchaseDate} />
-            <Input testID="inv-notes" label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="Why you bought this…"
-              onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)} />
+      {/* --- Supporting info, all kinds --- */}
+      <Input testID="inv-broker" label="Broker / Platform (optional)" value={broker} onChangeText={setBroker} placeholder="Bibit, Ajaib, Stockbit…" />
+      <DateField testID="inv-purchase-date" label="Purchase date (optional)" value={purchaseDate} onChange={setPurchaseDate} />
+      <Input testID="inv-notes" label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="Why you bought this…" />
 
-            {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
-            <Button testID="inv-save" label={isEdit ? 'Save changes' : 'Add investment'} onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Screen>
+      {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
+      <Button testID="inv-save" label={isEdit ? 'Save changes' : 'Add investment'} onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
+    </FormLayout>
   );
 }

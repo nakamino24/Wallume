@@ -1,18 +1,17 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
-import { formatInputDigits, stripFormatting } from '@/src/lib/money';
 import { api } from '@/src/api/client';
-import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
+import { Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
 import { DateField } from '@/src/components/DateField';
+import { FormLayout } from '@/src/components/FormLayout';
+import { MoneyInput } from '@/src/components/MoneyInput';
 import { CategorySelector } from '@/src/components/CategorySelector';
 
 // Edit an existing transaction. The list screen (transactions.tsx) passes the
@@ -44,7 +43,6 @@ export default function EditTransaction() {
   const [date, setDate] = useState(params.date || new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
-  const scrollRef = useRef<ScrollView>(null);
 
   const load = useCallback(async () => {
     const r = await api.wallets();
@@ -73,18 +71,8 @@ export default function EditTransaction() {
   const cur = user?.currency || 'USD';
 
   return (
-    <Screen>
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-            <TouchableOpacity testID="edit-tx-back" onPress={() => router.back()} style={{ padding: 4 }}>
-              <Ionicons name="close" size={24} color={colors.onSurface} />
-            </TouchableOpacity>
-            <H2 style={{ marginLeft: spacing.md }}>Edit transaction</H2>
-          </View>
-
-          <ScrollView ref={scrollRef} contentContainerStyle={{ padding: spacing.xl, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
-            {/* Type selector */}
+    <FormLayout title="Edit transaction" onBack={() => router.back()}>
+      {/* Type selector */}
             <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.md, padding: 4, marginBottom: spacing.xl }}>
               {(['expense', 'income', 'transfer'] as const).map((t) => (
                 <TouchableOpacity
@@ -118,14 +106,7 @@ export default function EditTransaction() {
               <Label>Amount</Label>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: spacing.sm }}>
                 <Body style={{ fontSize: scale(24), marginRight: 4, fontFamily: font.displayBold }}>{currencySymbol(cur)}</Body>
-                <Input
-                  testID="edit-tx-amount"
-                  keyboardType="decimal-pad"
-                  value={formatInputDigits(amount)}
-                  onChangeText={(t) => setAmount(stripFormatting(t))}
-                  placeholder="0"
-                  style={{ fontSize: scale(44), fontFamily: font.displayBold, textAlign: 'center', backgroundColor: 'transparent', borderWidth: 0, minWidth: 160, paddingVertical: 4 }}
-                />
+                <MoneyInput testID="edit-tx-amount" value={amount} onChange={setAmount} placeholder="0" style={{ flex: 1, alignSelf: 'stretch' }} />
               </View>
             </View>
 
@@ -154,15 +135,11 @@ export default function EditTransaction() {
               </>
             )}
 
-            <Input testID="edit-tx-note" label="Note (optional)" value={note} onChangeText={setNote} placeholder="Coffee, groceries…"
-              onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)} />
+            <Input testID="edit-tx-note" label="Note (optional)" value={note} onChangeText={setNote} placeholder="Coffee, groceries…" />
 
             {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
 
             <Button testID="edit-tx-save" label="Save changes" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Screen>
+    </FormLayout>
   );
 }
