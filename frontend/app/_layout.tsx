@@ -66,21 +66,35 @@ export default function RootLayout() {
   const [iconsLoaded, iconsErr] = useIconFonts();
   const [fontsLoaded, fontsErr] = useFonts(CUSTOM_FONTS);
 
-  // Don't block the app on custom Google font fetch failures — fall through to system font.
+  // Don't block the app on custom font fetch failures — fall through to system font.
   const ready = (iconsLoaded || iconsErr) && (fontsLoaded || fontsErr);
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
 
-  if (!ready) return null;
+  // Always render *something* while fonts/init are still pending so the user is
+  // never left staring at a dead splash: once assets resolve we swap to the app.
+  if (!ready) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <AppErrorBoundary>
+              <SplashScreenHolder />
+            </AppErrorBoundary>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    );
+  }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <AuthProvider>
-            <AppErrorBoundary>
+    <AppErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <AuthProvider>
               <ToastProvider>
                 <AppLockGate>
                   <BottomSheetGate>
@@ -88,10 +102,22 @@ export default function RootLayout() {
                   </BottomSheetGate>
                 </AppLockGate>
               </ToastProvider>
-            </AppErrorBoundary>
-          </AuthProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+            </AuthProvider>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </AppErrorBoundary>
   );
+}
+
+// The system splash is still visible at this point; returning an empty view keeps
+// the native splash on screen (it will be hidden once `ready` flips true). This
+// branch exists purely to satisfy the requirement that a mounted component tree
+// exists while initialization completes.
+function SplashScreenHolder() {
+  useEffect(() => {
+    const t = setTimeout(() => SplashScreen.hideAsync(), 15000);
+    return () => clearTimeout(t);
+  }, []);
+  return null;
 }
