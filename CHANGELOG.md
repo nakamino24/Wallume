@@ -15,6 +15,11 @@ All notable changes to Wallume are documented here. Format based on [Keep a Chan
 - Wedding Plan checklist (`plan/[id]`) and Goal detail (`goal/[id]`) → centralized `KeyboardAwareContainer`.
 - Removed the ad-hoc `KeyboardScroll` component (replaced by the centralized system).
 
+### Fixed
+- **Bug 1 — Widget pie chart collapsed to a single "Other" slice**: the widget analytics aggregation in `summary()` grouped only by month+type and never projected `category`, so every expense fell into an `"Other"` bucket (legend always showed one entry). `monthly_spending()` (the widget's PNG pie source) also filtered from *today* via `{date >= <today>}` instead of the 1st of the month, excluding the whole month. Both now project `category` (`$ifNull … "Other"`) and filter from month start, so the widget pie and legend reflect the real per-category breakdown (matching the in-app Reports screen, which groups raw transactions client-side).
+- **Bug 2 Case A — "Add category" modal: keyboard fully occluded the input & new category never appeared**: the modal is an RN `<Modal>` (separate overlay hierarchy) whose `KeyboardAvoidingView` was a no-op on Android and had no scroll container, so the field was 100% invisible and the Save button was unreachable (its `submit` was never triggered via the keyboard). The modal now tracks real keyboard height, pads a `ScrollView` wrapper, and the input submits on the keyboard "done" action. Category creation now also updates the chip list optimistically (`useUserCategories.add`), so a new category appears immediately after saving.
+- **Bug 2 Case B — Wedding Plan checklist "Add item" hidden below keyboard**: `KeyboardAwareContainer` now tracks the real keyboard height (all platforms) and scrolls the focused input to sit comfortably above it (previously a fixed `y - 90` offset with no keyboard height on Android), so the "Add item" field is fully visible above the keyboard.
+
 ## [1.0.4a] — 2026-08-02
 
 ### Added

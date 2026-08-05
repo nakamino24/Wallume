@@ -111,8 +111,16 @@ class AnalyticsService:
                 "month_key": {"$substr": ["$date", 0, 7]},
                 "month_label": {"$substr": ["$date", 5, 3]},
             }},
+            # Project category (falling back to "Other") so expense rows can be
+            # grouped per category. Without this, `category` never appears in the
+            # aggregated rows and every expense collapses into "Other".
             {"$group": {
-                "_id": {"month": "$month_key", "label": "$month_label", "type": "$type"},
+                "_id": {
+                    "month": "$month_key",
+                    "label": "$month_label",
+                    "type": "$type",
+                    "category": {"$ifNull": ["$category", "Other"]},
+                },
                 "total": {"$sum": {"$toDouble": "$amount"}},
             }},
             {"$sort": {"_id.month": 1}},
@@ -129,6 +137,7 @@ class AnalyticsService:
             mk = row["_id"]["month"]
             lbl = row["_id"]["label"]
             typ = row["_id"]["type"]
+            cat = row["_id"].get("category") or "Other"
             amt = round(row["total"], 2)
             if mk not in month_map:
                 month_map[mk] = {"month": lbl, "income": 0.0, "expense": 0.0}
@@ -140,9 +149,9 @@ class AnalyticsService:
                 income_total += amt if typ == "income" else 0
                 expense_total += amt if typ == "expense" else 0
                 if typ == "expense":
-                    cat_totals[row.get("category", "Other")] = cat_totals.get(row.get("category", "Other"), 0.0) + amt
+                    cat_totals[cat] = cat_totals.get(cat, 0.0) + amt
             elif typ == "expense":
-                cat_trailing.setdefault(row.get("category", "Other"), []).append(amt)
+                cat_trailing.setdefault(cat, []).append(amt)
 
         trend = [v for k, v in sorted(month_map.items())][-6:]
         cash_flow = income_total - expense_total
@@ -213,14 +222,19 @@ class AnalyticsService:
         home-screen widget chart. Returns [{category, amount}] sorted desc."""
         u = await self.auth.get_current_user(authorization)
         uid = u["user_id"]
-        month_key = now_utc().strftime("%Y-%m-%d")
+        # Compare from the 1st of the month (not today), otherwise most of the
+        # month's expenses fall outside the {date >= today} window and the chart
+        # renders empty / a single slice.
+        month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_key = month_start.strftime("%Y-%m-%d")
         pipeline = [
             {"$match": {
                 "user_id": uid,
                 "type": "expense",
                 "$expr": {"$gte": [{"$substr": ["$date", 0, 10]}, month_key]},
             }},
-            {"$group": {"_id": "$category", "total": {"$sum": {"$toDouble": "$amount"}}}},
+            # Normalize missing categories so no single giant "null" bucket appears.
+            {"$group": {"_id": {"$ifNull": ["$category", "Other"]}, "total": {"$sum": {"$toDouble": "$amount"}}}},
             {"$sort": {"total": -1}},
         ]
         rows = await self.transactions.aggregate(pipeline)

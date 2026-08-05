@@ -17,7 +17,7 @@ export function CategorySelector({
   testID?: string;
 }) {
   const { colors } = useTheme();
-  const { getOptions, reload } = useUserCategories();
+  const { getOptions, reload, add } = useUserCategories();
   const [modalVisible, setModalVisible] = useState(false);
   const options = type === 'transfer' ? ['Transfer'] : getOptions(type);
   const catType = type === 'transfer' ? 'expense' : type;
@@ -44,6 +44,7 @@ export function CategorySelector({
         onClose={() => setModalVisible(false)}
         onCreated={(cat) => {
           onChange(cat.label);
+          add(cat);
           reload();
         }}
       />

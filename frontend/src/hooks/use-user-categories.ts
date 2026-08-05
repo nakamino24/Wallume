@@ -14,11 +14,21 @@ export function useUserCategories() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Optimistically add a just-created category so it appears in the chip list
+  // immediately, without waiting on a (silently-failing) network refetch.
+  const add = useCallback((cat: UserCategory) => {
+    setCategories((prev) =>
+      prev.some((c) => c.label === cat.label && c.type === cat.type)
+        ? prev
+        : [...prev, cat],
+    );
+  }, []);
+
   const getOptions = (type: 'income' | 'expense'): string[] => mergeCategories(type, categories);
 
   const isKnown = (type: 'income' | 'expense', category: string): boolean => {
     return mergeCategories(type, categories).includes(category);
   };
 
-  return { categories, getOptions, isKnown, reload: load, defaults: DEFAULT_CATEGORIES };
+  return { categories, getOptions, isKnown, reload: load, add, defaults: DEFAULT_CATEGORIES };
 }
