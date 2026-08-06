@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 from fastapi import APIRouter, Header, HTTPException
-from app.schemas.models import BudgetCreate, GoalCreate, GoalContribute, PlanCreate, CategoryCreate
+from app.schemas.models import BudgetCreate, GoalCreate, GoalContribute, PlanCreate, CategoryCreate, CategoryUpdate
 from app.schemas.models import DebtCreate, InvestmentCreate, AssetCreate, RecurringCreate
 from app.repositories.repos import (
     BudgetRepository, GoalRepository, PlanRepository,
@@ -397,8 +397,86 @@ async def create_category(payload: CategoryCreate, authorization: Optional[str] 
     return {"success": True, "data": {"category": {k: v for k, v in doc.items() if k != "_id"}}}
 
 
-@categories_router.delete("/{category_id}")
-async def delete_category(category_id: str, authorization: Optional[str] = Header(None)):
+@categories_router.patch("/{category_id}")
+async def update_category(
+    category_id: str,
+    payload: CategoryUpdate,
+    authorization: Optional[str] = Header(None),
+):
     u = await auth_service.get_current_user(authorization)
+    cat = await categories_repo.find_one({"id": category_id, "user_id": u["user_id"]})
+    if not cat:
+        raise HTTPException(404, "Not found")
+
+    new_label = (payload.label or cat["label"]).strip()
+    if not new_label:
+        raise HTTPException(400, "Category label is required")
+    new_type = payload.type or cat.get("type", "expense")
+
+    # Same duplicate check create_category performs (per user+type).
+    if new_label != cat["label"] or new_type != cat.get("type"):
+        dup = await categories_repo.find_one({"user_id": u["user_id"], "label": new_label, "type": new_type})
+        if dup and dup["id"] != category_id:
+            raise HTTPException(400, "Category already exists")
+
+    allowed = {}
+    if payload.label is not None:
+        allowed["label"] = new_label
+    if payload.type is not None:
+        allowed["type"] = new_type
+    if payload.color is not None:
+        allowed["color"] = payload.color
+    if payload.icon is not None:
+        allowed["icon"] = payload.icon
+
+    if not allowed:
+        return {"success": True, "data": {"category": cat}}
+
+    # If the label changed, keep historical transactions pointing at the new
+    # name instead of silently losing their category.
+    if "label" in allowed and allowed["label"] != cat["label"]:
+        await tx_repo.update_category_for_user(
+            u["user_id"], cat["label"], allowed["label"]
+        )
+
+    await categories_repo.update_one({"id": category_id, "user_id": u["user_id"]}, {"$set": allowed})
+    updated = await categories_repo.find_one({"id": category_id, "user_id": u["user_id"]})
+    return {"success": True, "data": {"category": updated}}
+
+
+@categories_router.delete("/{category_id}")
+async def delete_category(
+    category_id: str,
+    reassign_to: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+):
+    """Delete a category.
+
+    - If no transaction references the category, it is deleted immediately.
+    - If transactions reference it and `reassign_to` names another category of
+      the same user, those transactions are bulk-reassigned first, then the
+      category is deleted.
+    - If transactions reference it and no `reassign_to` is given, return
+      409 Conflict with the usage count — never silently drop transaction data.
+    """
+    u = await auth_service.get_current_user(authorization)
+    cat = await categories_repo.find_one({"id": category_id, "user_id": u["user_id"]})
+    if not cat:
+        raise HTTPException(404, "Not found")
+
+    usage = await tx_repo.count_by_category(u["user_id"], cat["label"])
+
+    if usage > 0:
+        if not reassign_to:
+            raise HTTPException(409, detail={"message": "in_use", "count": usage})
+        target = await categories_repo.find_one({
+            "id": reassign_to, "user_id": u["user_id"],
+        })
+        if not target:
+            raise HTTPException(400, "Reassign target category not found")
+        if target["id"] == category_id:
+            raise HTTPException(400, "Reassign target must be a different category")
+        await tx_repo.update_category_for_user(u["user_id"], cat["label"], target["label"])
+
     await categories_repo.delete_one({"id": category_id, "user_id": u["user_id"]})
     return {"success": True, "data": None}

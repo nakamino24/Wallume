@@ -39,11 +39,16 @@ async function req(path: string, opts: RequestInit = {}) {
   const res = await fetch(url, { ...opts, headers });
   if (!res.ok) {
     let msg = `Request failed (${res.status})`;
+    let detail: any = null;
     try {
       const j = await res.json();
-      msg = j.detail || j.message || msg;
+      detail = j.detail || j.message || null;
+      msg = typeof detail === 'string' ? detail : (detail?.message || msg);
     } catch {}
-    throw new Error(msg);
+    const err: any = new Error(msg);
+    err.status = res.status;
+    err.detail = detail;
+    throw err;
   }
   if (res.status === 204) return null;
   const body = await res.json();
@@ -121,7 +126,10 @@ export const api = {
 
   categories: () => req('/categories'),
   createCategory: (body: any) => req('/categories', { method: 'POST', body: JSON.stringify(body) }),
+  updateCategory: (id: string, body: any) => req(`/categories/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteCategory: (id: string) => req(`/categories/${id}`, { method: 'DELETE' }),
+  deleteCategoryReassign: (id: string, reassignTo: string) =>
+    req(`/categories/${id}?reassign_to=${encodeURIComponent(reassignTo)}`, { method: 'DELETE' }),
 
   summary: () => req('/analytics/summary'),
 

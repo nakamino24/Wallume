@@ -4,6 +4,7 @@ import {
   formatInputDigits,
   stripFormatting,
   keepCursorDigits,
+  computeInputAmount,
 } from '@/src/lib/money';
 
 describe('formatMoneyFull (Indonesian)', () => {
@@ -96,5 +97,81 @@ describe('MoneyInput cursor/formatting edge cases (raw digit layer)', () => {
     expect(formatInputDigits('1234')).toBe('1.234');
     expect(formatInputDigits('12345')).toBe('12.345');
     expect(formatInputDigits('1234567')).toBe('1.234.567');
+  });
+});
+
+describe('computeInputAmount — caret scenarios from the transaction UX spec', () => {
+  // Scenario 1: type digits left-to-right; caret stays after the last typed digit.
+  it('types left-to-right with caret after the last digit', () => {
+    let raw = '';
+    let sel = { start: 0, end: 0 };
+    const typed = ['1', '12', '123', '1234'];
+    for (const text of typed) {
+      const { raw: next, caretFormatted, caretRaw } = computeInputAmount(text, raw, sel.start, sel.end);
+      raw = next;
+      sel = { start: caretRaw, end: caretRaw };
+    }
+    expect(raw).toBe('1234');
+    expect(formatInputDigits(raw)).toBe('1.234');
+    // caret (raw) sits at the end of the digits
+    expect(sel.start).toBe(4);
+  });
+
+  // Scenario 2: backspace repeatedly from 1234567; shrinks one digit, caret at end.
+  it('backspace shrinks one digit at a time with caret at end', () => {
+    const seq = ['123456', '12345', '1234', '123', '12', '1'];
+    let raw = '1234567';
+    let caret = 7;
+    for (const text of seq) {
+      const r = computeInputAmount(text, raw, caret, caret);
+      raw = r.raw;
+      caret = r.caretRaw;
+    }
+    expect(raw).toBe('1');
+    expect(caret).toBe(1);
+  });
+
+  // Scenario 3: insert mid-string; caret ends up right after the inserted digit.
+  it('inserts mid-string and keeps caret after the inserted digit', () => {
+    // raw 1234567 -> 12349567, insert '9' after 4th digit (raw index 4)
+    const { raw, caretRaw, caretFormatted } = computeInputAmount('12349567', '1234567', 4, 4);
+    expect(raw).toBe('12349567');
+    expect(formatInputDigits(raw)).toBe('12.349.567');
+    // caret right after the inserted '9' (raw index 5)
+    expect(caretRaw).toBe(5);
+    expect(caretFormatted).toBe(formatInputDigits('12349').length);
+  });
+
+  // Scenario 4: replace a selected run; caret sits right after the replacement.
+  it('replaces a selected run and keeps caret after the replacement', () => {
+    // raw "1234567", select digits 3..5 ("345"), replace with '9' -> "12967"
+    const { raw, caretRaw } = computeInputAmount('12967', '1234567', 2, 5);
+    expect(raw).toBe('12967');
+    // inserted at raw index 2, one digit typed -> caret at 3
+    expect(caretRaw).toBe(3);
+  });
+
+  // Scenario 5: paste into empty field; caret lands at end.
+  it('pastes digits into an empty field and lands caret at the end', () => {
+    const { raw, caretRaw, caretFormatted } = computeInputAmount('50.000', '', 0, 0);
+    expect(raw).toBe('50000');
+    expect(formatInputDigits(raw)).toBe('50.000');
+    expect(caretRaw).toBe(5);
+    expect(caretFormatted).toBe('50.000'.length);
+  });
+
+  // Scenario 6: leading zeros are dropped.
+  it('drops chained leading zeros when typing as the next digit', () => {
+    const first = computeInputAmount('0', '', 0, 0);
+    const second = computeInputAmount('0', first.raw, 0, 0);
+    const third = computeInputAmount('5', second.raw, 0, 0);
+    expect(third.raw).toBe('5');
+  });
+
+  // Scenario 7: clearing the field stays empty (does not reset to "0").
+  it('clearing the field stays empty', () => {
+    const { raw, caretRaw } = computeInputAmount('', '12345', 0, 5);
+    expect(raw).toBe('');
+    expect(caretRaw).toBe(0);
   });
 });

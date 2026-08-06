@@ -80,6 +80,39 @@ export function stripFormatting(formatted: string): string {
 }
 
 /**
+ * Core edit engine shared by every MoneyInput. Given the new formatted string
+ * `text` (as reported by onChangeText), the previous RAW digit value and the
+ * raw digit range of the current selection, it returns the next raw value and
+ * the caret position in the FORMATTED string.
+ *
+ * All caret math stays in raw-digit space (with tracking `selStartRaw`/`selEndRaw`),
+ * so mid-string inserts, backspace, paste, selection-replace and leading-zero
+ * typing always land the caret next to the edited digit — even when separators
+ * are inserted.
+ */
+export function computeInputAmount(
+  text: string,
+  prevRaw: string,
+  selStartRaw: number,
+  selEndRaw: number,
+): { raw: string; caretFormatted: number; caretRaw: number } {
+  const digits = stripFormatting(text);
+  const raw = digits.replace(/^0+(?=\d)/, ''); // drop leading zeros, keep lone "0"
+
+  const oldLen = prevRaw.length;
+  const removedLen = Math.max(0, selEndRaw - selStartRaw);
+  const inserted = digits.length - (oldLen - removedLen); // net digits typed (+/-)
+  const caretRaw = Math.max(0, Math.min(digits.length, selStartRaw + inserted));
+
+  // Map the raw caret offset back through the formatted string.
+  const prefixDigits = (digits.slice(0, caretRaw) || '').replace(/^0+(?=\d)/, '');
+  const caretFormatted = formatInputDigits(prefixDigits).length;
+  // Caret offset within the CLEANED raw value (for preserving position next keystroke).
+  const caretRawClean = Math.min(raw.length, Math.max(0, caretRaw));
+  return { raw, caretFormatted, caretRaw: caretRawClean };
+}
+
+/**
  * Guard for use in an onChangeText handler: given the previous plain-digits
  * value and the new (possibly caret-mangled) input, return the correct digits.
  * If appending keeps the string prefix, return as-is; otherwise fall back to

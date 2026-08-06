@@ -373,3 +373,84 @@ class TestSecurity:
             kwargs = {"json": body} if body is not None else {}
             r = requests.request(method, f"{BASE_URL}{path}", **kwargs)
             assert r.status_code == 401, f"{method} {path} returned {r.status_code}, expected 401"
+
+
+# ----------------- Categories (CRUD + usage check) -----------------
+class TestCategories:
+    def _make_wallet(self, auth_headers):
+        r = requests.post(f"{BASE_URL}/api/wallets", headers=auth_headers,
+                          json={"name": f"CAT_{time.time()}", "type": "cash", "balance": 100})
+        assert r.status_code == 200
+        return r.json()["wallet"]["id"]
+
+    def test_patch_renames_and_keeps_history(self, auth_headers):
+        # create category
+        r = requests.post(f"{BASE_URL}/api/categories", headers=auth_headers,
+                          json={"label": "Coffee", "type": "expense"})
+        assert r.status_code == 200
+        cat_id = r.json()["category"]["id"]
+
+        # add a transaction tagged "Coffee"
+        wid = self._make_wallet(auth_headers)
+        rtx = requests.post(f"{BASE_URL}/api/transactions", headers=auth_headers,
+                            json={"wallet_id": wid, "type": "expense", "amount": 15, "category": "Coffee"})
+        assert rtx.status_code == 200
+
+        # rename to "Latte"
+        rp = requests.patch(f"{BASE_URL}/api/categories/{cat_id}", headers=auth_headers,
+                            json={"label": "Latte"})
+        assert rp.status_code == 200
+        assert rp.json()["category"]["label"] == "Latte"
+
+        # historical transaction now carries the new label
+        rt = requests.get(f"{BASE_URL}/api/transactions", headers=auth_headers)
+        assert any(t["category"] == "Latte" for t in rt.json()["transactions"])
+        assert not any(t["category"] == "Coffee" for t in rt.json()["transactions"])
+
+    def test_patch_duplicate_label_rejected(self, auth_headers):
+        requests.post(f"{BASE_URL}/api/categories", headers=auth_headers,
+                      json={"label": "Makanan", "type": "expense"})
+        r2 = requests.post(f"{BASE_URL}/api/categories", headers=auth_headers,
+                           json={"label": "Minuman", "type": "expense"})
+        cat_id = r2.json()["category"]["id"]
+        rp = requests.patch(f"{BASE_URL}/api/categories/{cat_id}", headers=auth_headers,
+                            json={"label": "Makanan"})
+        assert rp.status_code == 400  # duplicate for user+type
+
+    def test_delete_in_use_returns_409(self, auth_headers):
+        r = requests.post(f"{BASE_URL}/api/categories", headers=auth_headers,
+                          json={"label": "Hobby", "type": "expense"})
+        cat_id = r.json()["category"]["id"]
+        wid = self._make_wallet(auth_headers)
+        requests.post(f"{BASE_URL}/api/transactions", headers=auth_headers,
+                      json={"wallet_id": wid, "type": "expense", "amount": 5, "category": "Hobby"})
+        rd = requests.delete(f"{BASE_URL}/api/categories/{cat_id}", headers=auth_headers)
+        assert rd.status_code == 409
+        body = rd.json()["detail"]
+        assert body["message"] == "in_use"
+        assert body["count"] == 1
+
+    def test_delete_reassign_moves_transactions(self, auth_headers):
+        a = requests.post(f"{BASE_URL}/api/categories", headers=auth_headers,
+                          json={"label": "Games", "type": "expense"})
+        b = requests.post(f"{BASE_URL}/api/categories", headers=auth_headers,
+                          json={"label": "Board", "type": "expense"})
+        cat_id = a.json()["category"]["id"]
+        target_id = b.json()["category"]["id"]
+        wid = self._make_wallet(auth_headers)
+        requests.post(f"{BASE_URL}/api/transactions", headers=auth_headers,
+                      json={"wallet_id": wid, "type": "expense", "amount": 9, "category": "Games"})
+        rd = requests.delete(f"{BASE_URL}/api/categories/{cat_id}?reassign_to={target_id}",
+                             headers=auth_headers)
+        assert rd.status_code == 200
+        rt = requests.get(f"{BASE_URL}/api/transactions", headers=auth_headers)
+        assert not any(t["category"] == "Games" for t in rt.json()["transactions"])
+        assert any(t["category"] == "Board" for t in rt.json()["transactions"])
+
+    def test_delete_unused_succeeds(self, auth_headers):
+        r = requests.post(f"{BASE_URL}/api/categories", headers=auth_headers,
+                          json={"label": "Unused", "type": "expense"})
+        cat_id = r.json()["category"]["id"]
+        rd = requests.delete(f"{BASE_URL}/api/categories/{cat_id}", headers=auth_headers)
+        assert rd.status_code == 200
+

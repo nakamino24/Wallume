@@ -37,6 +37,13 @@ class CategoryCreate(BaseModel):
     color: Optional[str] = None
     icon: Optional[str] = None
 
+
+class CategoryUpdate(BaseModel):
+    label: Optional[str] = None
+    type: Optional[Literal["income", "expense"]] = None
+    color: Optional[str] = None
+    icon: Optional[str] = None
+
 # --- Wallet ---
 class WalletCreate(BaseModel):
     name: str

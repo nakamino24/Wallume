@@ -3,7 +3,7 @@ import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { spacing, radius } from '@/src/theme/tokens';
+import { spacing } from '@/src/theme/tokens';
 import { Chip, Label } from '@/src/components/ui';
 import { QuickAddCategoryModal } from '@/src/components/QuickAddCategoryModal';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
@@ -28,8 +28,8 @@ export function CategorySelector({
         <Label>Category</Label>
         <TouchableOpacity testID={`${testID || 'category'}-quick-add`} onPress={() => setModalVisible(true)}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 }}>
-          <Ionicons name="add-circle" size={18} color={colors.brandPrimary} />
-          <Label style={{ color: colors.brandPrimary }}>Add</Label>
+          <Ionicons name="pricetags" size={16} color={colors.brandPrimary} />
+          <Label style={{ color: colors.brandPrimary }}>Manage</Label>
         </TouchableOpacity>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
@@ -47,6 +47,7 @@ export function CategorySelector({
           add(cat);
           reload();
         }}
+        onChanged={() => reload()}
       />
     </>
   );

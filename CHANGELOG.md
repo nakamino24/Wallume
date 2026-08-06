@@ -2,6 +2,22 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.4a] — 2026-08-07 (transaction UX polish: amount input, recent txs, category CRUD)
+
+### Added
+- **Category management CRUD (backend)** — `PATCH /api/categories/{id}` to rename a category (duplicate check per user+type, same as create, and re-labels any historical transactions using it), and a usage-aware `DELETE`:
+  - If no transaction references the category → deletes normally.
+  - If referenced without `?reassign_to=` → returns `409 Conflict` `{message:"in_use", count}` (never silently drops transaction data).
+  - `DELETE /api/categories/{id}?reassign_to=<other_id>` bulk-reassigns matching transactions to another category, then deletes. Contained `CategoryUpdate` schema; added `count_by_category` / `update_category_for_user` on `TransactionRepository`.
+- **Category CRUD modal (frontend)** — the create-only quick-add is now a full **Manage categories** sheet (reachable from the transaction form's category row "Manage" trigger): create, tap-to-rename inline, long-press-to-delete. A delete in use surfaces the reassign picker (move transactions to another category) before confirming. Wired via `api.updateCategory` / `api.deleteCategoryReassign`.
+- **Recent Transactions edit/delete (Home)** — `TxRow` on Home now matches `/transactions`: tap opens the edit screen, long-press shows the same delete-confirm alert, and the list updates in place after a confirmed delete (no full reload).
+
+### Fixed
+- **Decimal/caret formatting in the amount input** — `MoneyInput` previously sized its caret by a digit offset into the *formatted* string (index mismatch once separators are inserted, and no handling for selection-range replacement), so mid-string insertions, backspace, paste, and select-replace could place the cursor at the wrong spot. Extracted a single shared engine `computeInputAmount` in `money.ts` that reasons entirely in raw-digit space and maps the caret back through `formatInputDigits`, and verified all 7 spec scenarios with unit tests in `__tests__/money.test.ts`.
+
+### Migrated
+- Removed the standalone Profile → Categories entry point and the `app/categories.tsx` page (category management is now done solely from the transaction form's manage sheet).
+
 ## [1.0.4a] — 2026-08-02 (interaction redesign)
 
 ### Added

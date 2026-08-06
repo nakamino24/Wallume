@@ -78,6 +78,22 @@ class TransactionRepository(BaseRepository):
         docs = await cursor.to_list(10000)
         return self._money_out_list(docs)
 
+    async def count_by_category(self, user_id: str, category_label: str) -> int:
+        """Number of transactions currently tagged with a given category label."""
+        return await (await self._collection()).count_documents(
+            self._active_filter({"user_id": user_id, "category": category_label})
+        )
+
+    async def update_category_for_user(
+        self, user_id: str, from_label: str, to_label: str
+    ) -> None:
+        """Reassign every transaction of a user tagged with `from_label` to
+        `to_label` (bulk rename). Both labels are plain category-name strings."""
+        await (await self._collection()).update_many(
+            self._active_filter({"user_id": user_id, "category": from_label}),
+            {"$set": {"category": to_label}},
+        )
+
 
 class BudgetRepository(BaseRepository):
     def __init__(self) -> None:

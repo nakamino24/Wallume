@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, AppState } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, AppState, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -98,6 +98,24 @@ export default function Home() {
   }, []);
 
   const onRefresh = useCallback(async () => { setRefreshing(true); await load(true); setRefreshing(false); }, [load]);
+
+  // Delete a transaction inline, reusing the exact confirm pattern from
+  // transactions.tsx so Home and the full list behave identically.
+  const removeTx = useCallback((t: any) => {
+    Alert.alert('Delete transaction?', undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.deleteTransaction(t.id);
+            setTxs((prev) => prev.filter((x: any) => x.id !== t.id));
+          } catch {}
+        },
+      },
+    ]);
+  }, []);
 
   const cur = user?.currency || 'USD';
   const shownTxs = filter === 'all' ? txs : txs.filter((t) => t.type === filter);
@@ -372,7 +390,25 @@ export default function Home() {
             ) : (
               <Card style={{ padding: 0 }}>
                 {shownTxs.length > 0 ? shownTxs.slice(0, 8).map((t, idx) => (
-                  <TxRow key={t.id} tx={t} last={idx === Math.min(shownTxs.length, 8) - 1} currency={cur} />
+                  <TxRow
+                    key={t.id}
+                    tx={t}
+                    last={idx === Math.min(shownTxs.length, 8) - 1}
+                    currency={cur}
+                    onPress={() => router.push({
+                      pathname: '/transaction/[id]',
+                      params: {
+                        id: t.id,
+                        wallet_id: t.wallet_id,
+                        to_wallet_id: t.to_wallet_id || '',
+                        type: t.type,
+                        amount: String(t.amount),
+                        category: t.category,
+                        note: t.note || '',
+                      },
+                    })}
+                    onLongPress={() => removeTx(t)}
+                  />
                 )) : (
                   <View style={{ padding: spacing.xl }}>
                     <Body style={{ fontFamily: font.textMedium }}>Wallet balance available</Body>
@@ -441,25 +477,27 @@ function QuickAction({ icon, label, color, onPress, testID }: any) {
   );
 }
 
-function TxRow({ tx, last, currency }: any) {
+function TxRow({ tx, last, currency, onPress, onLongPress }: any) {
   const { colors } = useTheme();
   const positive = tx.type === 'income';
   const negative = tx.type === 'expense';
   const iconName = CATEGORY_ICON[tx.category] || 'ellipsis-horizontal';
   const color = positive ? colors.success : negative ? colors.error : colors.brandPrimary;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.border }}>
-      <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: color + '22', alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
-        <Ionicons name={tx.type === 'transfer' ? 'swap-horizontal' : iconName} size={18} color={color} />
+    <TouchableOpacity activeOpacity={0.85} onPress={onPress} onLongPress={onLongPress}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.border }}>
+        <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: color + '22', alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
+          <Ionicons name={tx.type === 'transfer' ? 'swap-horizontal' : iconName} size={18} color={color} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Body style={{ fontFamily: font.textMedium }}>{tx.category}</Body>
+          {!!tx.note && <Body muted style={{ fontSize: 12, marginTop: 2 }} numberOfLines={1}>{tx.note}</Body>}
+        </View>
+        <Body style={{ fontFamily: font.displayBold, color: positive ? colors.success : negative ? colors.error : colors.onSurface }}>
+          {positive ? '+' : negative ? '-' : ''}{formatMoney(tx.amount, currency)}
+        </Body>
       </View>
-      <View style={{ flex: 1 }}>
-        <Body style={{ fontFamily: font.textMedium }}>{tx.category}</Body>
-        {!!tx.note && <Body muted style={{ fontSize: 12, marginTop: 2 }} numberOfLines={1}>{tx.note}</Body>}
-      </View>
-      <Body style={{ fontFamily: font.displayBold, color: positive ? colors.success : negative ? colors.error : colors.onSurface }}>
-        {positive ? '+' : negative ? '-' : ''}{formatMoney(tx.amount, currency)}
-      </Body>
-    </View>
+    </TouchableOpacity>
   );
 }
 
