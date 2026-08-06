@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { TextInput, View } from 'react-native';
+import { TextInput, Text, View } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, radius, font } from '@/src/theme/tokens';
+import { scale } from '@/src/utils/responsive';
 import { Label } from '@/src/components/ui';
 import { useKeyboardScroll } from '@/src/components/KeyboardAwareContainer';
 import { formatInputDigits, stripFormatting } from '@/src/lib/money';
@@ -10,9 +11,15 @@ import { formatInputDigits, stripFormatting } from '@/src/lib/money';
  * Smart currency input. Internal state holds ONLY raw digits; the display
  * layer formats them live. The TextInput is stable (never remounted) so focus
  * is never lost. Cursor is preserved by tracking the raw caret position.
+ *
+ * `variant="hero"` renders the large centered amount display used on the
+ * transaction form: no box, big displayBold digits with the currency symbol
+ * inline at the same size, baseline-aligned — consistent for short ("Rp0") and
+ * long ("Rp10.000.000") values.
  */
 export function MoneyInput({
   value, onChange, label, placeholder, testID, style, editable = true, currency = 'IDR', autoFocus,
+  variant = 'default', symbol,
 }: {
   value: string; // raw digits only (e.g. "1234567")
   onChange: (raw: string) => void;
@@ -23,6 +30,8 @@ export function MoneyInput({
   editable?: boolean;
   currency?: string;
   autoFocus?: boolean;
+  variant?: 'default' | 'hero';
+  symbol?: string;
 }) {
   const { colors } = useTheme();
   const { focusToInput } = useKeyboardScroll();
@@ -51,6 +60,51 @@ export function MoneyInput({
       inputRef.current?.setNativeProps({ selection: { start: caretInFormatted, end: caretInFormatted } });
     });
   }, [onChange]);
+
+  const isHero = variant === 'hero';
+  const heroFontSize = scale(34);
+
+  if (isHero) {
+    return (
+      <View style={[{ alignItems: 'center' }, style]}>
+        {label && <Label style={{ marginBottom: 8 }}>{label}</Label>}
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', marginTop: spacing.sm }}>
+          {symbol ? (
+            <Text style={{ fontFamily: font.displayBold, fontSize: heroFontSize, color: colors.onSurface, marginRight: 2, paddingBottom: 2, lineHeight: heroFontSize * 1.25 }}>
+              {symbol}
+            </Text>
+          ) : null}
+          <TextInput
+            ref={inputRef}
+            testID={testID}
+            value={display}
+            onChangeText={handleChange}
+            keyboardType="decimal-pad"
+            editable={editable}
+            autoFocus={autoFocus}
+            onFocus={() => focusToInput(inputRef.current)}
+            placeholder={placeholder ?? '0'}
+            placeholderTextColor={colors.muted}
+            onSelectionChange={(e) => {
+              const sel = e.nativeEvent.selection;
+              rawCaret.current = stripFormatting(display.slice(0, sel.start)).length;
+            }}
+            style={{
+              color: colors.onSurface,
+              fontFamily: font.displayBold,
+              fontSize: heroFontSize,
+              padding: 0,
+              paddingVertical: 0,
+              margin: 0,
+              minWidth: 80,
+              textAlign: 'center',
+              lineHeight: heroFontSize * 1.25,
+            }}
+          />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={{ marginBottom: spacing.md, ...style }}>

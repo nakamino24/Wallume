@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
@@ -8,6 +8,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
 import { Screen, Body, Button, Input } from '@/src/components/ui';
+import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 
 export default function Signup() {
   const { colors } = useTheme();
@@ -36,9 +37,8 @@ export default function Signup() {
   return (
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView contentContainerStyle={{ flexGrow: 1, padding: spacing.xl, justifyContent: 'center' }} keyboardShouldPersistTaps="handled">
-            <View style={{ marginBottom: spacing.xxl }}>
+        <KeyboardAwareContainer contentContainerStyle={{ flexGrow: 1, padding: spacing.xl, justifyContent: 'center' }}>
+          <View style={{ marginBottom: spacing.xxl }}>
               <View style={[{ width: 44, height: 44, borderRadius: 8, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg }]}>
                 <Body style={{ color: '#FFFFFF', fontFamily: font.displayBold, fontSize: 20, fontWeight: '600', letterSpacing: -0.5 }}>W</Body>
               </View>
@@ -62,8 +62,7 @@ export default function Signup() {
                 <Body style={{ color: colors.brandPrimary, fontFamily: font.textMedium, fontSize: font.sizes.sm, fontWeight: '500' }}>Sign in</Body>
               </TouchableOpacity>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+        </KeyboardAwareContainer>
       </SafeAreaView>
     </Screen>
   );

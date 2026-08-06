@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
+import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 
 const KINDS = [
   { id: 'real_estate', label: 'Real Estate' },
@@ -43,24 +44,22 @@ export default function NewAsset() {
   return (
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+        <KeyboardAwareContainer contentContainerStyle={{ padding: spacing.xl }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 0, paddingTop: spacing.md }}>
             <TouchableOpacity onPress={() => router.back()}><Ionicons name="close" size={24} color={colors.onSurface} /></TouchableOpacity>
             <H2 style={{ marginLeft: spacing.md }}>New asset</H2>
           </View>
-          <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
-            <Input testID="asset-name" label="Name" value={name} onChangeText={setName} placeholder="Condo, MacBook, Rolex…" />
-            <Label>Kind</Label>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-              {KINDS.map((k) => (
-                <Chip key={k.id} testID={`asset-kind-${k.id}`} label={k.label} active={kind === k.id} onPress={() => setKind(k.id)} />
-              ))}
-            </ScrollView>
-            <Input testID="asset-value" label="Current value" keyboardType="decimal-pad" value={value} onChangeText={setValue} placeholder="150000" />
-            {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
-            <Button testID="asset-save" label="Add asset" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
+          <Input testID="asset-name" label="Name" value={name} onChangeText={setName} placeholder="Condo, MacBook, Rolex…" />
+          <Label>Kind</Label>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+            {KINDS.map((k) => (
+              <Chip key={k.id} testID={`asset-kind-${k.id}`} label={k.label} active={kind === k.id} onPress={() => setKind(k.id)} />
+            ))}
           </ScrollView>
-        </KeyboardAvoidingView>
+          <Input testID="asset-value" label="Current value" keyboardType="decimal-pad" value={value} onChangeText={setValue} placeholder="150000" />
+          {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
+          <Button testID="asset-save" label="Add asset" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
+        </KeyboardAwareContainer>
       </SafeAreaView>
     </Screen>
   );

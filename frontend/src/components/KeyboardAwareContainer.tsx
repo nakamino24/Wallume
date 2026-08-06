@@ -1,9 +1,8 @@
 import React, { useCallback, useContext, useRef, useState, createContext, useEffect, type ReactNode } from 'react';
 import {
   Keyboard, KeyboardAvoidingView, Platform, ScrollView,
-  type KeyboardEvent, type StyleProp, type ViewStyle,
+  type KeyboardEvent, type StyleProp, type ViewStyle, View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 type ScrollCtx = { focusToInput: (node: any) => void };
 const Ctx = createContext<ScrollCtx>({ focusToInput: () => {} });
@@ -13,6 +12,7 @@ export function useKeyboardScroll() {
 }
 
 const FOCUS_OFFSET = 24;
+const SPACER_PAD = 16;
 
 /**
  * Shared keyboard-aware scroll container used by every form (via FormLayout).
@@ -20,11 +20,10 @@ const FOCUS_OFFSET = 24;
  * view above the keyboard. Single place for keyboard-avoidance — screens no
  * longer implement their own.
  *
- * Android notes: we cannot rely on the window softinput mode, so we track the
- * real keyboard height and (a) pad the bottom
- * of the scroll content by exactly that height and (b) scroll the focused
- * input to sit comfortably above it. This works even inside modal/overlay
- * hierarchies where `behavior` on a KeyboardAvoidingView is a no-op.
+ * Mirrors the pattern that makes the "Add category" modal work: track the REAL
+ * keyboard height and use it as a bottom spacer inside the scroll content so a
+ * focused input can always scroll comfortably above the keyboard — even on
+ * Android where KeyboardAvoidingView's `behavior` is a no-op.
  */
 export function KeyboardAwareContainer({
   children, contentContainerStyle,
@@ -33,6 +32,7 @@ export function KeyboardAwareContainer({
   contentContainerStyle?: StyleProp<ViewStyle>;
 }) {
   const scrollRef = useRef<ScrollView>(null);
+  const focusedRef = useRef<any>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
@@ -47,20 +47,35 @@ export function KeyboardAwareContainer({
     return () => subs.forEach((s) => s.remove());
   }, []);
 
-  const focusToInput = useCallback((node: any) => {
+  const scrollFocused = useCallback((height: number) => {
     const sv = scrollRef.current;
+    const node = focusedRef.current;
     if (!sv || !node) return;
     requestAnimationFrame(() => {
       try {
         node.measureLayout(sv as any, (x: number, y: number) => {
-          // Bring the input comfortably above the keyboard (including the real
-          // keyboard height on Android where softinput mode does not adjust).
-          const target = Math.max(0, y - keyboardHeight - FOCUS_OFFSET);
+          const target = Math.max(0, y - height - FOCUS_OFFSET);
           sv.scrollTo({ y: target, animated: true });
         }, () => {});
       } catch {}
     });
-  }, [keyboardHeight]);
+  }, []);
+
+  const focusToInput = useCallback((node: any) => {
+    focusedRef.current = node;
+    // Scroll immediately (best-effort before the keyboard is measured), then
+    // let the keyboardHeight effect re-scroll with the real height.
+    scrollFocused(0);
+  }, [scrollFocused]);
+
+  // Re-scroll the focused input once the keyboard height is actually known —
+  // this is the part that made the old fixed-offset approach fail on Android.
+  useEffect(() => {
+    if (keyboardHeight > 0) {
+      const t = setTimeout(() => scrollFocused(keyboardHeight), 80);
+      return () => clearTimeout(t);
+    }
+  }, [keyboardHeight, scrollFocused]);
 
   return (
     <Ctx.Provider value={{ focusToInput }}>
@@ -71,14 +86,15 @@ export function KeyboardAwareContainer({
       >
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={[
-            { flexGrow: 1, paddingBottom: keyboardHeight > 0 ? keyboardHeight : undefined },
-            contentContainerStyle,
-          ]}
+          contentContainerStyle={[{ flexGrow: 1 }, contentContainerStyle]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           {children}
+          {/* Bottom spacer sized to the real keyboard so the focused input can
+              always scroll above it. Kept as an in-content element so a caller's
+              `contentContainerStyle.paddingBottom` can never override it. */}
+          {keyboardHeight > 0 && <View style={{ height: keyboardHeight + SPACER_PAD }} />}
         </ScrollView>
       </KeyboardAvoidingView>
     </Ctx.Provider>

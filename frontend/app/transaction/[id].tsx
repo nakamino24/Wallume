@@ -5,7 +5,6 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
-import { scale } from '@/src/utils/responsive';
 import { api } from '@/src/api/client';
 import { Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
@@ -102,12 +101,16 @@ export default function EditTransaction() {
             </View>
 
             {/* Amount */}
-            <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
-              <Label>Amount</Label>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: spacing.sm }}>
-                <Body style={{ fontSize: scale(24), marginRight: 4, fontFamily: font.displayBold }}>{currencySymbol(cur)}</Body>
-                <MoneyInput testID="edit-tx-amount" value={amount} onChange={setAmount} placeholder="0" style={{ flex: 1, alignSelf: 'stretch' }} />
-              </View>
+            <View style={{ alignSelf: 'stretch', marginBottom: spacing.xl }}>
+              <MoneyInput
+                testID="edit-tx-amount"
+                label="Amount"
+                variant="hero"
+                symbol={currencySymbol(cur)}
+                value={amount}
+                onChange={setAmount}
+                placeholder="0"
+              />
             </View>
 
             {/* Date */}

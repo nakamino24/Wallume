@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, formatMoney, currencySymbol } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, Input, EmptyState } from '@/src/components/ui';
+import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 
 type Strategy = 'avalanche' | 'snowball';
 
@@ -61,12 +62,11 @@ export default function DebtPlanner() {
   return (
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-          <TouchableOpacity testID="planner-back" onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
-          <H2 style={{ marginLeft: spacing.md }}>Debt Payoff Planner</H2>
-        </View>
-
-        <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 120 }}>
+        <KeyboardAwareContainer contentContainerStyle={{ padding: spacing.xl }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 0, paddingTop: spacing.md }}>
+            <TouchableOpacity testID="planner-back" onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
+            <H2 style={{ marginLeft: spacing.md }}>Debt Payoff Planner</H2>
+          </View>
           {plan && !plan.has_debts ? (
             <EmptyState testID="planner-empty" title="No debts to plan" subtitle="Add a debt first to see your payoff strategy."
               actionLabel="Add debt" onAction={() => router.push('/debt/new')} />
@@ -156,7 +156,7 @@ export default function DebtPlanner() {
               )}
             </>
           )}
-        </ScrollView>
+        </KeyboardAwareContainer>
       </SafeAreaView>
     </Screen>
   );

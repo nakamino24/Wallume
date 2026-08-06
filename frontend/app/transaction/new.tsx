@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, ScrollView, TouchableOpacity, Keyboard } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,7 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
-import { scale } from '@/src/utils/responsive';
 import { api } from '@/src/api/client';
 import { Button, Body, Label, Chip, Input } from '@/src/components/ui';
 import { ErrorBanner } from '@/src/components/ErrorBanner';
@@ -35,7 +34,6 @@ export default function NewTransaction() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const scrollRef = useRef<ScrollView>(null);
 
   const load = useCallback(async () => {
     const r = await api.wallets();
@@ -107,18 +105,16 @@ export default function NewTransaction() {
             </View>
 
             {/* Amount */}
-            <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
-              <Label>Amount</Label>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: spacing.sm }}>
-                <Body style={{ fontSize: scale(24), marginRight: 4, fontFamily: font.displayBold }}>{currencySymbol(cur)}</Body>
-                <MoneyInput
-                  testID="tx-amount"
-                  value={amount}
-                  onChange={setAmount}
-                  autoFocus
-                  style={{ flex: 1, alignSelf: 'stretch' }}
-                />
-              </View>
+            <View style={{ alignSelf: 'stretch', marginBottom: spacing.xl }}>
+              <MoneyInput
+                testID="tx-amount"
+                label="Amount"
+                variant="hero"
+                symbol={currencySymbol(cur)}
+                value={amount}
+                onChange={setAmount}
+                autoFocus
+              />
             </View>
 
             {/* Date */}
@@ -146,8 +142,7 @@ export default function NewTransaction() {
               </>
             )}
 
-            <Input testID="tx-note" label="Note (optional)" value={note} onChangeText={setNote} placeholder="Coffee, groceries…"
-              onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)} />
+            <Input testID="tx-note" label="Note (optional)" value={note} onChangeText={setNote} placeholder="Coffee, groceries…" />
 
             {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
 
