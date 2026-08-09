@@ -2,6 +2,11 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.4a] — 2026-08-09 (bottom nav clearance fix)
+
+### Fixed
+- **Bottom nav bar labels squeezed against the system navigation bar (regression)**: the tab bar previously applied only `insets.bottom + 6` as bottom padding on Android, so the icon+label row sat just ~6dp above the 3-button system nav bar (gesture nav's smaller inset happened to hide it). The bar's `height` and `paddingBottom` now both grow by a shared clearance constant (`20` Android / `18` iOS) on top of the reported inset, so the full icon + label for every tab (Home, Wallets, Plan, Coach) keeps its size and sits comfortably clear of the system nav — scaling with whatever inset the device reports rather than a single fixed value. The Home "+" FAB is positioned relative to the screen area above the (now taller) tab bar, so it inherits the same clearance automatically.
+
 ## [1.0.4a] — 2026-08-07 (transaction UX polish: amount input, recent txs, category CRUD)
 
 ### Added

@@ -21,6 +21,13 @@ export default function TabsLayout() {
 
   if (loading || !user) return <View style={{ flex: 1, backgroundColor: colors.surface }} />;
 
+  // Minimum clearance between the tab bar's icon+label content and the bottom
+  // of the screen (system navigation bar area), ON TOP of the reported inset.
+  // 3-button navigation reports a bigger insets.bottom than gesture nav, so the
+  // total padding scales with the device while this constant guarantees a
+  // comfortable gap for both. The earlier +6 Android clearance was too tight.
+  const BOTTOM_CLEARANCE = Platform.OS === 'ios' ? 18 : 20;
+
   return (
     <Tabs
       screenListeners={{
@@ -40,8 +47,11 @@ export default function TabsLayout() {
           // 'relative' keeps the bar in normal flow so screens and floating
           // buttons (e.g. the Home "+") never scroll under / overlap it.
           position: 'relative',
-          height: (Platform.OS === 'ios' ? 60 : 56) + insets.bottom,
-          paddingBottom: insets.bottom + (Platform.OS === 'ios' ? 18 : 6),
+          // Height must grow by the same clearance as the bottom padding so the
+          // icon+label area keeps its size while everything lifts above the
+          // system nav bar instead of being squeezed against it.
+          height: (Platform.OS === 'ios' ? 60 : 56) + insets.bottom + BOTTOM_CLEARANCE,
+          paddingBottom: insets.bottom + BOTTOM_CLEARANCE,
           paddingTop: 8,
         },
       }}
