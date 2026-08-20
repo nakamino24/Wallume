@@ -138,19 +138,3 @@ class ChatMessageRepository(BaseRepository):
 class CategoryRepository(BaseRepository):
     def __init__(self) -> None:
         super().__init__("categories")
-
-
-class IncomeTemplateRepository(BaseRepository):
-    def __init__(self) -> None:
-        super().__init__("income_templates")
-
-
-class IncomeSourceRepository(BaseRepository):
-    def __init__(self) -> None:
-        super().__init__("income_sources")
-
-    async def find_by_user_ordered(self, user_id: str) -> list[dict]:
-        cursor = (await self._collection()).find(
-            self._active_filter({"user_id": user_id}), {"_id": 0}
-        ).sort("sort_order", 1)
-        return self._money_out_list(await cursor.to_list(500))

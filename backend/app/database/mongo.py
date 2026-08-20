@@ -33,7 +33,6 @@ async def create_indexes() -> None:
     await db.user_sessions.create_index("expires_at", expireAfterSeconds=0)
     await db.token_blacklist.create_index("jti", unique=True)
     await db.token_blacklist.create_index("expires_at", expireAfterSeconds=0)
-    await db.income_templates.create_index("id", unique=True)
     for coll in ("wallets", "transactions", "budgets", "goals", "plans",
-                 "debts", "investments", "assets", "chat_messages", "recurring", "categories", "income_sources"):
+                 "debts", "investments", "assets", "chat_messages", "recurring", "categories"):
         await db[coll].create_index("user_id")

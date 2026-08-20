@@ -119,7 +119,7 @@ class AuthService:
         collections = [
             "wallets", "transactions", "budgets", "goals", "plans",
             "debts", "investments", "assets", "chat_messages",
-            "recurring", "user_sessions", "categories", "income_sources",
+            "recurring", "user_sessions", "categories",
         ]
         db: AsyncIOMotorDatabase = await get_database()
         for coll in collections:

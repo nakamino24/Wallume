@@ -136,17 +136,6 @@ export const api = {
   coachHistory: (session_id: string) => req(`/coach/history?session_id=${session_id}`),
   // coach chat uses fetch directly for streaming
   coachChatUrl: () => `${BASE}/api/coach/chat`,
-
-  // income / payroll
-  incomeTemplates: () => req('/income/templates'),
-  applyIncomeTemplate: (templateId: string, body: any) => req(`/income/templates/apply?template_id=${templateId}`, { method: 'POST', body: JSON.stringify(body) }),
-  suggestIncomeTemplates: (jobDescription: string) => req('/income/templates/suggest', { method: 'POST', body: JSON.stringify({ job_description: jobDescription }) }),
-  incomeSources: () => req('/income/sources'),
-  createIncomeSource: (body: any) => req('/income/sources', { method: 'POST', body: JSON.stringify(body) }),
-  updateIncomeSource: (id: string, body: any) => req(`/income/sources/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-  deleteIncomeSource: (id: string) => req(`/income/sources/${id}`, { method: 'DELETE' }),
-  reorderIncomeSources: (ids: string[]) => req('/income/sources/reorder', { method: 'POST', body: JSON.stringify({ ids }) }),
-  incomeForecast: (fromDate?: string) => req(`/income/forecast${fromDate ? `?from_date=${fromDate}` : ''}`),
 };
 
 export const BASE_URL = BASE;
