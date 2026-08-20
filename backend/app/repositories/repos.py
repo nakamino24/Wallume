@@ -52,11 +52,14 @@ class WalletRepository(BaseRepository):
         docs = await cursor.to_list(100)
         return self._money_out_list(docs)
 
-    async def adjust_balance(self, wallet_id: str, user_id: str, delta: float) -> None:
-        from app.utils.money import to_decimal128
-        await (await self._collection()).update_one(
+    async def adjust_balance(self, wallet_id: str, user_id: str, delta, session=None) -> None:
+        # delta may be int/float/Decimal/Decimal128. Decimal128 can't be
+        # negated/arith'd, so normalize via to_decimal before signing.
+        from app.utils.money import to_decimal128, to_decimal
+        signed = to_decimal(delta)
+        await (await self._collection(session)).update_one(
             {"id": wallet_id, "user_id": user_id},
-            {"$inc": {"balance": to_decimal128(delta)}},
+            {"$inc": {"balance": to_decimal128(signed)}},
         )
 
 

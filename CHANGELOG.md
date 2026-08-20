@@ -2,6 +2,13 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.5a] — 2026-08-09
+
+### Fixed
+
+- **Transfer balance corruption (root cause)**: `bson.Decimal128` does not support unary negation, so `-tx["amount"]` inside the delete/update reversal helpers raised a `TypeError` mid-way through — leaving one wallet reverted and the other not (or nothing reverted), plus a 500 error. Fixed by normalizing to a Python `Decimal` before negating (`app/utils/money.py::to_decimal`). Transfer create/update/delete now reverse/apply both wallet sides correctly and atomically, inside a MongoDB session transaction, so a partial reversal can never persist. Edit amount/wallet changes fully reverse the old effect before applying the new one. Delete is idempotent via the soft-deleted record (second delete 404s without touching balances). Same-wallet transfers are explicitly rejected.
+- **Bottom nav bar covered by system navigation bar**: the tab bar now uses `max(insets.bottom, 48)` on Android (matching the standard 3-button nav height) so the icon+label area always sits above the nav bar even when an OEM under-reports the inset under edge-to-edge contrast mode (e.g. Samsung One UI). Paired with the `expo-navigation-bar` config (dark bar) so Android keeps the app edge-to-edge and reports insets correctly on every nav mode.
+
 ## [1.0.4a] — 2026-08-09 (bottom nav clearance fix)
 
 ### Fixed

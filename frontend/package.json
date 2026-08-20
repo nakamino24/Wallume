@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "main": "index.js",
-  "version": "1.0.4b",
+  "version": "1.0.5a",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
@@ -30,6 +30,7 @@
     "expo-linear-gradient": "15.0.8",
     "expo-linking": "8.0.12",
     "expo-local-authentication": "~17.0.8",
+    "expo-navigation-bar": "~5.0.10",
     "expo-notifications": "~0.32.17",
     "expo-print": "~15.0.8",
     "expo-router": "6.0.24",
@@ -73,10 +74,4 @@
   "private": true,
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
-
-
-
-
-
-
 

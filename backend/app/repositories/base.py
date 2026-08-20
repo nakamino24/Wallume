@@ -16,9 +16,10 @@ class BaseRepository:
     def __init__(self, collection_name: str) -> None:
         self._collection_name = collection_name
 
-    async def _collection(self) -> AsyncIOMotorCollection:
+    async def _collection(self, session: Any = None) -> AsyncIOMotorCollection:
         db: AsyncIOMotorDatabase = await get_database()
-        return db[self._collection_name]
+        coll = db[self._collection_name]
+        return coll.with_options(session=session) if session is not None else coll
 
     def _money_out(self, doc: dict[str, Any]) -> dict[str, Any]:
         return convert_doc_decimals(doc, list(MONEY_FIELDS))
@@ -51,40 +52,40 @@ class BaseRepository:
             f["deleted_at"] = None
         return f
 
-    async def find_by_user(self, user_id: str, limit: int = 500) -> list[dict]:
-        cursor = (await self._collection()).find(
+    async def find_by_user(self, user_id: str, limit: int = 500, session=None) -> list[dict]:
+        cursor = (await self._collection(session)).find(
             self._active_filter({"user_id": user_id}), {"_id": 0}
         ).limit(limit)
         return self._money_out_list(await cursor.to_list(limit))
 
-    async def find_one(self, filter: dict) -> dict[str, Any] | None:
-        doc = await (await self._collection()).find_one(
+    async def find_one(self, filter: dict, session=None) -> dict[str, Any] | None:
+        doc = await (await self._collection(session)).find_one(
             self._active_filter(filter), {"_id": 0}
         )
         return self._money_out(doc) if doc else None
 
-    async def insert_one(self, doc: dict) -> None:
-        await (await self._collection()).insert_one(self._money_in(doc))
+    async def insert_one(self, doc: dict, session=None) -> None:
+        await (await self._collection(session)).insert_one(self._money_in(doc))
 
-    async def update_one(self, filter: dict, update: dict, upsert: bool = False) -> None:
-        await (await self._collection()).update_one(filter, self._money_in_update(update), upsert=upsert)
+    async def update_one(self, filter: dict, update: dict, upsert: bool = False, session=None) -> None:
+        await (await self._collection(session)).update_one(filter, self._money_in_update(update), upsert=upsert)
 
-    async def delete_one(self, filter: dict, hard: bool = False) -> None:
-        coll = await self._collection()
+    async def delete_one(self, filter: dict, hard: bool = False, session=None) -> None:
+        coll = await self._collection(session)
         if hard:
             await coll.delete_one(filter)
         else:
             from app.utils.helpers import now_utc
             await coll.update_one(filter, {"$set": {"deleted_at": now_utc()}})
 
-    async def delete_many(self, filter: dict, hard: bool = False) -> None:
-        coll = await self._collection()
+    async def delete_many(self, filter: dict, hard: bool = False, session=None) -> None:
+        coll = await self._collection(session)
         if hard:
             await coll.delete_many(filter)
         else:
             from app.utils.helpers import now_utc
             await coll.update_many(filter, {"$set": {"deleted_at": now_utc()}})
 
-    async def aggregate(self, pipeline: list[dict]) -> list[dict]:
-        docs = await (await self._collection()).aggregate(pipeline).to_list(5000)
+    async def aggregate(self, pipeline: list[dict], session=None) -> list[dict]:
+        docs = await (await self._collection(session)).aggregate(pipeline).to_list(5000)
         return self._money_out_list(docs)

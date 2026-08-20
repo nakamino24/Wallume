@@ -35,6 +35,21 @@ def round_money(value: float) -> float:
     return float(Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
+def to_decimal(value: Any) -> Decimal:
+    """Return a Python Decimal from any stored representation.
+
+    Decimal128 does NOT support unary negation/arithmetic, so callers must
+    convert to Decimal before any math (e.g. reversing a transfer's balanced
+    effect). Route all money math through this."""
+    if isinstance(value, Decimal128):
+        return value.to_decimal()
+    if isinstance(value, Decimal):
+        return value
+    if isinstance(value, (int, float, str)):
+        return Decimal(str(value))
+    return Decimal(str(value))
+
+
 def convert_doc_decimals(doc: dict[str, Any], fields: list[str]) -> dict[str, Any]:
     """Convert Decimal128 fields in a MongoDB doc to floats for the API."""
     result = dict(doc)

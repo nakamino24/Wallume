@@ -21,12 +21,14 @@ export default function TabsLayout() {
 
   if (loading || !user) return <View style={{ flex: 1, backgroundColor: colors.surface }} />;
 
-  // Minimum clearance between the tab bar's icon+label content and the bottom
-  // of the screen (system navigation bar area), ON TOP of the reported inset.
-  // 3-button navigation reports a bigger insets.bottom than gesture nav, so the
-  // total padding scales with the device while this constant guarantees a
-  // comfortable gap for both. The earlier +6 Android clearance was too tight.
-  const BOTTOM_CLEARANCE = Platform.OS === 'ios' ? 18 : 20;
+  // On edge-to-edge Android, insets.bottom is the system nav bar overlay
+  // (gesture pill ~24dp, 3-button ~48dp). Some OEMs (Samsung One UI) can report 0
+  // here while still drawing an opaque/contrast nav bar over the app, which
+  // leaves the tab bar sitting under it. Use the OS value when present, else
+  // fall back to the standard Android nav-bar height so the bar is never covered
+  // on any device/nav mode. iOS uses the real inset / home-indicator value.
+  const navBarBottom = Platform.OS === 'android' ? Math.max(insets.bottom, 48) : insets.bottom;
+  const clearGap = Platform.OS === 'ios' ? 18 : 6;
 
   return (
     <Tabs
@@ -47,11 +49,8 @@ export default function TabsLayout() {
           // 'relative' keeps the bar in normal flow so screens and floating
           // buttons (e.g. the Home "+") never scroll under / overlap it.
           position: 'relative',
-          // Height must grow by the same clearance as the bottom padding so the
-          // icon+label area keeps its size while everything lifts above the
-          // system nav bar instead of being squeezed against it.
-          height: (Platform.OS === 'ios' ? 60 : 56) + insets.bottom + BOTTOM_CLEARANCE,
-          paddingBottom: insets.bottom + BOTTOM_CLEARANCE,
+          height: (Platform.OS === 'ios' ? 60 : 56) + navBarBottom + clearGap,
+          paddingBottom: navBarBottom + clearGap,
           paddingTop: 8,
         },
       }}

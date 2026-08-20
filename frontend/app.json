@@ -2,7 +2,7 @@
   "expo": {
     "name": "Wallume",
     "slug": "frontend",
-    "version": "1.0.4b",
+    "version": "1.0.5a",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "wallume",
@@ -60,6 +60,16 @@
           ]
         }
       ],
+[
+        "expo-navigation-bar",
+        {
+          "backgroundColor": "#09090B",
+          "borderColor": "#09090B",
+          "barStyle": "light-content",
+          "enforceContrast": false,
+          "visibility": "visible"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -80,6 +90,7 @@
     }
   }
 }
+
 
 
 
