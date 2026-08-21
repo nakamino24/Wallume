@@ -149,6 +149,12 @@ describe('Home Screen', () => {
   });
 
   it('shows empty state when no transactions exist', async () => {
+    // Empty state requires BOTH no transactions and no wallets; the shared
+    // mock above returns two wallets, so override it for this scenario.
+    // (mockResolvedValue, not Once: useFocusEffect triggers a second load that
+    // would otherwise fall back to the two-wallet default.)
+    const { api } = require('@/src/api/client');
+    (api.wallets as jest.Mock).mockResolvedValue({ wallets: [] });
     const Home = require('@/app/(tabs)/home').default;
     const { getByTestId } = render(<Home />);
 

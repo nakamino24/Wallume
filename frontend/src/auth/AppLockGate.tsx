@@ -91,7 +91,7 @@ export function AppLockGate({ children }: { children: ReactNode }) {
       </View>
       <H2>Wallume is locked</H2>
       <Body muted style={{ marginTop: 6, marginBottom: spacing.xl, textAlign: 'center' }}>
-        Verify it's you to see your finances.
+        Verify it&apos;s you to see your finances.
       </Body>
       <Button testID="applock-unlock-btn" label={authenticating ? 'Waiting…' : 'Unlock'} onPress={attemptUnlock} loading={authenticating} />
     </View>

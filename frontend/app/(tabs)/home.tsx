@@ -167,6 +167,33 @@ export default function Home() {
     };
   }, [derivedSummary.month_expense, derivedSummary.month_income, txs, summary]);
 
+  if (initialLoading && !summary) {
+    return (
+      <Screen>
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+            <Skeleton width={120} height={14} />
+            <Skeleton width={100} height={22} style={{ marginTop: 4 }} />
+          </View>
+          <View style={{ padding: spacing.xl }}>
+            <SkeletonCard />
+          </View>
+          <View style={{ paddingHorizontal: spacing.xl, flexDirection: 'row', gap: spacing.md }}>
+            {[1, 2, 3, 4].map((i) => <Skeleton key={i} width={80} height={80} style={{ borderRadius: radius.md, flex: 1 }} />)}
+          </View>
+          <View style={{ padding: spacing.xl, gap: spacing.md }}>
+            <Skeleton width={120} height={16} />
+            <SkeletonCard />
+            <Skeleton width={140} height={16} />
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </View>
+        </SafeAreaView>
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
@@ -315,34 +342,7 @@ export default function Home() {
                   const dueSoon = r.days_until !== null && r.days_until >= 0 && r.days_until <= 3;
                   const dueColor = overdue ? colors.error : dueSoon ? colors.warning : colors.onSurface2;
                   const dueText = overdue ? `${Math.abs(r.days_until)}d overdue` : r.days_until === 0 ? 'Due today' : `in ${r.days_until}d`;
-  if (initialLoading && !summary) {
-    return (
-      <Screen>
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-          <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-            <Skeleton width={120} height={14} />
-            <Skeleton width={100} height={22} style={{ marginTop: 4 }} />
-          </View>
-          <View style={{ padding: spacing.xl }}>
-            <SkeletonCard />
-          </View>
-          <View style={{ paddingHorizontal: spacing.xl, flexDirection: 'row', gap: spacing.md }}>
-            {[1, 2, 3, 4].map((i) => <Skeleton key={i} width={80} height={80} style={{ borderRadius: radius.md, flex: 1 }} />)}
-          </View>
-          <View style={{ padding: spacing.xl, gap: spacing.md }}>
-            <Skeleton width={120} height={16} />
-            <SkeletonCard />
-            <Skeleton width={140} height={16} />
-            <SkeletonRow />
-            <SkeletonRow />
-            <SkeletonRow />
-          </View>
-        </SafeAreaView>
-      </Screen>
-    );
-  }
-
-  return (
+                  return (
                     <TouchableOpacity key={r.id} testID={`home-recurring-${r.id}`} onPress={() => router.push(`/recurring/${r.id}`)}
                       style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderBottomWidth: idx === upcoming.length - 1 ? 0 : 1, borderBottomColor: colors.border }}>
                       <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: dueColor + '22', alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>

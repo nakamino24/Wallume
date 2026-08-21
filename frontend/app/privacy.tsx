@@ -27,7 +27,7 @@ export default function Privacy() {
             <Body muted style={{ lineHeight: 20 }}>
               Wallume stores your financial data (wallets, transactions, budgets, goals, and chat history) on a MongoDB database.
               Your password is hashed with bcrypt and never stored in plain text. Authentication tokens are stored securely
-              using your device's Keychain (iOS) or Encrypted Shared Preferences (Android).
+              using your device&apos;s Keychain (iOS) or Encrypted Shared Preferences (Android).
             </Body>
           </Card>
 
@@ -36,7 +36,7 @@ export default function Privacy() {
             <Body muted style={{ lineHeight: 20 }}>
               Wallume does not sell, share, or transmit your financial data to any third party. The AI Coach uses
               your financial summary (net worth, income, expenses) as context to provide personalized advice —
-              this data is sent to Groq's API (llama-3.3-70b) for processing and is not stored by Groq.
+              this data is sent to Groq&apos;s API (llama-3.3-70b) for processing and is not stored by Groq.
               Exchange rates are fetched from a public API (open.er-api.com) — no personal data is included in those requests.
             </Body>
           </Card>
@@ -62,7 +62,7 @@ export default function Privacy() {
           <Card>
             <Body style={{ fontFamily: font.textBold, fontSize: 16, marginBottom: 8 }}>Contact</Body>
             <Body muted style={{ lineHeight: 20 }}>
-              For questions about this policy or to request data access, reach out via the app's support channel.
+              For questions about this policy or to request data access, reach out via the app&apos;s support channel.
             </Body>
           </Card>
 
