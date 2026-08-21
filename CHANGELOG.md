@@ -2,6 +2,26 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.6a] — 2026-08-22 (timestamp & wallet detail correctness fixes)
+
+### Follow-up hardening (same release, second batch)
+- **DB date-format migration**: audit found the `transactions.date` field mixed 133 canonical `YYYY-MM-DD` values with 3 full-ISO strings (legacy recurring mark-paid default). One-time migration (`backend/scripts/migrate_tx_dates.py`) normalized all records with automatic backup + rollback support; rehearsed against a staging copy first (136→136 docs, order unchanged, zero loss). Post-migration: 136/136 canonical. Read-only auditor kept at `scripts/audit_tx_timestamps.py`.
+- **Recurrence prevention at every write path**: new `to_canonical_date()` helper applied to transaction create/update and recurring mark-paid — full-ISO inputs are converted via their UTC calendar day so mixed formats can never re-enter the collection.
+- **Device-local "today" everywhere**: form defaults, reports range presets, and edit fallbacks no longer derive dates through `toISOString()` (UTC), which silently picked *yesterday* for UTC+X devices between 00:00 and 06:59 local.
+- **Timezone-explicit activity logic**: Wallet Activity grouping/time formatting extracted into pure modules (`src/lib/activity.ts`, `src/utils/dates.ts`) accepting an explicit IANA zone; covered by 25 deterministic multi-timezone tests simulating WIB (UTC+7), UTC, UTC-5, and DST-edge America/New_York (spring-forward + fall-back), including 23:59/00:01 day-boundary cases.
+- **created_at coverage confirmed**: production audit shows 0 of 136 transactions lack `created_at`; the honest "no time shown" fallback for date-only records remains as defensive behavior but never triggers on real data.
+
+### Fixed
+- **Uniform "7:00 AM" timestamps in Wallet Recent Activity**: the activity rows fell back to `tx.date` when `created_at` was missing, and a date-only `"YYYY-MM-DD"` parsed via `new Date()` is interpreted as **UTC midnight** — which renders as 07:00 for UTC+7 users regardless of when the transaction was actually made. Rows now prefer `created_at` (the real save time) and show no time at all when only a bare date exists, instead of fabricating one.
+- **Date-only strings parsed as UTC across the app** (`transactions.tsx`, `home.tsx` month filter, `export-report.tsx`, Wallet Activity grouping): date-only values now parse as *local* midnight (`YYYY-MM-DDT00:00:00`), so transactions can no longer land under the wrong calendar day or month for users outside UTC.
+- **Transaction date lost when editing**: the edit screen pre-fills from route params, but none of the entry points (Home, Transactions, Wallet Activity) passed `date` — editing any transaction silently reset its date to today. All three now pass it through; the edit screen also normalizes full-ISO dates to `YYYY-MM-DD`.
+- **Balance amount clipping on Wallet Detail**: the balance used a `Body` text with an overridden 32px font size while inheriting the component's fixed 22px line-height — on Android this clips tall glyphs and misaligns vertically. Replaced with the existing `DisplayNumber` component (auto-shrink to fit, correct line height), so amounts up to `Rp1.500.000.000+` stay fully readable without layout hacks.
+- **Intra-day activity ordering safety net**: the database holds mixed date formats (date-only from the form vs full ISO from the backend default), which makes backend string-sorting ambiguous within a single day. Wallet Activity now re-sorts each date group by `created_at DESC, id DESC` as a deterministic tiebreaker on top of the backend's compound sort.
+- **Misplaced loading skeleton in Home** (follow-up): the initial-load skeleton early-return had been nested inside the Upcoming map callback since ecceca6, triggering the long-standing `react/jsx-key` lint error; restored to a component-level guard, and the empty-state test no longer relies on a render race.
+
+### Changed
+- Version bumped `1.0.5a → 1.0.6a` in `app.json` (was stale after the v1.0.6 release).
+
 ## [1.0.6] — 2026-08-21
 
 ### Added

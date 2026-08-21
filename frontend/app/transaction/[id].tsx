@@ -12,6 +12,7 @@ import { DateField } from '@/src/components/DateField';
 import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
 import { CategorySelector } from '@/src/components/CategorySelector';
+import { todayLocalISO } from '@/src/utils/dates';
 
 // Edit an existing transaction. The list screen (transactions.tsx) passes the
 // transaction's fields in as route params, so we don't need a dedicated
@@ -39,7 +40,7 @@ export default function EditTransaction() {
   const [wallets, setWallets] = useState<any[]>([]);
   const [walletId, setWalletId] = useState(params.wallet_id || '');
   const [toWalletId, setToWalletId] = useState(params.to_wallet_id || '');
-  const [date, setDate] = useState(params.date || new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(params.date || todayLocalISO());
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
 

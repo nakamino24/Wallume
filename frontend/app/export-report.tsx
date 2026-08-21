@@ -29,7 +29,7 @@ function buildReportHTML(opts: {
 
   const txRows = txs.slice(0, 40).map((t: any) => `
     <tr>
-      <td>${new Date(t.date).toLocaleDateString()}</td>
+      <td>${/^\d{4}-\d{2}-\d{2}$/.test(t.date || '') ? new Date(`${t.date}T00:00:00`).toLocaleDateString() : new Date(t.date).toLocaleDateString()}</td>
       <td>${t.category}</td>
       <td>${t.note || ''}</td>
       <td style="text-align:right;color:${t.type === 'income' ? '#059669' : t.type === 'expense' ? '#DC2626' : '#111'}">

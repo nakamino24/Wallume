@@ -15,6 +15,7 @@ import { DateField } from '@/src/components/DateField';
 import { CategorySelector } from '@/src/components/CategorySelector';
 import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
+import { todayLocalISO } from '@/src/utils/dates';
 
 export default function NewTransaction() {
   const { colors } = useTheme();
@@ -30,7 +31,7 @@ export default function NewTransaction() {
   const [wallets, setWallets] = useState<any[]>([]);
   const [walletId, setWalletId] = useState('');
   const [toWalletId, setToWalletId] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => todayLocalISO());
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});

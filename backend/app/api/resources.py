@@ -12,7 +12,7 @@ from app.repositories.repos import (
 )
 from app.services.auth_service import AuthService
 from app.services.domain_services import DebtService, FxService
-from app.utils.helpers import new_id, now_utc, advance_date
+from app.utils.helpers import new_id, now_utc, advance_date, to_canonical_date
 
 auth_service = AuthService()
 
@@ -359,7 +359,10 @@ async def mark_recurring_paid(rec_id: str, authorization: Optional[str] = Header
     tx_doc = {
         "id": new_id("tx"), "user_id": u["user_id"], "wallet_id": r["wallet_id"],
         "to_wallet_id": None, "type": r["type"], "amount": r["amount"], "category": r["category"],
-        "note": r.get("note") or f"{r['name']} (recurring)", "date": now_utc().isoformat(),
+        # Canonical YYYY-MM-DD — full-ISO dates here were the original source of
+        # the mixed-format ordering bug (migrated 2026-08-22); never regress it.
+        "note": r.get("note") or f"{r['name']} (recurring)",
+        "date": to_canonical_date(now_utc().isoformat()),
         "created_at": now_utc(),
     }
     await tx_repo.insert_one(tx_doc)

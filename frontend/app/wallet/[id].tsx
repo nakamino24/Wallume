@@ -6,9 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, font, formatMoney, formatMoneyFull, radius } from '@/src/theme/tokens';
+import { spacing, font, formatMoney, formatMoneyFull } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H2, Body, Label, Chip, EmptyState, Caption } from '@/src/components/ui';
+import { formatActivityTime } from '@/src/utils/dates';
+import { groupActivitiesByDay } from '@/src/lib/activity';
+import { Screen, Card, H2, Body, Label, EmptyState, Caption, DisplayNumber } from '@/src/components/ui';
 
 const CATEGORY_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
@@ -82,36 +84,7 @@ export default function WalletDetail() {
   const meta = wallet ? (TYPE_TINT[wallet.type] || '#6B7280') : '#6B7280';
   const icon = wallet ? (TYPE_ICON[wallet.type] || 'wallet-outline') : 'wallet-outline';
 
-  const grouped = useMemo(() => {
-    const groups: Record<string, any[]> = {};
-    const today = new Date();
-    const todayStr = today.toDateString();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toDateString();
-
-    for (const t of txs) {
-      const d = new Date(t.date);
-      const key = d.toDateString();
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(t);
-    }
-
-    const sorted = Object.entries(groups).sort(([a], [b]) =>
-      new Date(b).getTime() - new Date(a).getTime()
-    );
-
-    return sorted.map(([dateStr, items]) => {
-      let label = dateStr;
-      if (dateStr === todayStr) label = 'TODAY';
-      else if (dateStr === yesterdayStr) label = 'YESTERDAY';
-      else {
-        const d = new Date(dateStr);
-        label = d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
-      }
-      return { label, items };
-    });
-  }, [txs]);
+  const grouped = useMemo(() => groupActivitiesByDay(txs), [txs]);
 
   if (!wallet) {
     return (
@@ -157,9 +130,9 @@ export default function WalletDetail() {
                   </Body>
                 </View>
               </View>
-              <Body style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 32 }}>
+              <DisplayNumber size={32} color={colors.onInverse} style={{ marginTop: 4 }}>
                 {formatMoneyFull(wallet.converted_balance ?? (wallet.balance || 0), walletCur)}
-              </Body>
+              </DisplayNumber>
               {wallet.currency && wallet.currency !== walletCur && (
                 <Caption style={{ color: colors.onInverse, opacity: 0.7, marginTop: 4 }}>
                   {formatMoneyFull(wallet.balance || 0, wallet.currency)} · {wallet.currency}
@@ -208,6 +181,7 @@ export default function WalletDetail() {
                             amount: String(t.amount),
                             category: t.category,
                             note: t.note || '',
+                            date: (t.date || '').split('T')[0],
                           },
                         })}
                         onLongPress={() => removeTx(t)}
@@ -250,7 +224,7 @@ function ActivityRow({ tx, walletId, currency, last, onPress, onLongPress }: any
 
   const color = direction === 'IN' ? colors.success : colors.error;
   const iconName = tx.type === 'transfer' ? 'swap-horizontal' : (CATEGORY_ICON[tx.category] || 'ellipsis-horizontal');
-  const time = new Date(tx.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  const time = formatActivityTime(tx);
 
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress} onLongPress={onLongPress}>

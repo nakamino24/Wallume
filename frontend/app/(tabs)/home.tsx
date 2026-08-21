@@ -137,7 +137,8 @@ export default function Home() {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
     const monthTxs = txs.filter((tx: any) => {
-      const d = new Date(tx.date);
+      const raw = tx.date || '';
+      const d = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? new Date(`${raw}T00:00:00`) : new Date(raw);
       return !Number.isNaN(d.getTime()) && d >= monthStart && d <= monthEnd;
     });
     const expenses = monthTxs.filter((tx: any) => tx.type === 'expense');
@@ -405,6 +406,7 @@ export default function Home() {
                         amount: String(t.amount),
                         category: t.category,
                         note: t.note || '',
+                        date: (t.date || '').split('T')[0],
                       },
                     })}
                     onLongPress={() => removeTx(t)}

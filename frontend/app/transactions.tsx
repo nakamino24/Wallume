@@ -67,7 +67,7 @@ export default function Transactions() {
             const negative = t.type === 'expense';
             const color = positive ? colors.success : negative ? colors.error : colors.brandPrimary;
             const iconName = t.type === 'transfer' ? 'swap-horizontal' : (CAT_ICON[t.category] || 'ellipsis-horizontal');
-            const d = new Date(t.date);
+            const d = /^\d{4}-\d{2}-\d{2}$/.test(t.date || '') ? new Date(`${t.date}T00:00:00`) : new Date(t.date);
             const label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
             return (
               <TouchableOpacity
@@ -83,6 +83,7 @@ export default function Transactions() {
                     amount: String(t.amount),
                     category: t.category,
                     note: t.note || '',
+                    date: (t.date || '').split('T')[0],
                   },
                 })}
                 onLongPress={() => remove(t)}

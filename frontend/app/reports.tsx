@@ -11,19 +11,24 @@ import { spacing, radius, font, formatMoney, formatMoneyFull, formatMoneyCompact
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, DisplayNumber, EmptyState, Input } from '@/src/components/ui';
 import { DateField } from '@/src/components/DateField';
+import { todayLocalISO } from '@/src/utils/dates';
 
 const CAT_COLORS = ['#3FA796', '#F4A261', '#D32F2F', '#2E7D32', '#16213E', '#ED6C02', '#6B7280', '#222222'];
 
 function toLocalDate(iso: string): string {
+  // Stored dates are local-calendar YYYY-MM-DD; never re-derive them through
+  // toISOString() (UTC), which shifts the day for any non-UTC device.
   if (!iso) return '';
-  try { return new Date(iso).toISOString().split('T')[0]; } catch { return iso; }
+  return iso.split('T')[0];
 }
 
-function todayISO() { return new Date().toISOString().split('T')[0]; }
+function todayISO() {
+  return todayLocalISO();
+}
 
 function monthStart() {
   const d = new Date(); d.setDate(1);
-  return d.toISOString().split('T')[0];
+  return todayLocalISO(d);
 }
 
 export default function Reports() {

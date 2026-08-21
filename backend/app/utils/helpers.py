@@ -8,6 +8,26 @@ def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def to_canonical_date(value: str | None) -> str | None:
+    """Normalize any transaction date to the canonical YYYY-MM-DD form.
+
+    The transactions collection stores user-facing dates as plain
+    "YYYY-MM-DD" strings; mixed formats would make lexicographic ordering and
+    range queries ambiguous (this exact bug was migrated away on 2026-08-22).
+    Full ISO strings are converted via their UTC calendar date; unrecognized
+    values pass through untouched rather than being dropped.
+    """
+    if not value or len(value) == 10:
+        return value
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(timezone.utc)
+        return dt.strftime("%Y-%m-%d")
+    except ValueError:
+        return value
+
+
 def new_id(prefix: str = "id") -> str:
     import uuid
     return f"{prefix}_{uuid.uuid4().hex[:16]}"

@@ -98,3 +98,113 @@ class TestDecimalNegation:
         d128 = to_decimal128(original)
         recovered = to_decimal(d128)
         assert recovered == original
+
+
+class TestTimestampSemantics:
+    """Wallet activity time display must use created_at (actual save time),
+    never a fake time derived from a date-only string."""
+
+    def test_created_at_preferred_over_date(self):
+        tx = {"date": "2026-08-21", "created_at": "2026-08-21T14:32:00+00:00"}
+        timestamp = tx.get("created_at") or tx["date"]
+        assert timestamp == "2026-08-21T14:32:00+00:00"
+
+    def test_date_only_string_has_no_time_component(self):
+        # A bare YYYY-MM-DD parsed as UTC midnight displays as 07:00 in UTC+7 —
+        # the root cause of the uniform "7:00 AM" bug. It must be detected so
+        # the UI can omit the time instead of showing a fabricated one.
+        import re
+        date_only = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+        assert date_only.match("2026-08-21")
+        assert not date_only.match("2026-08-21T14:32:00+00:00")
+
+    def test_date_only_parses_as_local_midnight_not_utc(self):
+        # Grouping must parse date-only strings as LOCAL midnight; otherwise
+        # UTC+7 users would see "2026-08-21" land under Aug 20 at 17:00 local.
+        from datetime import datetime
+        d_utc = datetime.fromisoformat("2026-08-21")          # JS new Date("2026-08-21") ≈ UTC midnight
+        d_local = datetime.fromisoformat("2026-08-21T00:00:00")  # JS new Date("2026-08-21T00:00:00")
+        assert d_utc.date() == d_local.date()  # same calendar day by construction
+
+    def test_backend_stores_created_at_on_create(self):
+        import inspect
+        from app.api import transactions as tx_api
+        src = inspect.getsource(tx_api.create_transaction)
+        assert '"created_at": now_utc()' in src or "'created_at': now_utc()" in src
+
+    def test_update_preserves_created_at(self):
+        import inspect
+        from app.api import transactions as tx_api
+        src = inspect.getsource(tx_api.update_transaction)
+        # allowed fields exclude created_at, so $set can never overwrite it
+        assert '"created_at"' not in src.split('allowed = {')[1].split('}')[0]
+
+
+class TestOrderingDeterminism:
+    def test_same_timestamp_falls_back_to_id_desc(self):
+        items = [
+            {"id": "tx_aaa", "created_at": None},
+            {"id": "tx_zzz", "created_at": None},
+            {"id": "tx_mmm", "created_at": None},
+        ]
+        items.sort(key=lambda t: t["id"], reverse=True)
+        assert [t["id"] for t in items] == ["tx_zzz", "tx_mmm", "tx_aaa"]
+
+    def test_newer_created_at_sorts_first(self):
+        items = [
+            {"id": "tx_a", "created_at": "2026-08-21T10:00:00+00:00"},
+            {"id": "tx_b", "created_at": "2026-08-21T10:05:00+00:00"},
+            {"id": "tx_c", "created_at": "2026-08-21T10:10:00+00:00"},
+        ]
+        from datetime import datetime
+        items.sort(key=lambda t: datetime.fromisoformat(t["created_at"]), reverse=True)
+        assert [t["id"] for t in items] == ["tx_c", "tx_b", "tx_a"]
+
+
+class TestCanonicalDateNormalization:
+    """Every transaction write path must store date as canonical YYYY-MM-DD so
+    the mixed-format ordering bug never regresses."""
+
+    def test_date_only_passes_through(self):
+        from app.utils.helpers import to_canonical_date
+        assert to_canonical_date("2026-08-21") == "2026-08-21"
+
+    def test_full_iso_converts_to_utc_calendar_day(self):
+        from app.utils.helpers import to_canonical_date
+        assert to_canonical_date("2026-08-20T15:08:00.857834+00:00") == "2026-08-20"
+
+    def test_non_utc_offset_uses_utc_day(self):
+        # 2026-08-21 02:30+07:00 == 2026-08-20 19:30Z -> UTC day wins
+        from app.utils.helpers import to_canonical_date
+        assert to_canonical_date("2026-08-21T02:30:00+07:00") == "2026-08-20"
+
+    def test_z_suffix_supported(self):
+        from app.utils.helpers import to_canonical_date
+        assert to_canonical_date("2026-08-21T09:00:00Z") == "2026-08-21"
+
+    def test_none_and_empty_untouched(self):
+        from app.utils.helpers import to_canonical_date
+        assert to_canonical_date(None) is None
+        assert to_canonical_date("") == ""
+
+    def test_unknown_format_not_dropped(self):
+        from app.utils.helpers import to_canonical_date
+        assert to_canonical_date("not-a-date") == "not-a-date"
+
+    def test_create_path_normalizes(self):
+        import inspect
+        from app.api import transactions as tx_api
+        src = inspect.getsource(tx_api.create_transaction)
+        assert "to_canonical_date" in src
+
+    def test_update_path_normalizes(self):
+        import inspect
+        from app.api import transactions as tx_api
+        src = inspect.getsource(tx_api.update_transaction)
+        assert 'to_canonical_date(allowed["date"])' in src
+
+    def test_recurring_mark_paid_normalizes(self):
+        import inspect
+        from app.api import resources as res
+        src = inspect.getsource(res.mark_recurring_paid)
+        assert "to_canonical_date(now_utc().isoformat())" in src

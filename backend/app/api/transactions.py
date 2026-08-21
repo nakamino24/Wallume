@@ -5,7 +5,7 @@ from fastapi import APIRouter, Header, HTTPException
 from app.schemas.models import TransactionCreate
 from app.repositories.repos import WalletRepository, TransactionRepository
 from app.services.auth_service import AuthService
-from app.utils.helpers import new_id, now_utc
+from app.utils.helpers import new_id, now_utc, to_canonical_date
 from app.utils.money import to_decimal, to_decimal128
 from app.database.mongo import get_database
 
@@ -52,7 +52,7 @@ async def list_transactions(
 @router.post("")
 async def create_transaction(payload: TransactionCreate, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    tx_date = payload.date or now_utc().isoformat()
+    tx_date = to_canonical_date(payload.date) or now_utc().isoformat()
     doc = {"id": new_id("tx"), "user_id": u["user_id"], **payload.model_dump(),
            "date": tx_date, "created_at": now_utc()}
 
@@ -91,6 +91,8 @@ async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Op
 
             allowed = {k: v for k, v in body.items()
                        if k in {"wallet_id", "to_wallet_id", "type", "amount", "category", "note", "date"}}
+            if "date" in allowed:
+                allowed["date"] = to_canonical_date(allowed["date"])
             merged = {**tx, **allowed}
             if merged["type"] == "transfer":
                 if not merged.get("to_wallet_id"):
