@@ -42,9 +42,10 @@ async def list_transactions(
     authorization: Optional[str] = Header(None),
     limit: int = 100,
     type: Optional[str] = None,
+    wallet_id: Optional[str] = None,
 ):
     u = await auth_service.get_current_user(authorization)
-    items = await txs.find_by_user(u["user_id"], type, limit)
+    items = await txs.find_by_user(u["user_id"], type, wallet_id, limit)
     return {"success": True, "data": {"transactions": items}}
 
 

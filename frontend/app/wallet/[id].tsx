@@ -1,116 +1,279 @@
-import React, { useCallback, useState } from 'react';
-import { ScrollView, TouchableOpacity } from 'react-native';
+import React, { useCallback, useState, useMemo } from 'react';
+import { ScrollView, TouchableOpacity, View, Alert, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, formatMoneyFull } from '@/src/theme/tokens';
-import { scale } from '@/src/utils/responsive';
+import { spacing, font, formatMoney, formatMoneyFull, radius } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Body, Label, Button, Input, Chip, Card } from '@/src/components/ui';
-import { confirmAction } from '@/src/utils/confirm';
-import { FormLayout } from '@/src/components/FormLayout';
-import { MoneyInput } from '@/src/components/MoneyInput';
+import { Screen, Card, H2, Body, Label, Chip, EmptyState, Caption } from '@/src/components/ui';
 
-const TYPES = [
-  { id: 'cash', label: 'Cash' },
-  { id: 'bank', label: 'Bank' },
-  { id: 'credit_card', label: 'Credit Card' },
-  { id: 'e_wallet', label: 'E-Wallet' },
-  { id: 'savings', label: 'Savings' },
-  { id: 'investment', label: 'Investment' },
-];
+const CATEGORY_ICON: Record<string, any> = {
+  Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
+  Entertainment: 'film', Bills: 'receipt', Health: 'medkit',
+  Rent: 'home', Salary: 'cash', Groceries: 'basket', Other: 'ellipsis-horizontal',
+  Freelance: 'laptop', Investment: 'trending-up', Business: 'briefcase', Gift: 'gift',
+};
 
-export default function EditWallet() {
+const TYPE_LABEL: Record<string, string> = {
+  cash: 'Cash', bank: 'Bank', credit_card: 'Credit Card',
+  e_wallet: 'E-Wallet', savings: 'Savings', investment: 'Investment',
+};
+
+const TYPE_ICON: Record<string, any> = {
+  cash: 'cash-outline', bank: 'business-outline', credit_card: 'card-outline',
+  e_wallet: 'phone-portrait-outline', savings: 'lock-closed-outline', investment: 'trending-up-outline',
+};
+
+const TYPE_TINT: Record<string, string> = {
+  cash: '#10B981', bank: '#3B82F6', credit_card: '#F59E0B',
+  e_wallet: '#8B5CF6', savings: '#14B8A6', investment: '#22C55E',
+};
+
+export default function WalletDetail() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [wallet, setWallet] = useState<any>(null);
-  const [name, setName] = useState('');
-  const [type, setType] = useState('bank');
-  const [balance, setBalance] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState('');
+  const [txs, setTxs] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    const r = await api.wallets();
-    const w = (r.wallets || []).find((x: any) => x.id === id);
-    if (w) {
-      setWallet(w);
-      setName(w.name);
-      setType(w.type);
-      setBalance(String(w.balance ?? 0));
-    }
+    try {
+      const [walletRes, txRes] = await Promise.all([
+        api.wallets(),
+        api.transactions(undefined, 50, id),
+      ]);
+      const w = (walletRes.wallets || []).find((x: any) => x.id === id);
+      if (w) setWallet(w);
+      setTxs(txRes.transactions || []);
+    } catch {}
   }, [id]);
+
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const submit = async () => {
-    setErr('');
-    if (!name.trim()) { setErr('Enter a wallet name'); return; }
-    if (balance.trim() === '') { setErr('Enter a balance (use 0 for empty)'); return; }
-    const parsed = parseFloat(balance);
-    if (Number.isNaN(parsed)) { setErr('Balance must be a number'); return; }
-    setLoading(true);
-    try {
-      await api.updateWallet(id!, {
-        name: name.trim(),
-        type,
-        balance: parsed,
-      });
-      router.back();
-    } catch (e: any) { setErr(e.message); }
-    finally { setLoading(false); }
-  };
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
 
-  const remove = () => {
-    confirmAction(
-      'Delete wallet?',
-      'This also deletes all transactions in this wallet.',
-      async () => { await api.deleteWallet(id!); router.back(); },
-      { confirmLabel: 'Delete', destructive: true },
-    );
-  };
-
-  if (!wallet) {
-    return <FormLayout title="Edit wallet"><Body style={{ padding: spacing.xl }}>Loading…</Body></FormLayout>;
-  }
+  const removeTx = useCallback((t: any) => {
+    Alert.alert('Delete transaction?', undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.deleteTransaction(t.id);
+            setTxs((prev) => prev.filter((x) => x.id !== t.id));
+          } catch {}
+        },
+      },
+    ]);
+  }, []);
 
   const cur = user?.currency || 'USD';
+  const meta = wallet ? (TYPE_TINT[wallet.type] || '#6B7280') : '#6B7280';
+  const icon = wallet ? (TYPE_ICON[wallet.type] || 'wallet-outline') : 'wallet-outline';
+
+  const grouped = useMemo(() => {
+    const groups: Record<string, any[]> = {};
+    const today = new Date();
+    const todayStr = today.toDateString();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toDateString();
+
+    for (const t of txs) {
+      const d = new Date(t.date);
+      const key = d.toDateString();
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(t);
+    }
+
+    const sorted = Object.entries(groups).sort(([a], [b]) =>
+      new Date(b).getTime() - new Date(a).getTime()
+    );
+
+    return sorted.map(([dateStr, items]) => {
+      let label = dateStr;
+      if (dateStr === todayStr) label = 'TODAY';
+      else if (dateStr === yesterdayStr) label = 'YESTERDAY';
+      else {
+        const d = new Date(dateStr);
+        label = d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+      }
+      return { label, items };
+    });
+  }, [txs]);
+
+  if (!wallet) {
+    return (
+      <Screen>
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+            <Body>Loading…</Body>
+          </View>
+        </SafeAreaView>
+      </Screen>
+    );
+  }
+
+  const walletCur = wallet.home_currency || cur;
 
   return (
-    <FormLayout title="Edit wallet" onBack={() => router.back()}
-      headerRight={
-        <TouchableOpacity testID="edit-wallet-delete" onPress={remove} style={{ padding: 8 }}>
-          <Ionicons name="trash" size={20} color={colors.error} />
-        </TouchableOpacity>
-      }>
-      <Card style={{ marginBottom: spacing.md }}>
-        <Label>Current balance</Label>
-        <Body style={{ fontSize: scale(24), fontFamily: 'SpaceGrotesk-Bold', marginTop: 4 }}>
-          {formatMoneyFull(wallet.converted_balance ?? (wallet.balance || 0), wallet.home_currency || cur)}
-        </Body>
-      </Card>
+    <Screen>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 100 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
+        >
+          <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={24} color={colors.onSurface} />
+            </TouchableOpacity>
+            <H2 style={{ flex: 1, marginLeft: spacing.md }}>{wallet.name}</H2>
+            <TouchableOpacity testID="wallet-edit-btn" onPress={() => router.push({ pathname: '/wallet/edit/[id]', params: { id: wallet.id } })}>
+              <Ionicons name="create-outline" size={22} color={colors.brandPrimary} />
+            </TouchableOpacity>
+          </View>
 
-      <Input testID="edit-wallet-name" label="Name" value={name} onChangeText={setName} placeholder="Main Bank" />
+          <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.xl }}>
+            <Card style={{ backgroundColor: colors.inverse }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: meta + '22', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name={icon} size={20} color={meta} />
+                </View>
+                <View style={{ marginLeft: spacing.md }}>
+                  <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Balance</Label>
+                  <Body style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 13, marginTop: 2 }}>
+                    {TYPE_LABEL[wallet.type] || wallet.type}
+                  </Body>
+                </View>
+              </View>
+              <Body style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 32 }}>
+                {formatMoneyFull(wallet.converted_balance ?? (wallet.balance || 0), walletCur)}
+              </Body>
+              {wallet.currency && wallet.currency !== walletCur && (
+                <Caption style={{ color: colors.onInverse, opacity: 0.7, marginTop: 4 }}>
+                  {formatMoneyFull(wallet.balance || 0, wallet.currency)} · {wallet.currency}
+                </Caption>
+              )}
+            </Card>
+          </View>
 
-      <Label>Type</Label>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-        {TYPES.map((t) => (
-          <Chip key={t.id} testID={`edit-wtype-${t.id}`} label={t.label} active={type === t.id} onPress={() => setType(t.id)} />
-        ))}
-      </ScrollView>
+          <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <H2>Recent Activity</H2>
+            <TouchableOpacity onPress={() => router.push('/transactions')}>
+              <Body style={{ color: colors.brandPrimary, fontFamily: font.textBold }}>See all</Body>
+            </TouchableOpacity>
+          </View>
 
-      <MoneyInput testID="edit-wallet-balance" label="Balance" value={balance} onChange={setBalance} placeholder="0" />
-      <Body muted style={{ fontSize: 12, marginTop: -spacing.sm, marginBottom: spacing.md }}>
-        Manually set the balance. This does not create a transaction.
-      </Body>
+          {grouped.length === 0 ? (
+            <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.md }}>
+              <EmptyState
+                testID="wallet-activity-empty"
+                title="No activity yet"
+                subtitle="Transactions for this wallet will appear here."
+                actionLabel="Add transaction"
+                onAction={() => router.push({ pathname: '/transaction/new', params: { wallet_id: wallet.id } })}
+              />
+            </View>
+          ) : (
+            <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.md }}>
+              {grouped.map(({ label, items }) => (
+                <View key={label} style={{ marginBottom: spacing.lg }}>
+                  <Label style={{ marginBottom: spacing.sm }}>{label}</Label>
+                  <Card style={{ padding: 0 }}>
+                    {items.map((t, idx) => (
+                      <ActivityRow
+                        key={t.id}
+                        tx={t}
+                        walletId={id!}
+                        currency={walletCur}
+                        last={idx === items.length - 1}
+                        onPress={() => router.push({
+                          pathname: '/transaction/[id]',
+                          params: {
+                            id: t.id,
+                            wallet_id: t.wallet_id,
+                            to_wallet_id: t.to_wallet_id || '',
+                            type: t.type,
+                            amount: String(t.amount),
+                            category: t.category,
+                            note: t.note || '',
+                          },
+                        })}
+                        onLongPress={() => removeTx(t)}
+                      />
+                    ))}
+                  </Card>
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </Screen>
+  );
+}
 
-      {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
+function ActivityRow({ tx, walletId, currency, last, onPress, onLongPress }: any) {
+  const { colors } = useTheme();
 
-      <Button testID="edit-wallet-save" label="Save changes" onPress={submit} loading={loading} />
-    </FormLayout>
+  const isSource = tx.wallet_id === walletId;
+  const isDest = tx.to_wallet_id === walletId;
+
+  let direction: 'IN' | 'OUT' = 'OUT';
+  let displayAmount = Number(tx.amount);
+  let counterparty: string | null = null;
+
+  if (tx.type === 'income') {
+    direction = 'IN';
+  } else if (tx.type === 'expense') {
+    direction = 'OUT';
+  } else if (tx.type === 'transfer') {
+    if (isSource) {
+      direction = 'OUT';
+      counterparty = tx.to_wallet_name || 'Transfer out';
+    } else if (isDest) {
+      direction = 'IN';
+      counterparty = tx.wallet_name || 'Transfer in';
+    }
+  }
+
+  const color = direction === 'IN' ? colors.success : colors.error;
+  const iconName = tx.type === 'transfer' ? 'swap-horizontal' : (CATEGORY_ICON[tx.category] || 'ellipsis-horizontal');
+  const time = new Date(tx.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <TouchableOpacity activeOpacity={0.85} onPress={onPress} onLongPress={onLongPress}>
+      <View style={{
+        flexDirection: 'row', alignItems: 'center', padding: spacing.md,
+        borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.border,
+      }}>
+        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: color + '18', alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
+          <Ionicons name={iconName} size={16} color={color} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Body style={{ fontFamily: font.textMedium, fontSize: 14 }}>
+            {tx.type === 'transfer' ? (counterparty || 'Transfer') : tx.category}
+          </Body>
+          {!!tx.note && <Caption muted style={{ marginTop: 1 }}>{tx.note.length > 30 ? tx.note.slice(0, 30) + '…' : tx.note}</Caption>}
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Body style={{ fontFamily: font.displayBold, color, fontSize: 14 }}>
+            {direction === 'IN' ? '+' : '-'}{formatMoney(displayAmount, currency)}
+          </Body>
+          <Caption muted style={{ fontSize: 11, marginTop: 2 }}>{time}</Caption>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 }

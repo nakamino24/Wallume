@@ -2,6 +2,15 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.6] — 2026-08-21
+
+### Added
+- **Wallet Recent Activity** — each wallet now shows its own transaction history (tap a wallet to view). Activity is correctly scoped: income shows `+amount`, expense shows `-amount`, transfers show the correct perspective (`-amount, Transfer to X` for source wallet; `+amount, Transfer from Y` for destination wallet). Grouped by date (TODAY, YESTERDAY, etc.) with time stamps. Reuses the existing transaction model — no new table or duplicate data.
+- **Deterministic transaction ordering** — backend now sorts by `date DESC, created_at DESC, id DESC` so same-timestamp transactions have a stable, predictable order.
+
+### Fixed
+- **Recent Transaction ordering bug** — transactions were sorted only by `date DESC`, which meant same-date transactions had unpredictable order. Now uses compound sort (date, created_at, id) so newest-by-creation always appears first, even when transaction dates match.
+
 ## [1.0.5a] — 2026-08-09
 
 ### Fixed

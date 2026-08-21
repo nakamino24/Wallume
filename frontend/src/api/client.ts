@@ -79,10 +79,13 @@ export const api = {
   updateWallet: (id: string, body: any) => req(`/wallets/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteWallet: (id: string) => req(`/wallets/${id}`, { method: 'DELETE' }),
 
-  transactions: (type?: string, limit?: number) => {
-    let path = `/transactions${type ? `?type=${type}` : ''}`;
-    if (limit) path += `${type ? '&' : '?'}limit=${limit}`;
-    return req(path);
+  transactions: (type?: string, limit?: number, wallet_id?: string) => {
+    const params = new URLSearchParams();
+    if (type) params.append('type', type);
+    if (limit) params.append('limit', String(limit));
+    if (wallet_id) params.append('wallet_id', wallet_id);
+    const qs = params.toString();
+    return req(qs ? `/transactions?${qs}` : '/transactions');
   },
   createTransaction: (body: any) => req('/transactions', { method: 'POST', body: JSON.stringify(body) }),
   updateTransaction: (id: string, body: any) => req(`/transactions/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
