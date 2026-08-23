@@ -23,12 +23,12 @@ def auth_user(api_client):
     """Signup a fresh user and return {token, user}."""
     epoch = int(time.time() * 1000)
     email = f"alex+{epoch}@matrix.dev"
-    payload = {"name": "Alex", "email": email, "password": "password123"}
+    payload = {"name": "Alex", "email": email, "password": "Password123"}
     r = api_client.post(f"{BASE_URL}/api/auth/signup", json=payload)
     assert r.status_code == 200, f"signup failed: {r.status_code} {r.text}"
-    data = r.json()
+    data = r.json().get("data") or r.json()
     assert "token" in data and "user" in data
-    return {"token": data["token"], "user": data["user"], "email": email, "password": "password123"}
+    return {"token": data["token"], "user": data["user"], "email": email, "password": "Password123"}
 
 
 @pytest.fixture(scope="session")
