@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 from datetime import datetime, timezone
 
@@ -26,6 +27,17 @@ def to_canonical_date(value: str | None) -> str | None:
         return dt.strftime("%Y-%m-%d")
     except ValueError:
         return value
+
+
+_CANONICAL_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def strict_canonical_date(value: str | None) -> str | None:
+    """`to_canonical_date` plus a hard guarantee: the result is either a true
+    YYYY-MM-DD string or None. API boundaries use this so unrecognized inputs
+    (e.g. "not-a-date") can be rejected instead of stored verbatim."""
+    c = to_canonical_date(value)
+    return c if c and _CANONICAL_RE.match(c) else None
 
 
 def new_id(prefix: str = "id") -> str:

@@ -18,6 +18,7 @@ export default function Recurring() {
   const { user } = useAuth();
   const router = useRouter();
   const [items, setItems] = useState<any[]>([]);
+  const [markingId, setMarkingId] = useState<string | null>(null);
   const cur = user?.currency || 'USD';
 
   const load = useCallback(async () => {
@@ -43,9 +44,16 @@ export default function Recurring() {
     }, 0);
 
   const markPaid = async (id: string, name: string) => {
+    // One in-flight payment at a time: the backend logs a transaction per
+    // call, so a double-tap would double-charge the wallet.
+    if (markingId) return;
     Alert.alert('Mark as paid?', `This logs a transaction for ${name} and moves it to the next due date.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Mark paid', onPress: async () => { await api.markRecurringPaid(id); load(); } },
+      { text: 'Mark paid', onPress: async () => {
+        setMarkingId(id);
+        try { await api.markRecurringPaid(id); await load(); }
+        finally { setMarkingId(null); }
+      } },
     ]);
   };
 
@@ -96,7 +104,8 @@ export default function Recurring() {
                   </View>
                 </View>
                 <TouchableOpacity testID={`recurring-mark-paid-${r.id}`} onPress={() => markPaid(r.id, r.name)}
-                  style={{ marginTop: spacing.md, paddingVertical: 8, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.surface2 }}>
+                  disabled={markingId === r.id}
+                  style={{ marginTop: spacing.md, paddingVertical: 8, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.surface2, opacity: markingId === r.id ? 0.5 : 1 }}>
                   <Body style={{ fontFamily: font.textMedium, fontSize: 13, color: dueColor }}>Mark as paid</Body>
                 </TouchableOpacity>
               </Card>

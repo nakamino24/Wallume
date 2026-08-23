@@ -19,6 +19,7 @@ export default function RecurringDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [item, setItem] = useState<any>(null);
+  const [marking, setMarking] = useState(false);
   const sheetRef = useRef<BottomSheetModal>(null);
   const cur = user?.currency || 'USD';
 
@@ -55,10 +56,17 @@ export default function RecurringDetail() {
   };
 
   const onMarkPaid = () => {
+    // One in-flight payment at a time — the backend logs one transaction per
+    // call, so re-entry would double-charge the wallet.
+    if (marking) return;
     sheetRef.current?.dismiss();
     Alert.alert('Mark as paid?', `This logs a transaction for ${item.name} and moves it to the next due date.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Mark paid', onPress: async () => { await api.markRecurringPaid(item.id); load(); } },
+      { text: 'Mark paid', onPress: async () => {
+        setMarking(true);
+        try { await api.markRecurringPaid(item.id); await load(); }
+        finally { setMarking(false); }
+      } },
     ]);
   };
   const onEdit = () => { sheetRef.current?.dismiss(); router.push({ pathname: '/recurring/new', params: editParams }); };

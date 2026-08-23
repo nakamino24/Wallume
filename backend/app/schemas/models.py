@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Literal, Optional
 
 
@@ -62,6 +62,16 @@ class TransactionCreate(BaseModel):
     category: str
     note: Optional[str] = ""
     date: Optional[str] = None
+
+    @field_validator("amount")
+    @classmethod
+    def _amount_must_be_positive(cls, v: float) -> float:
+        # A negative expense would INCREASE the wallet balance (the effect is
+        # negated downstream), so the boundary must reject it outright.
+        import math
+        if not math.isfinite(v) or v <= 0:
+            raise ValueError("amount must be greater than 0")
+        return v
 
 # --- Budget ---
 class BudgetCreate(BaseModel):

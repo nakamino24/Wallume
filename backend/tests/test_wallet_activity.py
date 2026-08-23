@@ -195,16 +195,69 @@ class TestCanonicalDateNormalization:
         import inspect
         from app.api import transactions as tx_api
         src = inspect.getsource(tx_api.create_transaction)
-        assert "to_canonical_date" in src
+        assert "strict_canonical_date" in src
 
     def test_update_path_normalizes(self):
         import inspect
         from app.api import transactions as tx_api
         src = inspect.getsource(tx_api.update_transaction)
-        assert 'to_canonical_date(allowed["date"])' in src
+        assert 'strict_canonical_date(allowed["date"])' in src
 
     def test_recurring_mark_paid_normalizes(self):
         import inspect
         from app.api import resources as res
         src = inspect.getsource(res.mark_recurring_paid)
         assert "to_canonical_date(now_utc().isoformat())" in src
+
+
+class TestApiBoundaryHardening:
+    """Future-bug guards found in the 2026-08-23 audit."""
+
+    def test_strict_canonical_rejects_garbage(self):
+        from app.utils.helpers import strict_canonical_date
+        assert strict_canonical_date("not-a-date") is None
+        assert strict_canonical_date("") is None
+        assert strict_canonical_date(None) is None
+
+    def test_strict_canonical_accepts_valid_inputs(self):
+        from app.utils.helpers import strict_canonical_date
+        assert strict_canonical_date("2026-08-21") == "2026-08-21"
+        assert strict_canonical_date("2026-08-20T15:08:00+00:00") == "2026-08-20"
+
+    def test_create_fallback_is_canonical_not_iso(self):
+        # Regression guard: an empty date used to fall through to
+        # now_utc().isoformat() (full ISO), silently reintroducing the
+        # mixed-format bug after the DB migration.
+        import inspect
+        from app.api import transactions as tx_api
+        src = inspect.getsource(tx_api.create_transaction)
+        assert 'or now_utc().strftime("%Y-%m-%d")' in src
+        code_lines = [l for l in src.splitlines() if "now_utc()" in l and not l.strip().startswith("#")]
+        assert all("isoformat" not in l for l in code_lines)
+
+    def test_negative_amount_rejected_by_schema(self):
+        from pydantic import ValidationError
+        from app.schemas.models import TransactionCreate
+        with __import__("pytest").raises(ValidationError):
+            TransactionCreate(wallet_id="wal1", type="expense", amount=-5000, category="Food")
+
+    def test_zero_amount_rejected_by_schema(self):
+        from pydantic import ValidationError
+        from app.schemas.models import TransactionCreate
+        with __import__("pytest").raises(ValidationError):
+            TransactionCreate(wallet_id="wal1", type="expense", amount=0, category="Food")
+
+    def test_nan_amount_rejected_by_schema(self):
+        from pydantic import ValidationError
+        from app.schemas.models import TransactionCreate
+        with __import__("pytest").raises(ValidationError):
+            TransactionCreate(wallet_id="wal1", type="expense", amount=float("nan"), category="Food")
+
+    def test_update_endpoint_validates_wallets_and_amount_and_date(self):
+        import inspect
+        from app.api import transactions as tx_api
+        src = inspect.getsource(tx_api.update_transaction)
+        assert "_require_positive_amount" in src          # amount guard
+        assert "Wallet not found" in src                   # source wallet guard
+        assert "Destination wallet not found" in src       # transfer dest guard
+        assert "Invalid date" in src                       # canonical-date guard

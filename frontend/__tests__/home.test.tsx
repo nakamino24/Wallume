@@ -151,15 +151,22 @@ describe('Home Screen', () => {
   it('shows empty state when no transactions exist', async () => {
     // Empty state requires BOTH no transactions and no wallets; the shared
     // mock above returns two wallets, so override it for this scenario.
-    // (mockResolvedValue, not Once: useFocusEffect triggers a second load that
-    // would otherwise fall back to the two-wallet default.)
+    // (persistent override, not Once: useFocusEffect triggers a second load
+    // that would otherwise fall back to the two-wallet default)
     const { api } = require('@/src/api/client');
+    const originalWalletsImpl = (api.wallets as jest.Mock).getMockImplementation();
     (api.wallets as jest.Mock).mockResolvedValue({ wallets: [] });
-    const Home = require('@/app/(tabs)/home').default;
-    const { getByTestId } = render(<Home />);
+    try {
+      const Home = require('@/app/(tabs)/home').default;
+      const { getByTestId } = render(<Home />);
 
-    await waitFor(() => {
-      expect(getByTestId('home-tx-empty')).toBeTruthy();
-    });
+      await waitFor(() => {
+        expect(getByTestId('home-tx-empty')).toBeTruthy();
+      });
+    } finally {
+      // Restore, or later tests in this file would inherit the empty wallet
+      // list if execution order ever changes.
+      (api.wallets as jest.Mock).mockImplementation(originalWalletsImpl ?? undefined);
+    }
   });
 });
