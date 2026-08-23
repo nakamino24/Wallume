@@ -17,9 +17,14 @@ class BaseRepository:
         self._collection_name = collection_name
 
     async def _collection(self, session: Any = None) -> AsyncIOMotorCollection:
+        # NOTE: `session` is intentionally NOT attached here. pymongo's
+        # Collection.with_options() does not accept a session kwarg — passing
+        # one raises TypeError mid-request (500). Sessions belong on the
+        # individual operation calls below; keeping them there also fixes the
+        # silent bug where insert/update dropped the session entirely,
+        # meaning "atomic" multi-step writes were never inside the txn.
         db: AsyncIOMotorDatabase = await get_database()
-        coll = db[self._collection_name]
-        return coll.with_options(session=session) if session is not None else coll
+        return db[self._collection_name]
 
     def _money_out(self, doc: dict[str, Any]) -> dict[str, Any]:
         return convert_doc_decimals(doc, list(MONEY_FIELDS))
@@ -53,39 +58,39 @@ class BaseRepository:
         return f
 
     async def find_by_user(self, user_id: str, limit: int = 500, session=None) -> list[dict]:
-        cursor = (await self._collection(session)).find(
-            self._active_filter({"user_id": user_id}), {"_id": 0}
+        cursor = (await self._collection()).find(
+            self._active_filter({"user_id": user_id}), {"_id": 0}, session=session
         ).limit(limit)
         return self._money_out_list(await cursor.to_list(limit))
 
     async def find_one(self, filter: dict, session=None) -> dict[str, Any] | None:
-        doc = await (await self._collection(session)).find_one(
-            self._active_filter(filter), {"_id": 0}
+        doc = await (await self._collection()).find_one(
+            self._active_filter(filter), {"_id": 0}, session=session
         )
         return self._money_out(doc) if doc else None
 
     async def insert_one(self, doc: dict, session=None) -> None:
-        await (await self._collection(session)).insert_one(self._money_in(doc))
+        await (await self._collection()).insert_one(self._money_in(doc), session=session)
 
     async def update_one(self, filter: dict, update: dict, upsert: bool = False, session=None) -> None:
-        await (await self._collection(session)).update_one(filter, self._money_in_update(update), upsert=upsert)
+        await (await self._collection()).update_one(filter, self._money_in_update(update), upsert=upsert, session=session)
 
     async def delete_one(self, filter: dict, hard: bool = False, session=None) -> None:
-        coll = await self._collection(session)
+        coll = await self._collection()
         if hard:
-            await coll.delete_one(filter)
+            await coll.delete_one(filter, session=session)
         else:
             from app.utils.helpers import now_utc
-            await coll.update_one(filter, {"$set": {"deleted_at": now_utc()}})
+            await coll.update_one(filter, {"$set": {"deleted_at": now_utc()}}, session=session)
 
     async def delete_many(self, filter: dict, hard: bool = False, session=None) -> None:
-        coll = await self._collection(session)
+        coll = await self._collection()
         if hard:
-            await coll.delete_many(filter)
+            await coll.delete_many(filter, session=session)
         else:
             from app.utils.helpers import now_utc
-            await coll.update_many(filter, {"$set": {"deleted_at": now_utc()}})
+            await coll.update_many(filter, {"$set": {"deleted_at": now_utc()}}, session=session)
 
     async def aggregate(self, pipeline: list[dict], session=None) -> list[dict]:
-        docs = await (await self._collection(session)).aggregate(pipeline).to_list(5000)
+        docs = await (await self._collection()).aggregate(pipeline, session=session).to_list(5000)
         return self._money_out_list(docs)

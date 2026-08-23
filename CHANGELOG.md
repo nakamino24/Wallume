@@ -2,6 +2,12 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.5b] — 2026-08-24 (HOTFIX — transaction writes 500 in production)
+
+### Fixed
+- **ALL transaction writes failing with HTTP 500 in production since v1.0.5a deploy (~Aug 20/21)** — regression introduced by `f16a9a9`, which threaded MongoDB sessions through `BaseRepository._collection()` via `Collection.with_options(session=...)`. pymongo's `with_options()` has never accepted a `session` kwarg, so every request that opened a transaction session raised `TypeError` mid-request. Blast radius (verified against live production): `POST /api/transactions` (income/expense/transfer creation), `PATCH /api/transactions/{id}` (edits), and `DELETE /api/transactions/{id}` all returned 500 unconditionally. All other endpoints (wallets, budgets, goals, plans, debts, investments, assets, categories, recurring incl. mark-paid, analytics, auth) were unaffected — no other code path passes sessions.
+- **Sessions were silently dropped on writes** (same commit): even where the session was accepted, `insert_one`/`update_one` accepted the `session=` parameter but never forwarded it to the motor operation — meaning the "atomic" multi-document reverse/apply from v1.0.5a was never actually executing inside a transaction anywhere. Sessions are now passed per-operation (the correct motor API), so create/update/delete are genuinely atomic.
+
 ## [1.0.6a] — 2026-08-22 (timestamp & wallet detail correctness fixes)
 
 ### Follow-up hardening (same release, second batch)
