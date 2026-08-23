@@ -60,6 +60,7 @@ class TransactionCreate(BaseModel):
     type: Literal["income", "expense", "transfer"]
     amount: float
     category: str
+    merchant: Optional[str] = ""
     note: Optional[str] = ""
     date: Optional[str] = None
 
@@ -72,6 +73,13 @@ class TransactionCreate(BaseModel):
         if not math.isfinite(v) or v <= 0:
             raise ValueError("amount must be greater than 0")
         return v
+
+    @field_validator("merchant")
+    @classmethod
+    def _merchant_normalized(cls, v: Optional[str]) -> str:
+        # Trim whitespace and cap length; None collapses to "" so list views
+        # can always assume a string field on every stored transaction.
+        return (v or "").strip()[:120]
 
 # --- Budget ---
 class BudgetCreate(BaseModel):

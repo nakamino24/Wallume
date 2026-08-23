@@ -179,6 +179,7 @@ export default function WalletDetail() {
                             type: t.type,
                             amount: String(t.amount),
                             category: t.category,
+                            merchant: t.merchant || '',
                             note: t.note || '',
                             date: (t.date || '').split('T')[0],
                           },

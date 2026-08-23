@@ -29,6 +29,7 @@ export default function EditTransaction() {
     type?: string;
     amount?: string;
     category?: string;
+    merchant?: string;
     note?: string;
     date?: string;
   }>();
@@ -36,6 +37,7 @@ export default function EditTransaction() {
   const [type, setType] = useState<'income' | 'expense' | 'transfer'>((params.type as any) || 'expense');
   const [amount, setAmount] = useState(params.amount ? String(params.amount) : '');
   const [category, setCategory] = useState(params.category || 'Food');
+  const [merchant, setMerchant] = useState(params.merchant || '');
   const [note, setNote] = useState(params.note || '');
   const [wallets, setWallets] = useState<any[]>([]);
   const [walletId, setWalletId] = useState(params.wallet_id || '');
@@ -61,7 +63,7 @@ export default function EditTransaction() {
       await api.updateTransaction(params.id, {
         wallet_id: walletId,
         to_wallet_id: type === 'transfer' ? toWalletId : undefined,
-        type, amount: amt, category, note, date: date || undefined,
+        type, amount: amt, category, merchant, note, date: date || undefined,
       });
       router.back();
     } catch (e: any) { setErr(e.message); }
@@ -119,6 +121,9 @@ export default function EditTransaction() {
 
             {/* Category */}
             <CategorySelector type={type} value={category} onChange={setCategory} testID="edit-tx" />
+
+            {/* Merchant */}
+            <Input testID="edit-tx-merchant" label="Merchant (optional)" value={merchant} onChangeText={setMerchant} placeholder="e.g. Starbucks, Grab" />
 
             {/* Wallet */}
             <Label style={{ marginTop: spacing.md }}>{type === 'transfer' ? 'From' : 'Wallet'}</Label>

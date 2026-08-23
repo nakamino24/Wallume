@@ -146,12 +146,16 @@ async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Op
             raise HTTPException(404, "Not found")
 
         allowed = {k: v for k, v in body.items()
-                   if k in {"wallet_id", "to_wallet_id", "type", "amount", "category", "note", "date"}}
+                   if k in {"wallet_id", "to_wallet_id", "type", "amount", "category", "merchant", "note", "date"}}
         # Validate only CHANGED fields: re-validating the stored amount
         # would make legacy bad-amount records impossible to edit at all.
         if "amount" in allowed:
             _require_positive_amount(allowed["amount"])
             allowed["amount"] = float(allowed["amount"])
+        if "merchant" in allowed:
+            # Mirror the create-side normalization so PATCH can't smuggle
+            # in whitespace-only or oversized values.
+            allowed["merchant"] = str(allowed["merchant"] or "").strip()[:120]
         if "date" in allowed:
             canonical = strict_canonical_date(allowed["date"])
             if not canonical:
