@@ -53,7 +53,9 @@ async def coach_chat(payload: CoachChatRequest, authorization: Optional[str] = H
                         "Content-Type": "application/json",
                     },
                     json={
-                        "model": "llama-3.3-70b-versatile",
+                        # llama-3.3-70b-versatile was decommissioned by Groq;
+                        # gpt-oss-120b is the current flagship chat model.
+                        "model": "openai/gpt-oss-120b",
                         "max_tokens": 1024,
                         "stream": True,
                         "messages": [
