@@ -1,14 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Keyboard } from 'react-native';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
+import { spacing, font, currencySymbol } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Button, Body, Label, Chip, Input } from '@/src/components/ui';
-import { ErrorBanner } from '@/src/components/ErrorBanner';
 import { useToast } from '@/src/components/Toast';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
 import { DateField } from '@/src/components/DateField';
@@ -34,7 +32,6 @@ export default function NewTransaction() {
   const [date, setDate] = useState(() => todayLocalISO());
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     const r = await api.wallets();

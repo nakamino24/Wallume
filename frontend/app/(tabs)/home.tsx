@@ -10,7 +10,7 @@ import { usePayday } from '@/src/hooks/use-payday';
 import { spacing, radius, font, formatMoneyFull, formatMoney, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { storage } from '@/src/utils/storage';
-import { Screen, Card, H1, H2, Body, Label, DisplayNumber, ProgressRing, Chip, EmptyState, Caption } from '@/src/components/ui';
+import { Screen, Card, H2, Body, Label, DisplayNumber, ProgressRing, Chip, EmptyState, Caption } from '@/src/components/ui';
 import { Skeleton, SkeletonCard, SkeletonRow } from '@/src/components/Skeleton';
 import { ErrorBanner } from '@/src/components/ErrorBanner';
 import { refreshNetWorthWidget } from '@/src/widgets/refresh-widget';
@@ -85,7 +85,7 @@ export default function Home() {
       if (!summary) setLoadError('Could not load your data');
       setInitialLoading(false);
     }
-  }, []);
+  }, [summary]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -166,7 +166,7 @@ export default function Home() {
       savingsRate,
       tip,
     };
-  }, [derivedSummary.month_expense, derivedSummary.month_income, txs, summary]);
+  }, [derivedSummary.month_expense, txs, summary]);
 
   if (initialLoading && !summary) {
     return (

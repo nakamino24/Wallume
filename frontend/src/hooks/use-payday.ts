@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { isIndonesianHoliday } from '@/src/lib/indonesian-holidays';
 
 // workWeek = number of working days per week (5, 6, or 7).

@@ -1,10 +1,9 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, radius, font } from '@/src/theme/tokens';
-import { useAuth } from '@/src/auth/AuthProvider';
 import { api } from '@/src/api/client';
 import { Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
@@ -20,7 +19,6 @@ const FREQUENCIES: { id: 'weekly' | 'monthly' | 'yearly'; label: string }[] = [
 
 export default function RecurringForm() {
   const { colors } = useTheme();
-  const { user } = useAuth();
   const router = useRouter();
   const { getOptions } = useUserCategories();
   const params = useLocalSearchParams<Record<string, string>>();
@@ -37,7 +35,6 @@ export default function RecurringForm() {
   const [walletId, setWalletId] = useState(params.wallet_id || '');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
-  const scrollRef = useRef<ScrollView>(null);
 
   const load = useCallback(async () => {
     const r = await api.wallets();
@@ -45,8 +42,6 @@ export default function RecurringForm() {
     if (!walletId && r.wallets?.length) setWalletId(r.wallets[0].id);
   }, [walletId]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
-
-  const cur = user?.currency || 'USD';
 
   const submit = async () => {
     setErr('');

@@ -103,8 +103,6 @@ export function currencySymbol(code: string) {
   return moneyMoney.currencySymbol(code) || CURRENCIES.find((c) => c.code === code)?.symbol || code;
 }
 
-const ZERO_DECIMAL_CURRENCIES = new Set(['IDR', 'JPY', 'KRW', 'VND', 'CLP', 'ISK', 'HUF']);
-
 export function formatMoney(amount: number, currency: string = 'USD') {
   // Indonesian full format, no compact — e.g. "Rp4.200.000".
   return moneyMoney.formatMoneyFull(amount, currency);

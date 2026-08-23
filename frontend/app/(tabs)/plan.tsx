@@ -7,9 +7,9 @@ import { useRouter, useFocusEffect } from 'expo-router';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney, formatMoneyFull, images, cv } from '@/src/theme/tokens';
+import { spacing, radius, font, formatMoney, images, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H1, H2, Body, Label, DisplayNumber, ProgressRing, ProgressBar, EmptyState, Chip } from '@/src/components/ui';
+import { Screen, Card, H1, H2, Body, Label, ProgressRing, ProgressBar, EmptyState, Chip } from '@/src/components/ui';
 import { computeInvestmentMetrics, kindLabel, quantitySummary } from '@/src/lib/investmentKinds';
 
 type Section = 'budgets' | 'goals' | 'plans' | 'debts' | 'assets';
@@ -205,7 +205,7 @@ function goalIcon(kind: string): any {
 /* --------------------- PLANS --------------------- */
 function PlansSection({ plans, currency, onAdd, onOpen }: any) {
   const { colors } = useTheme();
-  const kinds: Array<'wedding' | 'house' | 'car' | 'vacation'> = ['wedding', 'house', 'car', 'vacation'];
+  const kinds: ('wedding' | 'house' | 'car' | 'vacation')[] = ['wedding', 'house', 'car', 'vacation'];
   return (
     <>
       <H2>Life plans</H2>

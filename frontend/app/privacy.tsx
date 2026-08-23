@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { spacing, font } from '@/src/theme/tokens';
+import { font } from '@/src/theme/tokens';
 import { Screen, H2, Body, Card } from '@/src/components/ui';
 
 export default function Privacy() {

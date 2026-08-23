@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,9 +7,9 @@ import Svg, { Circle as SvgCircle, G } from 'react-native-svg';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney } from '@/src/theme/tokens';
+import { spacing, font, formatMoney } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H1, H2, Body, Label, DisplayNumber } from '@/src/components/ui';
+import { Screen, Card, H2, Body, Label, DisplayNumber } from '@/src/components/ui';
 import { computeInvestmentMetrics, kindLabel, quantitySummary, type InvestmentDoc } from '@/src/lib/investmentKinds';
 
 const TYPE_COLORS: Record<string, string> = {
@@ -117,7 +117,7 @@ export default function Portfolio() {
           {investments.length === 0 ? (
             <Body muted style={{ textAlign: 'center', marginTop: spacing.md }}>No investments yet.</Body>
           ) : investments.map((iv) => {
-            const { value, cost, pl, returnPct: rp } = computeInvestmentMetrics(iv);
+            const { value, pl, returnPct: rp } = computeInvestmentMetrics(iv);
             const plColor = pl >= 0 ? colors.success : colors.error;
             return (
               <Card key={iv.id} onPress={() => router.push(`/investment/${iv.id}` as any)}>

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font, formatMoney, formatMoneyFull, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H1, H2, Body, Label, Button, Input, ProgressBar, DisplayNumber } from '@/src/components/ui';
+import { Screen, Card, H2, Body, Label, Button, Input, ProgressBar, DisplayNumber } from '@/src/components/ui';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 
 export default function GoalDetail() {

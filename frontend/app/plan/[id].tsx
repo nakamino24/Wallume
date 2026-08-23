@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, ImageBackground, Alert } from 'react-native';
+import { View, TouchableOpacity, ImageBackground, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
@@ -7,9 +7,9 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney, formatMoneyFull, images, cv } from '@/src/theme/tokens';
+import { spacing, font, formatMoney, images, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H1, H2, Body, Label, Button, Input, ProgressBar, DisplayNumber } from '@/src/components/ui';
+import { Screen, Card, H1, H2, Body, Label, Button, Input, ProgressBar } from '@/src/components/ui';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 
 const HERO: Record<string, string> = { wedding: images.wedding, house: images.house, car: images.car, vacation: images.vacation };

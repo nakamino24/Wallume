@@ -12,7 +12,7 @@ import { useOnboarding } from '@/src/hooks/use-onboarding';
 import { usePayday } from '@/src/hooks/use-payday';
 import { api } from '@/src/api/client';
 import { t, setLocale } from '@/src/lib/i18n';
-import { getNotifSettings, setNotifSettings, requestNotificationPermission, type NotifSettings } from '@/src/utils/notifications';
+import { getNotifSettings, setNotifSettings, type NotifSettings } from '@/src/utils/notifications';
 import { spacing, radius, font, CURRENCIES } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
 import { Screen, Card, H1, H2, Body, Label, Button, Chip } from '@/src/components/ui';

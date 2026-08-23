@@ -1,26 +1,19 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Rect, Circle as SvgCircle, G, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle as SvgCircle, G } from 'react-native-svg';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney, formatMoneyFull, formatMoneyCompact } from '@/src/theme/tokens';
+import { spacing, font, formatMoney, formatMoneyCompact } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H1, H2, Body, Label, DisplayNumber, EmptyState, Input } from '@/src/components/ui';
+import { Screen, Card, H2, Body, Label, DisplayNumber } from '@/src/components/ui';
 import { DateField } from '@/src/components/DateField';
 import { todayLocalISO } from '@/src/utils/dates';
 
 const CAT_COLORS = ['#3FA796', '#F4A261', '#D32F2F', '#2E7D32', '#16213E', '#ED6C02', '#6B7280', '#222222'];
-
-function toLocalDate(iso: string): string {
-  // Stored dates are local-calendar YYYY-MM-DD; never re-derive them through
-  // toISOString() (UTC), which shifts the day for any non-UTC device.
-  if (!iso) return '';
-  return iso.split('T')[0];
-}
 
 function todayISO() {
   return todayLocalISO();
@@ -40,7 +33,6 @@ export default function Reports() {
   const [fromDate, setFromDate] = useState(monthStart());
   const [toDate, setToDate] = useState(todayISO());
   const [txs, setTxs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
 
   const filtered = txs.filter((t) => {
     const d = (t.date || '').split('T')[0];
@@ -60,13 +52,11 @@ export default function Reports() {
     .sort((a, b) => b.amount - a.amount);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       // Load more transactions to cover date range
       const r = await api.transactions(undefined, 500);
       setTxs(r.transactions || []);
     } catch {}
-    setLoading(false);
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));

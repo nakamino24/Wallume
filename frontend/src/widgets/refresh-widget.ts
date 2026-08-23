@@ -17,8 +17,11 @@ const WIDGET_NAME = 'NetWorth';
 export async function refreshNetWorthWidget(): Promise<void> {
   if (!isWidgetSupported) return;
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { requestWidgetUpdate } = require('react-native-android-widget');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { NetWorthWidget } = require('./NetWorthWidged');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { fetchWidgetData, widgetIsLarge } = require('./widget-task-handler');
     const data: NetWorthWidgetData = await fetchWidgetData();
     await requestWidgetUpdate({

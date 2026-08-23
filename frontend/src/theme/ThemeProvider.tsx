@@ -25,15 +25,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [system]);
 
-  const setMode = (m: ThemeMode) => {
+  const setMode = useCallback((m: ThemeMode) => {
     setModeState(m);
     storage.setItem(KEY, m);
-  };
-  const toggle = () => setMode(mode === 'dark' ? 'light' : 'dark');
+  }, []);
+  const toggle = useCallback(() => setModeState((prev) => {
+    const next = prev === 'dark' ? 'light' : 'dark';
+    storage.setItem(KEY, next);
+    return next;
+  }), []);
 
   const value = useMemo<Ctx>(
     () => ({ mode, colors: palette[mode], setMode, toggle }),
-    [mode],
+    [mode, setMode, toggle],
   );
 
   return <ThemeCtx.Provider value={value}>{children}</ThemeCtx.Provider>;

@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { View, AppState, AppStateStatus, TouchableOpacity } from 'react-native';
+import { View, AppState, AppStateStatus } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { spacing, font } from '@/src/theme/tokens';
+import { spacing } from '@/src/theme/tokens';
 import { Body, H2, Button } from '@/src/components/ui';
 import { storage } from '@/src/utils/storage';
 import { useAuth } from '@/src/auth/AuthProvider';

@@ -3,7 +3,7 @@ import { View, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { spacing, radius, font } from '@/src/theme/tokens';
+import { spacing, radius } from '@/src/theme/tokens';
 import { Body, Label } from '@/src/components/ui';
 
 export function DateField({

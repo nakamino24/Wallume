@@ -9,7 +9,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, formatMoney, cv } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
 import { api } from '@/src/api/client';
-import { Screen, Card, H1, H2, Body, Label, Button, EmptyState } from '@/src/components/ui';
+import { Screen, Card, H2, Body, Label, EmptyState } from '@/src/components/ui';
 
 const FREQ_LABEL: Record<string, string> = { weekly: '/week', monthly: '/month', yearly: '/year' };
 

@@ -1,10 +1,11 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ViewStyle, TextStyle, StyleProp } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, ViewStyle, TextStyle, StyleProp, TextInput, TextInputProps } from 'react-native';
 import type { TextProps } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, radius, font } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
 import Svg, { Circle } from 'react-native-svg';
+import { useKeyboardScroll } from '@/src/components/KeyboardAwareContainer';
 
 export function Screen({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   const { colors } = useTheme();
@@ -211,8 +212,7 @@ export function EmptyState({
 }
 
 // Input
-import { TextInput, TextInputProps } from 'react-native';
-import { useKeyboardScroll } from '@/src/components/KeyboardAwareContainer';
+
 
 export function Input(props: TextInputProps & { label?: string; testID?: string }) {
   const { colors } = useTheme();

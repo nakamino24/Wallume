@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +8,7 @@ import * as Sharing from 'expo-sharing';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoneyFull, formatMoney } from '@/src/theme/tokens';
+import { spacing, font, formatMoneyFull, formatMoney } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H2, Body, Label, Button } from '@/src/components/ui';
 

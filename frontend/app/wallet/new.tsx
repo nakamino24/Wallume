@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, font } from '@/src/theme/tokens';
+import { spacing } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { FormLayout } from '@/src/components/FormLayout';

@@ -40,7 +40,7 @@ export default function DebtPlanner() {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { load(parseFloat(extra) || 0); }, []));
+  useFocusEffect(useCallback(() => { load(parseFloat(extra) || 0); }, [load, extra]));
 
   const applyExtra = () => load(parseFloat(extra) || 0);
 

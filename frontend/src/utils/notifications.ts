@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { storage } from '@/src/utils/storage';
 
@@ -39,12 +38,6 @@ export async function setNotifSettings(settings: Partial<NotifSettings>): Promis
   if (settings.budgetAlert !== undefined) ops.push(storage.setItem(KEYS.budgetAlert, settings.budgetAlert));
   if (settings.paydayReminder !== undefined) ops.push(storage.setItem(KEYS.paydayReminder, settings.paydayReminder));
   await Promise.all(ops);
-}
-
-export async function requestNotificationPermission(): Promise<boolean> {
-  if (Platform.OS === 'web') return true;
-  const result = await Notifications.requestPermissionsAsync();
-  return !!result;
 }
 
 export async function scheduleBillingReminder(name: string, amount: string, daysUntil: number, recId: string) {
