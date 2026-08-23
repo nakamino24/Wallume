@@ -8,7 +8,6 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font, formatMoney, formatMoneyFull } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { formatActivityTime } from '@/src/utils/dates';
 import { groupActivitiesByDay } from '@/src/lib/activity';
 import { Screen, Card, H2, Body, Label, EmptyState, Caption, DisplayNumber } from '@/src/components/ui';
 
@@ -224,7 +223,6 @@ function ActivityRow({ tx, walletId, currency, last, onPress, onLongPress }: any
 
   const color = direction === 'IN' ? colors.success : colors.error;
   const iconName = tx.type === 'transfer' ? 'swap-horizontal' : (CATEGORY_ICON[tx.category] || 'ellipsis-horizontal');
-  const time = formatActivityTime(tx);
 
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress} onLongPress={onLongPress}>
@@ -245,7 +243,6 @@ function ActivityRow({ tx, walletId, currency, last, onPress, onLongPress }: any
           <Body style={{ fontFamily: font.displayBold, color, fontSize: 14 }}>
             {direction === 'IN' ? '+' : '-'}{formatMoney(displayAmount, currency)}
           </Body>
-          <Caption muted style={{ fontSize: 11, marginTop: 2 }}>{time}</Caption>
         </View>
       </View>
     </TouchableOpacity>

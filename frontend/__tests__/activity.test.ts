@@ -10,7 +10,7 @@
  * grouping/order -> rendered time string.
  */
 import { groupActivitiesByDay, compareIntraDay } from '../src/lib/activity';
-import { formatActivityTime, activityDayKey, todayLocalISO } from '../src/utils/dates';
+import { activityDayKey, todayLocalISO } from '../src/utils/dates';
 
 const WIB = 'Asia/Jakarta';
 const BOGOTA = 'America/Bogota'; // UTC-5, no DST
@@ -46,36 +46,6 @@ describe('activityDayKey: date-only is user intent, instants are zone-rendered',
   });
 });
 
-describe('formatActivityTime picks honest sources in every zone', () => {
-  const fmtOpts = { hour: '2-digit' as const, minute: '2-digit' as const };
-
-  it.each([WIB, UTC, BOGOTA, NYC])(
-    'created_at wins in %s and renders that instant (never a fabricated 07:00)',
-    (tz) => {
-      const tx = { created_at: '2026-08-21T14:32:00+07:00', date: '2026-08-21' };
-      const rendered = formatActivityTime(tx, tz);
-      expect(rendered).not.toBe('');
-      // Independent render of the same instant with IDENTICAL options
-      // (locale left to the environment so hour12 style matches).
-      const expected = new Intl.DateTimeFormat(undefined, { ...fmtOpts, timeZone: tz }).format(new Date(tx.created_at!));
-      expect(rendered).toBe(expected);
-      // And it must NOT equal the fake time a bare-date parse would produce.
-      const fakeMidnight = new Intl.DateTimeFormat(undefined, { ...fmtOpts, timeZone: tz }).format(new Date('2026-08-21'));
-      if (fakeMidnight !== expected) {
-        expect(rendered).not.toBe(fakeMidnight);
-      }
-    },
-  );
-
-  it.each([WIB, UTC, BOGOTA, NYC])('date-only without created_at shows NO time in %s', (tz) => {
-    expect(formatActivityTime({ date: '2026-08-21' }, tz)).toBe('');
-  });
-
-  it('full ISO without created_at still renders its real time', () => {
-    expect(formatActivityTime({ date: '2026-08-21T09:15:00+07:00' }, WIB)).not.toBe('');
-  });
-});
-
 describe('day boundary 23:59 vs 00:01 stays inside its own group', () => {
   it('WIB device at 01:00: yesterday-23:59 -> YESTERDAY, today-00:01 -> TODAY', () => {
     const now = new Date('2026-08-21T18:00:00Z'); // 01:00 WIB Aug 22
@@ -101,11 +71,11 @@ describe('day boundary 23:59 vs 00:01 stays inside its own group', () => {
 });
 
 describe('DST-adjacent instants (America/New_York)', () => {
-  it('spring-forward morning 2026-03-08 keeps the day and a renderable time', () => {
+  it('spring-forward morning 2026-03-08 keeps the day grouping', () => {
     const tx = { id: 'tx_dst', created_at: '2026-03-08T07:30:00+00:00', date: '2026-03-08' }; // 03:30 EDT (02:00 skipped)
     const groups = groupActivitiesByDay([tx], { timeZone: NYC });
     expect(groups).toHaveLength(1);
-    expect(formatActivityTime(tx, NYC)).not.toBe('');
+    expect(groups[0].items[0].id).toBe('tx_dst');
   });
 
   it('fall-back ambiguous hour 2026-11-01 stays on Nov 1 and orders deterministically against pre-transition tx', () => {
@@ -115,7 +85,6 @@ describe('DST-adjacent instants (America/New_York)', () => {
     expect(groups).toHaveLength(1);
     // Absolute-instant order preserved across the DST fold
     expect(groups[0].items.map((t) => t.id)).toEqual(['tx_after', 'tx_before']);
-    expect(formatActivityTime(afterFallback, NYC)).not.toBe('');
   });
 });
 

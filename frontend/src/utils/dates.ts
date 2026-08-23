@@ -43,28 +43,3 @@ export function activityDayKey(raw?: string | null, timeZone?: string): string |
   const d = new Date(raw);
   return Number.isNaN(d.getTime()) ? null : ymdInZone(d, timeZone);
 }
-
-/** Human time ("7:42 AM") from the honest source: real save time first;
- * a bare date carries no meaningful time so we render nothing rather than a
- * fabricated one.
- * Uses an explicit Intl.DateTimeFormat instead of Date#toLocaleTimeString:
- * identical result in production, but immune to test-preset locale stubs and
- * guaranteed to honor `timeZone`. */
-export function formatActivityTime(
-  tx: { created_at?: string; date?: string },
-  timeZone?: string,
-): string {
-  const raw = tx.created_at && !DATE_ONLY.test(tx.created_at)
-    ? tx.created_at
-    : tx.date && !DATE_ONLY.test(tx.date)
-      ? tx.date
-      : null;
-  if (!raw) return '';
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-    ...(timeZone ? { timeZone } : {}),
-  }).format(d);
-}
