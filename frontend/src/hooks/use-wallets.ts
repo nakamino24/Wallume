@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/src/api/client';
+import { storage } from '@/src/utils/storage';
 
 type WalletsState = {
   wallets: any[];
@@ -8,13 +9,34 @@ type WalletsState = {
   refresh: () => Promise<void>;
 };
 
+const STORAGE_KEY = 'mf.wallets.cache.v1';
+const STALE_MS = 30_000; // background revalidate after 30s
+
 // Module-level cache — survives navigation, shared across all screens.
-// Stale-while-revalidate: instant cache hit, background refresh on focus.
+// Now persistent: saved to AsyncStorage for <1ms instant on next app launch.
 let cache: any[] | null = null;
 let cacheError: string | null = null;
 let inFlight: Promise<any[]> | null = null;
 let lastFetch = 0;
-const STALE_MS = 30_000; // background revalidate after 30s
+
+async function loadFromStorage() {
+  try {
+    const raw = await storage.getItem<string | null>(STORAGE_KEY, null);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.wallets)) {
+        cache = parsed.wallets;
+        lastFetch = parsed.updatedAt || 0;
+      }
+    }
+  } catch {}
+}
+
+async function saveToStorage(list: any[]) {
+  try {
+    await storage.setItem(STORAGE_KEY, JSON.stringify({ wallets: list, updatedAt: Date.now() }));
+  } catch {}
+}
 
 async function fetchWallets(): Promise<any[]> {
   if (inFlight) return inFlight;
@@ -24,6 +46,7 @@ async function fetchWallets(): Promise<any[]> {
     cache = list;
     cacheError = null;
     lastFetch = Date.now();
+    await saveToStorage(list);
     return list;
   })();
   try {
@@ -61,17 +84,28 @@ export function useWallets(): WalletsState {
   }, []);
 
   useEffect(() => {
-    // Initial load if no cache, or background revalidate if stale
-    if (cache === null) {
-      refresh();
-    } else if (Date.now() - lastFetch > STALE_MS) {
-      // Stale-while-revalidate: serve cache, refresh in background
-      refresh();
-    } else {
-      setWallets(cache);
-      setError(cacheError ?? '');
-      setLoading(false);
-    }
+    let cancelled = false;
+    (async () => {
+      if (cache === null) {
+        await loadFromStorage();
+        if (!cancelled && cache !== null) {
+          setWallets(cache);
+          setError(cacheError ?? '');
+          setLoading(false);
+          if (Date.now() - lastFetch > STALE_MS) refresh();
+          else return;
+        } else if (!cancelled) {
+          refresh();
+        }
+      } else if (Date.now() - lastFetch > STALE_MS) {
+        refresh();
+      } else {
+        setWallets(cache);
+        setError(cacheError ?? '');
+        setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [refresh]);
 
   return { wallets, loading, error, refresh };

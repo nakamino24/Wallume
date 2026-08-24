@@ -10,7 +10,7 @@ import { Button, Body, Label, Chip, Input } from '@/src/components/ui';
 import { useToast } from '@/src/components/Toast';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
 import { useWallets, invalidateWalletsCache, applyOptimisticWalletEffect } from '@/src/hooks/use-wallets';
-import { invalidateTransactionsCache } from '@/src/hooks/use-transactions';
+import { useTransactions, invalidateTransactionsCache } from '@/src/hooks/use-transactions';
 import { storage } from '@/src/utils/storage';
 import { DateField } from '@/src/components/DateField';
 import { CategorySelector } from '@/src/components/CategorySelector';
@@ -30,6 +30,7 @@ export default function NewTransaction() {
   const [category, setCategory] = useState('Food');
   const [note, setNote] = useState('');
   const { wallets, loading: walletsLoading, error: walletsError, refresh: refreshWallets } = useWallets();
+  const { addOptimistic } = useTransactions();
   const [walletId, setWalletId] = useState('');
   const [toWalletId, setToWalletId] = useState('');
   const [date, setDate] = useState(() => todayLocalISO());
@@ -59,11 +60,19 @@ export default function NewTransaction() {
       setErr(Object.values(errors)[0]);
       return;
     }
-    // Optimistic: update UI instantly, then confirm with server
+    // Optimistic <1ms: mutate cache, toast, and navigate instantly — do not block on network.
+    const optimisticTx = {
+      wallet_id: walletId,
+      to_wallet_id: type === 'transfer' ? toWalletId : undefined,
+      type, amount: amt, category, note, date: date || todayLocalISO(),
+      created_at: new Date().toISOString(),
+    };
+    addOptimistic(optimisticTx);
     applyOptimisticWalletEffect(walletId, toWalletId, type, amt);
-    invalidateTransactionsCache();
     await storage.removeItem('mf.home.cache.v1');
-    setLoading(true);
+    toast.show(`${type === 'income' ? 'Income' : type === 'expense' ? 'Expense' : 'Transfer'} added`, 'success');
+    router.back();
+    // Background sync — if it fails, rollback and surface error.
     try {
       await api.createTransaction({
         wallet_id: walletId,
@@ -71,10 +80,13 @@ export default function NewTransaction() {
         type, amount: amt, category, note, date: date || undefined,
       });
       invalidateWalletsCache();
-      toast.show(`${type === 'income' ? 'Income' : type === 'expense' ? 'Expense' : 'Transfer'} added`, 'success');
-      router.back();
-    } catch (e: any) { setErr(e.message); }
-    finally { setLoading(false); }
+      invalidateTransactionsCache();
+    } catch (e: any) {
+      invalidateWalletsCache();
+      invalidateTransactionsCache();
+      await storage.removeItem('mf.home.cache.v1');
+      toast.show(e?.message || 'Failed to save transaction', 'error');
+    }
   };
 
   const cur = user?.currency || 'USD';

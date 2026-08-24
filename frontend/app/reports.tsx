@@ -48,7 +48,9 @@ const [fromDate, setFromDate] = useState(monthStart());
 
   const load = useCallback(async () => {
     try {
-      const r = await api.transactions(undefined, 1000, undefined, fromDate, toDate);
+      console.log(`[Reports] fetching ${fromDate} to ${toDate}`);
+      const r = await api.transactions(undefined, 2000, undefined, fromDate, toDate);
+      console.log(`[Reports] got ${r.transactions?.length || 0} txs for ${fromDate}..${toDate}`);
       setTxs(r.transactions || []);
     } catch (e: any) {
       console.error('[Reports] failed to load:', e?.message || e);
