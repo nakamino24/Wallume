@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/src/api/client';
-import { storage } from '@/src/utils/storage';
 
 type TxState = {
   transactions: any[];
@@ -10,32 +9,13 @@ type TxState = {
   addOptimistic: (tx: any) => void;
 };
 
-const STORAGE_KEY = 'mf.transactions.cache.v1';
 const STALE_MS = 30_000;
 
+// In-memory only (no AsyncStorage for financial data — security)
 let cache: any[] | null = null;
 let cacheError: string | null = null;
 let inFlight: Promise<any[]> | null = null;
 let lastFetch = 0;
-
-async function loadFromStorage() {
-  try {
-    const raw = await storage.getItem<string | null>(STORAGE_KEY, null);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.transactions)) {
-        cache = parsed.transactions;
-        lastFetch = parsed.updatedAt || 0;
-      }
-    }
-  } catch {}
-}
-
-async function saveToStorage(list: any[]) {
-  try {
-    await storage.setItem(STORAGE_KEY, JSON.stringify({ transactions: list, updatedAt: Date.now() }));
-  } catch {}
-}
 
 async function fetchTransactions(): Promise<any[]> {
   if (inFlight) return inFlight;
@@ -45,7 +25,6 @@ async function fetchTransactions(): Promise<any[]> {
     cache = list;
     cacheError = null;
     lastFetch = Date.now();
-    await saveToStorage(list);
     return list;
   })();
   try {
@@ -87,28 +66,15 @@ export function useTransactions(): TxState {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (cache === null) {
-        await loadFromStorage();
-        if (!cancelled && cache !== null) {
-          setTransactions(cache);
-          setError(cacheError ?? '');
-          setLoading(false);
-          if (Date.now() - lastFetch > STALE_MS) refresh();
-          else return;
-        } else if (!cancelled) {
-          refresh();
-        }
-      } else if (Date.now() - lastFetch > STALE_MS) {
-        refresh();
-      } else {
-        setTransactions(cache);
-        setError(cacheError ?? '');
-        setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    if (cache === null) {
+      refresh();
+    } else if (Date.now() - lastFetch > STALE_MS) {
+      refresh();
+    } else {
+      setTransactions(cache);
+      setError(cacheError ?? '');
+      setLoading(false);
+    }
   }, [refresh]);
 
   return { transactions, loading, error, refresh, addOptimistic };

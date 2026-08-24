@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/src/api/client';
-import { storage } from '@/src/utils/storage';
 
 type WalletsState = {
   wallets: any[];
@@ -9,34 +8,14 @@ type WalletsState = {
   refresh: () => Promise<void>;
 };
 
-const STORAGE_KEY = 'mf.wallets.cache.v1';
-const STALE_MS = 30_000; // background revalidate after 30s
-
 // Module-level cache — survives navigation, shared across all screens.
-// Now persistent: saved to AsyncStorage for <1ms instant on next app launch.
+// In-memory only (no AsyncStorage for financial data — security).
+// Stale-while-revalidate: instant cache hit, background refresh.
 let cache: any[] | null = null;
 let cacheError: string | null = null;
 let inFlight: Promise<any[]> | null = null;
 let lastFetch = 0;
-
-async function loadFromStorage() {
-  try {
-    const raw = await storage.getItem<string | null>(STORAGE_KEY, null);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.wallets)) {
-        cache = parsed.wallets;
-        lastFetch = parsed.updatedAt || 0;
-      }
-    }
-  } catch {}
-}
-
-async function saveToStorage(list: any[]) {
-  try {
-    await storage.setItem(STORAGE_KEY, JSON.stringify({ wallets: list, updatedAt: Date.now() }));
-  } catch {}
-}
+const STALE_MS = 30_000;
 
 async function fetchWallets(): Promise<any[]> {
   if (inFlight) return inFlight;
@@ -46,7 +25,6 @@ async function fetchWallets(): Promise<any[]> {
     cache = list;
     cacheError = null;
     lastFetch = Date.now();
-    await saveToStorage(list);
     return list;
   })();
   try {
@@ -84,28 +62,15 @@ export function useWallets(): WalletsState {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (cache === null) {
-        await loadFromStorage();
-        if (!cancelled && cache !== null) {
-          setWallets(cache);
-          setError(cacheError ?? '');
-          setLoading(false);
-          if (Date.now() - lastFetch > STALE_MS) refresh();
-          else return;
-        } else if (!cancelled) {
-          refresh();
-        }
-      } else if (Date.now() - lastFetch > STALE_MS) {
-        refresh();
-      } else {
-        setWallets(cache);
-        setError(cacheError ?? '');
-        setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    if (cache === null) {
+      refresh();
+    } else if (Date.now() - lastFetch > STALE_MS) {
+      refresh();
+    } else {
+      setWallets(cache);
+      setError(cacheError ?? '');
+      setLoading(false);
+    }
   }, [refresh]);
 
   return { wallets, loading, error, refresh };
