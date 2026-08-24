@@ -27,6 +27,8 @@ export default function Reports() {
   });
   const [toDate, setToDate] = useState(() => todayLocalISO());
   const [txs, setTxs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0);
   const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0);
@@ -41,6 +43,8 @@ export default function Reports() {
     .sort((a, b) => b.amount - a.amount);
 
   const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
       console.log(`[Reports] fetching ${fromDate} to ${toDate}`);
       const r = await api.transactions(undefined, 2000, undefined, fromDate, toDate);
@@ -48,6 +52,9 @@ export default function Reports() {
       setTxs(r.transactions || []);
     } catch (e: any) {
       console.error('[Reports] failed to load:', e?.message || e);
+      setError('Unable to load this period. Try again.');
+    } finally {
+      setLoading(false);
     }
   }, [fromDate, toDate]);
 
@@ -78,25 +85,38 @@ export default function Reports() {
         </View>
 
         <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.md, paddingBottom: 60 }}>
-          {/* Summary */}
-          <Card style={{ backgroundColor: colors.inverse }}>
-            <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Net cash flow</Label>
-            <DisplayNumber size={34} color={colors.onInverse} style={{ marginTop: 6 }}>
-              {formatMoney(netFlow, cur)}
-            </DisplayNumber>
-            <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.xl }}>
-              <MiniStat label="Income" value={formatMoney(income, cur)} color={colors.success} />
-              <MiniStat label="Expense" value={formatMoney(expense, cur)} color={colors.error} />
-              <MiniStat label="Transactions" value={String(txs.length)} />
-            </View>
-          </Card>
+          {loading ? (
+            <Card><Body>Updating report...</Body></Card>
+          ) : error ? (
+            <Card>
+              <Body style={{ color: colors.error }}>{error}</Body>
+              <TouchableOpacity onPress={load} style={{ marginTop: spacing.md, paddingVertical: 10, paddingHorizontal: spacing.lg, backgroundColor: colors.brandPrimary, borderRadius: 8, alignSelf: 'flex-start' }}>
+                <Body style={{ color: colors.onBrand, fontFamily: font.textBold }}>Try again</Body>
+              </TouchableOpacity>
+            </Card>
+          ) : txs.length === 0 ? (
+            <Card><Body>No transactions in this period.</Body></Card>
+          ) : (
+            <>
+              {/* Summary */}
+              <Card style={{ backgroundColor: colors.inverse }}>
+                <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Net cash flow</Label>
+                <DisplayNumber size={34} color={colors.onInverse} style={{ marginTop: 6 }}>
+                  {formatMoney(netFlow, cur)}
+                </DisplayNumber>
+                <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.xl }}>
+                  <MiniStat label="Income" value={formatMoney(income, cur)} color={colors.success} />
+                  <MiniStat label="Expense" value={formatMoney(expense, cur)} color={colors.error} />
+                  <MiniStat label="Transactions" value={String(txs.length)} />
+                </View>
+              </Card>
 
-          {/* Category breakdown */}
-          <Card>
-            <Label>Spending by category</Label>
-            {categoryBreakdown.length === 0 ? (
-              <Body muted style={{ marginTop: spacing.md }}>No expenses in this period.</Body>
-            ) : (
+              {/* Category breakdown */}
+              <Card>
+                <Label>Spending by category</Label>
+                {categoryBreakdown.length === 0 ? (
+                  <Body muted style={{ marginTop: spacing.md }}>No expenses in this period.</Body>
+                ) : (
               <>
                 <View style={{ alignItems: 'center', marginTop: spacing.md }}>
                   <DonutChart data={categoryBreakdown} />
@@ -122,6 +142,8 @@ export default function Reports() {
               <MiniStat label="Saving rate" value={income > 0 ? `${Math.round((netFlow / income) * 100)}%` : '-'} />
             </View>
           </Card>
+            </>
+          )}
         </ScrollView>
       </SafeAreaView>
     </Screen>
