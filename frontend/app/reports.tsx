@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -50,10 +50,14 @@ const [fromDate, setFromDate] = useState(monthStart());
     try {
       const r = await api.transactions(undefined, 500, undefined, fromDate, toDate);
       setTxs(r.transactions || []);
-    } catch {}
+    } catch (e: any) {
+      console.error('[Reports] failed to load:', e?.message || e);
+    }
   }, [fromDate, toDate]);
 
+  // useFocusEffect for when screen regains focus; useEffect for when dates change while focused.
   useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => { load(); }, [load]);
 
   return (
     <Screen>

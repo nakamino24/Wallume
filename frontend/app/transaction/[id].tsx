@@ -1,6 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { View, ScrollView, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
@@ -8,6 +8,7 @@ import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
+import { useWallets } from '@/src/hooks/use-wallets';
 import { DateField } from '@/src/components/DateField';
 import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
@@ -37,30 +38,12 @@ export default function EditTransaction() {
   const [amount, setAmount] = useState(params.amount ? String(params.amount) : '');
   const [category, setCategory] = useState(params.category || 'Food');
   const [note, setNote] = useState(params.note || '');
-  const [wallets, setWallets] = useState<any[]>([]);
+  const { wallets, loading: walletsLoading, error: walletsError, refresh: refreshWallets } = useWallets();
   const [walletId, setWalletId] = useState(params.wallet_id || '');
   const [toWalletId, setToWalletId] = useState(params.to_wallet_id || '');
   const [date, setDate] = useState(params.date || todayLocalISO());
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
-  const [walletsLoading, setWalletsLoading] = useState(true);
-  const [walletsError, setWalletsError] = useState('');
-
-  const load = useCallback(async () => {
-    setWalletsLoading(true);
-    setWalletsError('');
-    try {
-      const r = await api.wallets();
-      setWallets(r.wallets || []);
-    } catch (e: any) {
-      console.error('[EditTransaction] failed to load wallets:', e?.message || e);
-      setWalletsError(e?.message || 'Failed to load wallets');
-      setWallets([]);
-    } finally {
-      setWalletsLoading(false);
-    }
-  }, []);
-  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const submit = async () => {
     setErr('');
@@ -141,7 +124,7 @@ export default function EditTransaction() {
             ) : walletsError ? (
               <View style={{ paddingVertical: spacing.md, gap: spacing.sm }}>
                 <Body style={{ color: colors.error }}>{walletsError}</Body>
-                <Button label="Retry" onPress={load} />
+                <Button label="Retry" onPress={refreshWallets} />
               </View>
             ) : wallets.length === 0 ? (
               <View style={{ paddingVertical: spacing.md }}>
@@ -165,7 +148,7 @@ export default function EditTransaction() {
                 ) : walletsError ? (
                   <View style={{ paddingVertical: spacing.md, gap: spacing.sm }}>
                     <Body style={{ color: colors.error }}>{walletsError}</Body>
-                    <Button label="Retry" onPress={load} />
+                    <Button label="Retry" onPress={refreshWallets} />
                   </View>
                 ) : wallets.length === 0 ? (
                   <View style={{ paddingVertical: spacing.md }}>

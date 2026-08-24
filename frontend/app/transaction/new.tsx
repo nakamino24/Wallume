@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, ScrollView, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
@@ -9,6 +9,7 @@ import { api } from '@/src/api/client';
 import { Button, Body, Label, Chip, Input } from '@/src/components/ui';
 import { useToast } from '@/src/components/Toast';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
+import { useWallets, invalidateWalletsCache } from '@/src/hooks/use-wallets';
 import { DateField } from '@/src/components/DateField';
 import { CategorySelector } from '@/src/components/CategorySelector';
 import { FormLayout } from '@/src/components/FormLayout';
@@ -26,32 +27,20 @@ export default function NewTransaction() {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Food');
   const [note, setNote] = useState('');
-  const [wallets, setWallets] = useState<any[]>([]);
+  const { wallets, loading: walletsLoading, error: walletsError, refresh: refreshWallets } = useWallets();
   const [walletId, setWalletId] = useState('');
   const [toWalletId, setToWalletId] = useState('');
   const [date, setDate] = useState(() => todayLocalISO());
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
-  const [walletsLoading, setWalletsLoading] = useState(true);
-  const [walletsError, setWalletsError] = useState('');
 
-  const load = useCallback(async () => {
-    setWalletsLoading(true);
-    setWalletsError('');
-    try {
-      const r = await api.wallets();
-      setWallets(r.wallets || []);
-      if (r.wallets?.[0]) setWalletId(r.wallets[0].id);
-      if (r.wallets?.[1]) setToWalletId(r.wallets[1].id);
-    } catch (e: any) {
-      console.error('[NewTransaction] failed to load wallets:', e?.message || e);
-      setWalletsError(e?.message || 'Failed to load wallets');
-      setWallets([]);
-    } finally {
-      setWalletsLoading(false);
+  // Auto-select first wallets when cache populates
+  useEffect(() => {
+    if (wallets.length > 0) {
+      if (!walletId && wallets[0]) setWalletId(wallets[0].id);
+      if (!toWalletId && wallets[1]) setToWalletId(wallets[1].id);
     }
-  }, []);
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  }, [wallets, walletId, toWalletId]);
 
   useEffect(() => {
     setCategory(getOptions(type === 'transfer' ? 'expense' : type)[0]);
@@ -75,6 +64,7 @@ export default function NewTransaction() {
         to_wallet_id: type === 'transfer' ? toWalletId : undefined,
         type, amount: amt, category, note, date: date || undefined,
       });
+      invalidateWalletsCache();
       toast.show(`${type === 'income' ? 'Income' : type === 'expense' ? 'Expense' : 'Transfer'} added`, 'success');
       router.back();
     } catch (e: any) { setErr(e.message); }
@@ -140,7 +130,7 @@ export default function NewTransaction() {
             ) : walletsError ? (
               <View style={{ paddingVertical: spacing.md, gap: spacing.sm }}>
                 <Body style={{ color: colors.error }}>{walletsError}</Body>
-                <Button label="Retry" onPress={load} />
+                <Button label="Retry" onPress={refreshWallets} />
               </View>
             ) : wallets.length === 0 ? (
               <View style={{ paddingVertical: spacing.md }}>
@@ -164,7 +154,7 @@ export default function NewTransaction() {
                 ) : walletsError ? (
                   <View style={{ paddingVertical: spacing.md, gap: spacing.sm }}>
                     <Body style={{ color: colors.error }}>{walletsError}</Body>
-                    <Button label="Retry" onPress={load} />
+                    <Button label="Retry" onPress={refreshWallets} />
                   </View>
                 ) : wallets.length === 0 ? (
                   <View style={{ paddingVertical: spacing.md }}>

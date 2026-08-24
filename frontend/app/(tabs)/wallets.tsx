@@ -10,6 +10,7 @@ import { spacing, radius, font, formatMoneyFull } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, H1, Body, DisplayNumber, EmptyState, Caption } from '@/src/components/ui';
 import { confirmAction } from '@/src/utils/confirm';
+import { useWallets } from '@/src/hooks/use-wallets';
 
 const WALLET_META: Record<string, { icon: any; tint: string }> = {
   cash: { icon: 'cash-outline', tint: '#10B981' },
@@ -38,32 +39,14 @@ export default function Wallets() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
-  const [wallets, setWallets] = useState<any[]>([]);
+  const { wallets, loading, error, refresh } = useWallets();
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
-    try {
-      setError('');
-      const r = await api.wallets();
-      setWallets(r.wallets || []);
-    } catch (e: any) {
-      console.error('[Wallets] failed to load:', e?.message || e);
-      setError(e?.message || 'Failed to load wallets');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-  useFocusEffect(useCallback(() => {
-    // Only show full loading on initial load; on refocus keep stale wallets visible
-    // with RefreshControl spinner to avoid flashing empty state.
-    if (wallets.length === 0) setLoading(true);
-    else setRefreshing(true);
-    load();
-  }, [load, wallets.length]));
-  const onRefresh = useCallback(async () => { setRefreshing(true); await load(); }, [load]);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }, [refresh]);
 
   const cur = user?.currency || 'USD';
   const total = wallets.reduce((s, w) => s + (Number(w.converted_balance ?? w.balance) || 0), 0);
@@ -123,13 +106,25 @@ export default function Wallets() {
           </View>
 
           {loading ? (
-            <View style={{ paddingHorizontal: spacing.xl, paddingVertical: spacing.xl, alignItems: 'center' }}>
-              <Body muted>Loading wallets…</Body>
+            <View style={{ paddingHorizontal: spacing.xl, gap: spacing.md }}>
+              {[0, 1, 2].map((k) => (
+                <View key={k} style={[styles.card, { backgroundColor: colors.surface2, borderColor: colors.border, opacity: 0.5 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface3 }} />
+                    <View style={{ marginLeft: spacing.md, flex: 1, gap: 6 }}>
+                      <View style={{ height: 14, width: '40%', backgroundColor: colors.surface3, borderRadius: 4 }} />
+                      <View style={{ height: 10, width: '25%', backgroundColor: colors.surface3, borderRadius: 4 }} />
+                    </View>
+                  </View>
+                  <View style={{ marginTop: spacing.md, height: 10, width: '20%', backgroundColor: colors.surface3, borderRadius: 4 }} />
+                  <View style={{ marginTop: 6, height: 18, width: '35%', backgroundColor: colors.surface3, borderRadius: 4 }} />
+                </View>
+              ))}
             </View>
           ) : error ? (
             <View style={{ paddingHorizontal: spacing.xl, gap: spacing.md }}>
               <Body style={{ color: colors.error, textAlign: 'center' }}>{error}</Body>
-              <TouchableOpacity onPress={() => { setLoading(true); load(); }}
+              <TouchableOpacity onPress={refresh}
                 style={{ alignSelf: 'center', paddingVertical: 10, paddingHorizontal: spacing.lg, backgroundColor: colors.brandPrimary, borderRadius: radius.md }}>
                 <Body style={{ color: colors.onBrand, fontFamily: font.textBold }}>Retry</Body>
               </TouchableOpacity>
@@ -147,7 +142,7 @@ export default function Wallets() {
               {wallets.map((w) => (
                 <WalletCard key={w.id} wallet={w} currency={cur}
                   onPress={() => router.push({ pathname: '/wallet/[id]', params: { id: w.id } })}
-                  onLongPress={() => confirmDelete(w, load)}
+                  onLongPress={() => confirmDelete(w, refresh)}
                 />
               ))}
             </View>
