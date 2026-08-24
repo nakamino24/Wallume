@@ -9,7 +9,7 @@ import { api } from '@/src/api/client';
 import { Button, Body, Label, Chip, Input } from '@/src/components/ui';
 import { useToast } from '@/src/components/Toast';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
-import { useWallets, invalidateWalletsCache } from '@/src/hooks/use-wallets';
+import { useWallets, invalidateWalletsCache, applyOptimisticWalletEffect } from '@/src/hooks/use-wallets';
 import { invalidateTransactionsCache } from '@/src/hooks/use-transactions';
 import { storage } from '@/src/utils/storage';
 import { DateField } from '@/src/components/DateField';
@@ -59,6 +59,10 @@ export default function NewTransaction() {
       setErr(Object.values(errors)[0]);
       return;
     }
+    // Optimistic: update UI instantly, then confirm with server
+    applyOptimisticWalletEffect(walletId, toWalletId, type, amt);
+    invalidateTransactionsCache();
+    await storage.removeItem('mf.home.cache.v1');
     setLoading(true);
     try {
       await api.createTransaction({
@@ -67,8 +71,6 @@ export default function NewTransaction() {
         type, amount: amt, category, note, date: date || undefined,
       });
       invalidateWalletsCache();
-      invalidateTransactionsCache();
-      await storage.removeItem('mf.home.cache.v1');
       toast.show(`${type === 'income' ? 'Income' : type === 'expense' ? 'Expense' : 'Transfer'} added`, 'success');
       router.back();
     } catch (e: any) { setErr(e.message); }

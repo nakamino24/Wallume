@@ -79,8 +79,6 @@ export function useTransactions(): TxState {
 }
 
 export function invalidateTransactionsCache() {
-  cache = null;
-  cacheError = null;
   lastFetch = 0;
   inFlight = null;
 }

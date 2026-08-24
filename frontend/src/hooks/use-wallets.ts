@@ -78,8 +78,24 @@ export function useWallets(): WalletsState {
 }
 
 export function invalidateWalletsCache() {
-  cache = null;
-  cacheError = null;
+  // Keep stale cache visible, just mark as stale so next refresh does background fetch.
+  // Previously did cache=null which caused wallet cards to disappear and show loading.
   lastFetch = 0;
   inFlight = null;
+}
+
+export function applyOptimisticWalletEffect(walletId: string, toWalletId: string | undefined, type: string, amount: number) {
+  if (!cache) return;
+  const amt = Number(amount) || 0;
+  cache = cache.map((w) => {
+    if (w.id === walletId) {
+      const delta = type === 'income' ? amt : -amt;
+      return { ...w, balance: (Number(w.balance) || 0) + delta, converted_balance: undefined };
+    }
+    if (type === 'transfer' && w.id === toWalletId) {
+      return { ...w, balance: (Number(w.balance) || 0) + amt, converted_balance: undefined };
+    }
+    return w;
+  });
+  lastFetch = Date.now();
 }
