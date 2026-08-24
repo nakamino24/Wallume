@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, font, currencySymbol } from '@/src/theme/tokens';
+import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Button, Body, Label, Chip, Input } from '@/src/components/ui';
 import { useToast } from '@/src/components/Toast';
@@ -47,14 +47,12 @@ export default function NewTransaction() {
 
   const submit = async () => {
     setErr('');
-    setFieldErrors({});
     const errors: Record<string, string> = {};
     const amt = parseFloat(amount);
     if (!amt || amt <= 0) errors.amount = 'Enter a valid amount';
     if (!walletId) errors.wallet = 'Select a wallet';
     if (type === 'transfer' && (!toWalletId || toWalletId === walletId)) errors.toWallet = 'Select a different wallet';
     if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
       setErr(Object.values(errors)[0]);
       return;
     }

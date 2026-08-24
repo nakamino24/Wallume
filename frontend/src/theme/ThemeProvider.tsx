@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { palette, Palette, ThemeMode } from '@/src/theme/tokens';
 import { storage } from '@/src/utils/storage';

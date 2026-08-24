@@ -2,6 +2,11 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.6c] — 2026-08-24 (HOTFIX — preview crash)
+
+### Fixed
+- **Preview crash `ReferenceError: Property 'useCallback' doesn't exist` in `ThemeProvider`** — `useCallback` was used but not imported; added missing import. Also fixed `app/transaction/new.tsx` missing `radius` import and stray `setFieldErrors` calls that broke `tsc` and would crash at runtime.
+
 ## [1.0.5c] — 2026-08-24 (HOTFIX — Reports date range filtering)
 
 ### Fixed
