@@ -9,6 +9,7 @@ from app.services.auth_service import AuthService
 from app.utils.helpers import new_id, now_utc, strict_canonical_date
 from app.utils.money import to_decimal, to_decimal128
 from app.database.mongo import get_database
+from pymongo.errors import DuplicateKeyError
 
 router = APIRouter(prefix="/transactions")
 auth_service = AuthService()
@@ -97,21 +98,40 @@ async def create_transaction(payload: TransactionCreate, authorization: Optional
             raise HTTPException(400, "Cannot transfer to the same wallet")
 
     db = await get_database()
-    async with await db.client.start_session() as session:
-        async with session.start_transaction():
-            if payload.type == "transfer":
-                dw = await wallets.find_one({"id": payload.to_wallet_id, "user_id": u["user_id"]}, session)
-                if not dw:
-                    raise HTTPException(400, "Destination wallet not found")
-            await _apply_effect(u["user_id"], payload.wallet_id, payload.to_wallet_id, payload.type, payload.amount, session, reverse=False)
-            await txs.insert_one(doc, session)
+    try:
+        async with await db.client.start_session() as session:
+            async with session.start_transaction():
+                if payload.type == "transfer":
+                    dw = await wallets.find_one({"id": payload.to_wallet_id, "user_id": u["user_id"]}, session)
+                    if not dw:
+                        raise HTTPException(400, "Destination wallet not found")
+                await _apply_effect(u["user_id"], payload.wallet_id, payload.to_wallet_id, payload.type, payload.amount, session, reverse=False)
+                await txs.insert_one(doc, session)
+    except DuplicateKeyError:
+        # Race: another request with same client_mutation_id already inserted.
+        # Fetch and return the authoritative existing transaction.
+        if client_mid:
+            db_raw = await get_database()
+            existing_raw = await db_raw.transactions.find_one({"user_id": u["user_id"], "client_mutation_id": client_mid}, {"_id": 0})
+            if existing_raw:
+                return {"success": True, "data": {"transaction": existing_raw}}
+        raise HTTPException(409, "Duplicate transaction")
 
     return {"success": True, "data": {"transaction": {k: v for k, v in doc.items() if k != "_id"}}}
 
 
 @router.patch("/{tx_id}")
-async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Optional[str] = Header(None)):
+async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Optional[str] = Header(None), x_client_mutation_id: Optional[str] = Header(None, alias="X-Client-Mutation-Id")):
+    client_mid = x_client_mutation_id or body.get("client_mutation_id")
     u = await auth_service.get_current_user(authorization)
+    # Idempotency for PATCH: use dedicated collection so multiple sequential
+    # PATCHes with different clientMutationIds remain replayable.
+    # A single client_mutation_id field on the document would be overwritten.
+    if client_mid:
+        db_chk = await get_database()
+        existing_idem = await db_chk.idempotency.find_one({"user_id": u["user_id"], "client_mutation_id": client_mid})
+        if existing_idem:
+            return {"success": True, "data": existing_idem["result"]}
 
     db = await get_database()
     async with await db.client.start_session() as session:
@@ -157,6 +177,24 @@ async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Op
 
             await txs.update_one({"id": tx_id, "user_id": u["user_id"]}, {"$set": allowed}, session=session)
             updated = await txs.find_one({"id": tx_id, "user_id": u["user_id"]}, session)
+
+    # Store idempotency result for replay (outside transaction, after success)
+    if client_mid:
+        try:
+            db_idem = await get_database()
+            await db_idem.idempotency.insert_one({
+                "user_id": u["user_id"],
+                "client_mutation_id": client_mid,
+                "operation": f"PATCH /transactions/{tx_id}",
+                "result": {"transaction": updated},
+                "created_at": now_utc(),
+            })
+        except DuplicateKeyError:
+            # Race: another request already stored this mutation, fetch and return existing
+            db_idem = await get_database()
+            existing_idem = await db_idem.idempotency.find_one({"user_id": u["user_id"], "client_mutation_id": client_mid})
+            if existing_idem:
+                return {"success": True, "data": existing_idem["result"]}
 
     return {"success": True, "data": {"transaction": updated}}
 

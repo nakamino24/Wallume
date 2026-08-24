@@ -9,7 +9,6 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { usePayday } from '@/src/hooks/use-payday';
 import { spacing, radius, font, formatMoneyFull, formatMoney, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { storage } from '@/src/utils/storage';
 import { Screen, Card, H2, Body, Label, DisplayNumber, ProgressRing, Chip, EmptyState, Caption } from '@/src/components/ui';
 import { Skeleton, SkeletonCard, SkeletonRow } from '@/src/components/Skeleton';
 import { ErrorBanner } from '@/src/components/ErrorBanner';
@@ -21,14 +20,6 @@ const CATEGORY_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
   Entertainment: 'film', Bills: 'receipt', Health: 'medkit',
   Rent: 'home', Salary: 'cash', Other: 'ellipsis-horizontal',
-};
-const HOME_CACHE_KEY = 'mf.home.cache.v1';
-
-type HomeCachePayload = {
-  summary: any;
-  txs: any[];
-  wallets: any[];
-  updatedAt: number;
 };
 
 export default function Home() {

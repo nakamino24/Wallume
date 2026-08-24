@@ -47,3 +47,8 @@ async def create_indexes() -> None:
     # financial effects from retries, double taps, or network replays.
     await db.transactions.create_index([("user_id", 1), ("client_mutation_id", 1)], unique=True, sparse=True)
     await db.wallets.create_index([("user_id", 1), ("client_mutation_id", 1)], unique=True, sparse=True)
+    # Dedicated idempotency collection for PATCH/DELETE which need to store
+    # multiple sequential mutation IDs per resource (a single client_mutation_id
+    # field on the resource would be overwritten by each mutation).
+    await db.idempotency.create_index([("user_id", 1), ("client_mutation_id", 1)], unique=True)
+    await db.idempotency.create_index("created_at", expireAfterSeconds=30*24*3600)  # 30 days TTL
