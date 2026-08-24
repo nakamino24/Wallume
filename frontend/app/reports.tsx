@@ -8,7 +8,7 @@ import Svg, { Circle as SvgCircle, G } from 'react-native-svg';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font, formatMoney, formatMoneyCompact } from '@/src/theme/tokens';
-import { api } from '@/src/api/client';
+import { api, type ReportSummary } from '@/src/api/client';
 import { Screen, Card, H2, Body, Label, DisplayNumber } from '@/src/components/ui';
 import { DateField } from '@/src/components/DateField';
 import { todayLocalISO } from '@/src/utils/dates';
@@ -26,30 +26,21 @@ export default function Reports() {
     return todayLocalISO(d);
   });
   const [toDate, setToDate] = useState(() => todayLocalISO());
-  const [txs, setTxs] = useState<any[]>([]);
+  const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0);
-  const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0);
-  const netFlow = income - expense;
-
-  const catTotals: Record<string, number> = {};
-  txs.filter((t) => t.type === 'expense').forEach((t) => {
-    catTotals[t.category] = (catTotals[t.category] || 0) + (Number(t.amount) || 0);
-  });
-  const categoryBreakdown = Object.entries(catTotals)
-    .map(([category, amount]) => ({ category, amount: Math.round(amount * 100) / 100 }))
+  const income = summary?.income_total ?? 0;
+  const expense = summary?.expense_total ?? 0;
+  const netFlow = summary?.net_total ?? 0;
+  const categoryBreakdown = [...(summary?.expense_by_category ?? [])]
     .sort((a, b) => b.amount - a.amount);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      console.log(`[Reports] fetching ${fromDate} to ${toDate}`);
-      const r = await api.transactions(undefined, 2000, undefined, fromDate, toDate);
-      console.log(`[Reports] got ${r.transactions?.length || 0} txs for ${fromDate}..${toDate}`);
-      setTxs(r.transactions || []);
+      setSummary(await api.reports.getSummary({ from_date: fromDate, to_date: toDate }));
     } catch (e: any) {
       console.error('[Reports] failed to load:', e?.message || e);
       setError('Unable to load this period. Try again.');
@@ -94,7 +85,7 @@ export default function Reports() {
                 <Body style={{ color: colors.onBrand, fontFamily: font.textBold }}>Try again</Body>
               </TouchableOpacity>
             </Card>
-          ) : txs.length === 0 ? (
+          ) : summary?.transaction_count === 0 ? (
             <Card><Body>No transactions in this period.</Body></Card>
           ) : (
             <>
@@ -107,7 +98,7 @@ export default function Reports() {
                 <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.xl }}>
                   <MiniStat label="Income" value={formatMoney(income, cur)} color={colors.success} />
                   <MiniStat label="Expense" value={formatMoney(expense, cur)} color={colors.error} />
-                  <MiniStat label="Transactions" value={String(txs.length)} />
+                  <MiniStat label="Transactions" value={String(summary?.transaction_count ?? 0)} />
                 </View>
               </Card>
 
@@ -119,7 +110,7 @@ export default function Reports() {
                 ) : (
               <>
                 <View style={{ alignItems: 'center', marginTop: spacing.md }}>
-                  <DonutChart data={categoryBreakdown} />
+                  <DonutChart data={categoryBreakdown} total={expense} />
                 </View>
                 <View style={{ marginTop: spacing.md, gap: 8 }}>
                   {categoryBreakdown.map((c, i) => (
@@ -160,8 +151,7 @@ function MiniStat({ label, value, color }: any) {
   );
 }
 
-function DonutChart({ data }: any) {
-  const total = data.reduce((s: number, d: any) => s + d.amount, 0);
+function DonutChart({ data, total }: any) {
   const size = 180; const r = 70; const stroke = 24;
   const c = 2 * Math.PI * r;
   let accum = 0;

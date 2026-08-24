@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 from typing import Any, Optional
 from fastapi import APIRouter, Header, HTTPException
 from app.schemas.models import WalletCreate
@@ -8,10 +10,18 @@ from app.repositories.repos import WalletRepository
 from app.services.auth_service import AuthService
 from app.services.domain_services import FxService
 from app.utils.helpers import new_id, now_utc
+from app.database.mongo import get_database
+from pymongo.errors import DuplicateKeyError
 
 router = APIRouter(prefix="/wallets")
 auth_service = AuthService()
 wallets = WalletRepository()
+
+
+def _create_fingerprint(payload: dict[str, Any]) -> str:
+    normalized = {key: value for key, value in payload.items() if key != "client_mutation_id"}
+    encoded = json.dumps({"operation": "POST /wallets", "payload": normalized}, default=str, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 @router.get("")
@@ -35,17 +45,38 @@ async def list_wallets(authorization: Optional[str] = Header(None)):
 async def create_wallet(payload: WalletCreate, authorization: Optional[str] = Header(None), x_client_mutation_id: Optional[str] = Header(None, alias="X-Client-Mutation-Id")):
     u = await auth_service.get_current_user(authorization)
     client_mid = x_client_mutation_id or payload.client_mutation_id
+    payload_data = payload.model_dump()
+    fingerprint = _create_fingerprint(payload_data)
+    db = await get_database()
     if client_mid:
-        from app.database.mongo import get_database
-        db = await get_database()
-        existing = await db.wallets.find_one({"user_id": u["user_id"], "client_mutation_id": client_mid}, {"_id": 0})
-        if existing:
-            return {"success": True, "data": {"wallet": existing}}
-    doc = {"id": new_id("wal"), "user_id": u["user_id"], **payload.model_dump(), "created_at": now_utc()}
+        record = await db.idempotency.find_one({"user_id": u["user_id"], "client_mutation_id": client_mid})
+        if record:
+            if record.get("fingerprint") != fingerprint:
+                raise HTTPException(409, "client mutation id was reused for a different operation")
+            return {"success": True, "data": record["result"]}
+    doc = {"id": new_id("wal"), "user_id": u["user_id"], **payload_data, "created_at": now_utc()}
     if client_mid and not doc.get("client_mutation_id"):
         doc["client_mutation_id"] = client_mid
-    await wallets.insert_one(doc)
-    return {"success": True, "data": {"wallet": {k: v for k, v in doc.items() if k != "_id"}}}
+    try:
+        async with await db.client.start_session() as session:
+            async with session.start_transaction():
+                await wallets.insert_one(doc, session=session)
+                result = {"wallet": {k: v for k, v in doc.items() if k != "_id"}}
+                if client_mid:
+                    await db.idempotency.insert_one({
+                        "user_id": u["user_id"], "client_mutation_id": client_mid,
+                        "operation": "POST /wallets", "resource_type": "wallet", "resource_id": doc["id"],
+                        "fingerprint": fingerprint, "status": "completed", "result": result, "created_at": now_utc(),
+                    }, session=session)
+    except DuplicateKeyError:
+        if client_mid:
+            record = await db.idempotency.find_one({"user_id": u["user_id"], "client_mutation_id": client_mid})
+            if record:
+                if record.get("fingerprint") != fingerprint:
+                    raise HTTPException(409, "client mutation id was reused for a different operation")
+                return {"success": True, "data": record["result"]}
+        raise HTTPException(409, "Duplicate wallet")
+    return {"success": True, "data": result}
 
 
 @router.patch("/{wallet_id}")

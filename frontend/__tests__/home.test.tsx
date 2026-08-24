@@ -4,6 +4,8 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 const mockRefresh = jest.fn();
 const mockRouterPush = jest.fn();
 const mockUser = { name: 'Alex', currency: 'USD', email: 'alex@wallume.com' };
+const mockUseTransactions = jest.fn();
+const mockUseWallets = jest.fn();
 
 jest.mock('@/src/auth/AuthProvider', () => ({
   useAuth: () => ({ user: mockUser, loading: false }),
@@ -57,13 +59,17 @@ jest.mock('@/src/utils/storage', () => ({
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockRouterPush, replace: jest.fn(), back: jest.fn() }),
-  useFocusEffect: jest.fn((cb) => cb()),
+  // Expo invokes focus callbacks from an effect. Calling the callback during
+  // render turns Home's state update into an artificial render loop.
+  useFocusEffect: (cb: () => void) => require('react').useEffect(cb, [cb]),
 }));
 
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: ({ children }: any) => children }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('expo-haptics', () => ({ selectionAsync: jest.fn() }));
 jest.mock('@/src/widgets/refresh-widget', () => ({ refreshNetWorthWidget: jest.fn() }));
+jest.mock('@/src/hooks/use-transactions', () => ({ useTransactions: mockUseTransactions }));
+jest.mock('@/src/hooks/use-wallets', () => ({ useWallets: mockUseWallets }));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children, style }: any) => {
     const React = require('react');
@@ -75,6 +81,14 @@ jest.mock('react-native-safe-area-context', () => ({
 describe('Home Screen', () => {
   beforeEach(() => {
     mockRouterPush.mockReset();
+    mockUseTransactions.mockReturnValue({ transactions: [], loading: false, error: '', refresh: mockRefresh });
+    mockUseWallets.mockReturnValue({
+      wallets: [
+        { id: 'wal1', name: 'Cash', balance: 250, currency: 'USD' },
+        { id: 'wal2', name: 'Main Bank', balance: 3200, currency: 'USD' },
+      ],
+      loading: false, error: '', refresh: mockRefresh,
+    });
   });
 
   it('renders welcome message with user name', async () => {
@@ -149,24 +163,9 @@ describe('Home Screen', () => {
   });
 
   it('shows empty state when no transactions exist', async () => {
-    // Empty state requires BOTH no transactions and no wallets; the shared
-    // mock above returns two wallets, so override it for this scenario.
-    // (persistent override, not Once: useFocusEffect triggers a second load
-    // that would otherwise fall back to the two-wallet default)
-    const { api } = require('@/src/api/client');
-    const originalWalletsImpl = (api.wallets as jest.Mock).getMockImplementation();
-    (api.wallets as jest.Mock).mockResolvedValue({ wallets: [] });
-    try {
-      const Home = require('@/app/(tabs)/home').default;
-      const { getByTestId } = render(<Home />);
-
-      await waitFor(() => {
-        expect(getByTestId('home-tx-empty')).toBeTruthy();
-      });
-    } finally {
-      // Restore, or later tests in this file would inherit the empty wallet
-      // list if execution order ever changes.
-      (api.wallets as jest.Mock).mockImplementation(originalWalletsImpl ?? undefined);
-    }
+    mockUseWallets.mockReturnValue({ wallets: [], loading: false, error: '', refresh: mockRefresh });
+    const Home = require('@/app/(tabs)/home').default;
+    const { getByTestId } = render(<Home />);
+    await waitFor(() => expect(getByTestId('home-tx-empty')).toBeTruthy());
   });
 });

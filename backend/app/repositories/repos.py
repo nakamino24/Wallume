@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from typing import Any, Optional
+from bson import Decimal128
 from app.repositories.base import BaseRepository
+from app.utils.money import from_decimal128
 
 
 class UserRepository(BaseRepository):
@@ -60,6 +62,7 @@ class WalletRepository(BaseRepository):
         await (await self._collection(session)).update_one(
             {"id": wallet_id, "user_id": user_id},
             {"$inc": {"balance": to_decimal128(signed)}},
+            session=session,
         )
 
 
@@ -98,6 +101,76 @@ class TransactionRepository(BaseRepository):
         ]).limit(limit)
         docs = await cursor.to_list(limit)
         return self._money_out_list(docs)
+
+    async def aggregate_report_summary(self, user_id: str, from_date: str, to_date_exclusive: str) -> dict:
+        """Return complete cash-flow aggregates for one user's date range.
+
+        Category values mirror JavaScript object-key coercion in the former
+        Reports screen: missing -> "undefined", null -> "null", and an empty
+        string remains empty.
+        """
+        zero = Decimal128("0")
+        pipeline = [
+            {"$match": self._active_filter({
+                "user_id": user_id,
+                "date": {"$gte": from_date, "$lt": to_date_exclusive},
+            })},
+            {"$facet": {
+                "totals": [
+                    {"$group": {
+                        "_id": None,
+                        "transaction_count": {"$sum": 1},
+                        "income_total": {"$sum": {"$cond": [
+                            {"$eq": ["$type", "income"]}, "$amount", zero,
+                        ]}},
+                        "expense_total": {"$sum": {"$cond": [
+                            {"$eq": ["$type", "expense"]}, "$amount", zero,
+                        ]}},
+                    }},
+                    {"$project": {
+                        "_id": 0,
+                        "transaction_count": 1,
+                        "income_total": 1,
+                        "expense_total": 1,
+                        "net_total": {"$subtract": ["$income_total", "$expense_total"]},
+                    }},
+                ],
+                "expense_by_category": [
+                    {"$match": {"type": "expense"}},
+                    {"$project": {
+                        "category": {"$switch": {
+                            "branches": [
+                                {"case": {"$eq": [{"$type": "$category"}, "missing"]}, "then": "undefined"},
+                                {"case": {"$eq": [{"$type": "$category"}, "null"]}, "then": "null"},
+                            ],
+                            "default": {"$toString": "$category"},
+                        }},
+                        "amount": 1,
+                    }},
+                    {"$group": {"_id": "$category", "amount": {"$sum": "$amount"}}},
+                    {"$project": {"_id": 0, "category": "$_id", "amount": 1}},
+                    {"$sort": {"amount": -1}},
+                ],
+            }},
+        ]
+        result = await (await self._collection()).aggregate(pipeline).to_list(1)
+        facet = result[0] if result else {"totals": [], "expense_by_category": []}
+        totals = facet["totals"][0] if facet["totals"] else {
+            "transaction_count": 0,
+            "income_total": zero,
+            "expense_total": zero,
+            "net_total": zero,
+        }
+        return {
+            "transaction_count": totals["transaction_count"],
+            "income_total": from_decimal128(totals["income_total"]),
+            "expense_total": from_decimal128(totals["expense_total"]),
+            "net_total": from_decimal128(totals["net_total"]),
+            "expense_by_category": [
+                {"category": row["category"], "amount": from_decimal128(row["amount"])}
+                for row in facet["expense_by_category"]
+            ],
+        }
 
     async def find_month_txs(self, user_id: str, start_date: str) -> list[dict]:
         q = self._active_filter({"user_id": user_id, "date": {"$gte": start_date}})

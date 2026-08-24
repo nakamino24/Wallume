@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { api, getToken, setToken } from '@/src/api/client';
+import { clearTransactionsState } from '@/src/hooks/use-transactions';
 
 type User = {
   user_id: string;
@@ -53,18 +54,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const login = async (email: string, password: string) => {
+    clearTransactionsState();
     const r = await api.login({ email, password });
     await setToken(r.token);
     setUser(r.user);
   };
 
   const signup = async (name: string, email: string, password: string) => {
+    clearTransactionsState();
     const r = await api.signup({ name, email, password });
     await setToken(r.token);
     setUser(r.user);
   };
 
   const loginWithEmergentToken = async (session_token: string) => {
+    clearTransactionsState();
     const r = await api.emergentSession(session_token);
     await setToken(r.token);
     setUser(r.user);
@@ -73,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try { await api.logout(); } catch {}
     await setToken(null);
+    clearTransactionsState();
     setUser(null);
   };
 

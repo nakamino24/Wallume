@@ -51,4 +51,6 @@ async def create_indexes() -> None:
     # multiple sequential mutation IDs per resource (a single client_mutation_id
     # field on the resource would be overwritten by each mutation).
     await db.idempotency.create_index([("user_id", 1), ("client_mutation_id", 1)], unique=True)
-    await db.idempotency.create_index("created_at", expireAfterSeconds=30*24*3600)  # 30 days TTL
+    # Completed records remain replayable for 30 days. TTL expiry begins only
+    # after the atomic completion write; no in-progress record is TTL-eligible.
+    await db.idempotency.create_index("created_at", expireAfterSeconds=30*24*3600)

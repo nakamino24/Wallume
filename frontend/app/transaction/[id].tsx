@@ -5,7 +5,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
-import { api } from '@/src/api/client';
 import { Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
 import { useWallets } from '@/src/hooks/use-wallets';
@@ -14,6 +13,7 @@ import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
 import { CategorySelector } from '@/src/components/CategorySelector';
 import { todayLocalISO } from '@/src/utils/dates';
+import { useTransactions } from '@/src/hooks/use-transactions';
 
 // Edit an existing transaction. The list screen (transactions.tsx) passes the
 // transaction's fields in as route params, so we don't need a dedicated
@@ -42,8 +42,9 @@ export default function EditTransaction() {
   const [walletId, setWalletId] = useState(params.wallet_id || '');
   const [toWalletId, setToWalletId] = useState(params.to_wallet_id || '');
   const [date, setDate] = useState(params.date || todayLocalISO());
-  const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  const [loading] = useState(false);
+  const { edit } = useTransactions();
 
   const submit = async () => {
     setErr('');
@@ -51,16 +52,12 @@ export default function EditTransaction() {
     if (!amt || amt <= 0) { setErr('Enter a valid amount'); return; }
     if (!walletId) { setErr('Select a wallet'); return; }
     if (type === 'transfer' && (!toWalletId || toWalletId === walletId)) { setErr('Select a different destination wallet'); return; }
-    setLoading(true);
-    try {
-      await api.updateTransaction(params.id, {
+    edit(params.id, {
         wallet_id: walletId,
         to_wallet_id: type === 'transfer' ? toWalletId : undefined,
         type, amount: amt, category, note, date: date || undefined,
       });
-      router.back();
-    } catch (e: any) { setErr(e.message); }
-    finally { setLoading(false); }
+    router.back();
   };
 
   const cur = user?.currency || 'USD';

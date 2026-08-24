@@ -9,26 +9,17 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { usePayday } from '@/src/hooks/use-payday';
 import { spacing, radius, font, formatMoneyFull, formatMoney, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { storage } from '@/src/utils/storage';
 import { Screen, Card, H2, Body, Label, DisplayNumber, ProgressRing, Chip, EmptyState, Caption } from '@/src/components/ui';
 import { Skeleton, SkeletonCard, SkeletonRow } from '@/src/components/Skeleton';
 import { ErrorBanner } from '@/src/components/ErrorBanner';
 import { refreshNetWorthWidget } from '@/src/widgets/refresh-widget';
-import { invalidateWalletsCache } from '@/src/hooks/use-wallets';
-import { invalidateTransactionsCache } from '@/src/hooks/use-transactions';
+import { useWallets } from '@/src/hooks/use-wallets';
+import { useTransactions } from '@/src/hooks/use-transactions';
 
 const CATEGORY_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
   Entertainment: 'film', Bills: 'receipt', Health: 'medkit',
   Rent: 'home', Salary: 'cash', Other: 'ellipsis-horizontal',
-};
-const HOME_CACHE_KEY = 'mf.home.cache.v1';
-
-type HomeCachePayload = {
-  summary: any;
-  txs: any[];
-  wallets: any[];
-  updatedAt: number;
 };
 
 export default function Home() {
@@ -37,8 +28,8 @@ export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
   const [summary, setSummary] = useState<any>(null);
-  const [txs, setTxs] = useState<any[]>([]);
-  const [wallets, setWallets] = useState<any[]>([]);
+  const { transactions: txs, remove: removeTransaction } = useTransactions();
+  const { wallets } = useWallets();
   const [upcoming, setUpcoming] = useState<any[]>([]);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -47,47 +38,23 @@ export default function Home() {
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const { info: payday } = usePayday(user?.payday_day, user?.work_week);
 
-  const load = useCallback(async (useCache = true) => {
-    if (useCache) {
-      const cached = await storage.getItem<string | null>(HOME_CACHE_KEY, null);
-      if (cached) {
-        try {
-          const parsed: HomeCachePayload = JSON.parse(cached);
-          setSummary(parsed.summary ?? null);
-          setTxs(parsed.txs ?? []);
-          setWallets(parsed.wallets ?? []);
-          setUpcoming([]);
-          setLastSyncedAt(parsed.updatedAt ?? null);
-        } catch {}
-      }
-    }
-
+  const load = useCallback(async () => {
     try {
       setLoadError(null);
-      const [summaryResult, txResult, walletResult] = await Promise.allSettled([
-        api.summary().catch(() => null),
-        api.transactions().catch(() => ({ transactions: [] })),
-        api.wallets().catch(() => ({ wallets: [] })),
-      ]);
-
-      const nextSummary = summaryResult.status === 'fulfilled' ? summaryResult.value : null;
-      const nextTxs = txResult.status === 'fulfilled' ? (txResult.value?.transactions || []) : [];
-      const nextWallets = walletResult.status === 'fulfilled' ? (walletResult.value?.wallets || []) : [];
+      const summaryResult = await api.summary().catch(() => null);
+      const nextSummary = summaryResult;
       const updatedAt = Date.now();
 
       setSummary(nextSummary);
-      setTxs(nextTxs);
-      setWallets(nextWallets);
       setUpcoming([]);
       setLastSyncedAt(updatedAt);
-      await storage.setItem(HOME_CACHE_KEY, JSON.stringify({ summary: nextSummary, txs: nextTxs, wallets: nextWallets, updatedAt }));
       setInitialLoading(false);
       refreshNetWorthWidget();
     } catch {
-      if (!summary) setLoadError('Could not load your data');
+      setLoadError('Could not load your data');
       setInitialLoading(false);
     }
-  }, [summary]);
+  }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -99,7 +66,7 @@ export default function Home() {
     return () => sub.remove();
   }, []);
 
-  const onRefresh = useCallback(async () => { setRefreshing(true); await load(true); setRefreshing(false); }, [load]);
+  const onRefresh = useCallback(async () => { setRefreshing(true); await load(); setRefreshing(false); }, [load]);
 
   // Delete a transaction inline, reusing the exact confirm pattern from
   // transactions.tsx so Home and the full list behave identically.
@@ -111,16 +78,12 @@ export default function Home() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await api.deleteTransaction(t.id);
-            setTxs((prev) => prev.filter((x: any) => x.id !== t.id));
-            invalidateWalletsCache();
-            invalidateTransactionsCache();
-            await storage.removeItem(HOME_CACHE_KEY);
+            removeTransaction(t.id);
           } catch {}
         },
       },
     ]);
-  }, []);
+  }, [removeTransaction]);
 
   const cur = user?.currency || 'USD';
   const shownTxs = filter === 'all' ? txs : txs.filter((t) => t.type === filter);

@@ -7,11 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font, formatMoney } from '@/src/theme/tokens';
-import { api } from '@/src/api/client';
 import { Screen, Card, H2, Body, Chip, EmptyState } from '@/src/components/ui';
-import { useTransactions, invalidateTransactionsCache } from '@/src/hooks/use-transactions';
-import { invalidateWalletsCache } from '@/src/hooks/use-wallets';
-import { storage } from '@/src/utils/storage';
+import { useTransactions } from '@/src/hooks/use-transactions';
 
 const CAT_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
@@ -24,7 +21,7 @@ export default function Transactions() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
-  const { transactions: txs, loading, error, refresh } = useTransactions();
+  const { transactions: txs, loading, error, refresh, remove: removeTransaction } = useTransactions();
   const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
 
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
@@ -36,11 +33,7 @@ export default function Transactions() {
     Alert.alert('Delete transaction?', undefined, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
-        try { await api.deleteTransaction(t.id); } catch (e: any) { return; }
-        invalidateTransactionsCache();
-        invalidateWalletsCache();
-        await storage.removeItem('mf.home.cache.v1');
-        refresh();
+        removeTransaction(t.id);
       } },
     ]);
   };

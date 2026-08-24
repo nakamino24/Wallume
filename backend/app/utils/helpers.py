@@ -37,7 +37,13 @@ def strict_canonical_date(value: str | None) -> str | None:
     YYYY-MM-DD string or None. API boundaries use this so unrecognized inputs
     (e.g. "not-a-date") can be rejected instead of stored verbatim."""
     c = to_canonical_date(value)
-    return c if c and _CANONICAL_RE.match(c) else None
+    if not c or not _CANONICAL_RE.match(c):
+        return None
+    try:
+        datetime.strptime(c, "%Y-%m-%d")
+    except ValueError:
+        return None
+    return c
 
 
 def new_id(prefix: str = "id") -> str:

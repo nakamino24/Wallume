@@ -5,13 +5,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
-import { api } from '@/src/api/client';
 import { Button, Body, Label, Chip, Input } from '@/src/components/ui';
-import { useToast } from '@/src/components/Toast';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
-import { useWallets, invalidateWalletsCache, applyOptimisticWalletEffect } from '@/src/hooks/use-wallets';
-import { useTransactions, invalidateTransactionsCache } from '@/src/hooks/use-transactions';
-import { storage } from '@/src/utils/storage';
+import { useWallets } from '@/src/hooks/use-wallets';
+import { useTransactions } from '@/src/hooks/use-transactions';
 import { DateField } from '@/src/components/DateField';
 import { CategorySelector } from '@/src/components/CategorySelector';
 import { FormLayout } from '@/src/components/FormLayout';
@@ -22,7 +19,6 @@ export default function NewTransaction() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
-  const toast = useToast();
   const { getOptions } = useUserCategories();
   const params = useLocalSearchParams<{ type?: string }>();
   const [type, setType] = useState<'income' | 'expense' | 'transfer'>((params.type as any) || 'expense');
@@ -30,12 +26,12 @@ export default function NewTransaction() {
   const [category, setCategory] = useState('Food');
   const [note, setNote] = useState('');
   const { wallets, loading: walletsLoading, error: walletsError, refresh: refreshWallets } = useWallets();
-  const { addOptimistic } = useTransactions();
+  const { create } = useTransactions();
   const [walletId, setWalletId] = useState('');
   const [toWalletId, setToWalletId] = useState('');
   const [date, setDate] = useState(() => todayLocalISO());
-  const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  const [loading] = useState(false);
 
   // Auto-select first wallets when cache populates
   useEffect(() => {
@@ -60,33 +56,14 @@ export default function NewTransaction() {
       setErr(Object.values(errors)[0]);
       return;
     }
-    // Optimistic <1ms: mutate cache, toast, and navigate instantly — do not block on network.
     const optimisticTx = {
       wallet_id: walletId,
       to_wallet_id: type === 'transfer' ? toWalletId : undefined,
       type, amount: amt, category, note, date: date || todayLocalISO(),
       created_at: new Date().toISOString(),
     };
-    addOptimistic(optimisticTx);
-    applyOptimisticWalletEffect(walletId, toWalletId, type, amt);
-    await storage.removeItem('mf.home.cache.v1');
-    toast.show(`${type === 'income' ? 'Income' : type === 'expense' ? 'Expense' : 'Transfer'} added`, 'success');
+    create(optimisticTx);
     router.back();
-    // Background sync — if it fails, rollback and surface error.
-    try {
-      await api.createTransaction({
-        wallet_id: walletId,
-        to_wallet_id: type === 'transfer' ? toWalletId : undefined,
-        type, amount: amt, category, note, date: date || undefined,
-      });
-      invalidateWalletsCache();
-      invalidateTransactionsCache();
-    } catch (e: any) {
-      invalidateWalletsCache();
-      invalidateTransactionsCache();
-      await storage.removeItem('mf.home.cache.v1');
-      toast.show(e?.message || 'Failed to save transaction', 'error');
-    }
   };
 
   const cur = user?.currency || 'USD';

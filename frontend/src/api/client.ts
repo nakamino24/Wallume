@@ -4,6 +4,16 @@ const FALLBACK_BASE = 'https://victorious-enthusiasm-production.up.railway.app';
 const BASE = process.env.EXPO_PUBLIC_BACKEND_URL || FALLBACK_BASE;
 const TOKEN_KEY = 'mf.token';
 
+export type ReportSummary = {
+  from_date: string;
+  to_date: string;
+  transaction_count: number;
+  income_total: number;
+  expense_total: number;
+  net_total: number;
+  expense_by_category: { category: string; amount: number }[];
+};
+
 function normalizeToken(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
@@ -28,7 +38,7 @@ export async function setToken(t: string | null) {
   else await storage.secureRemove(TOKEN_KEY);
 }
 
-function generateMutationId(): string {
+export function generateMutationId(): string {
   try {
     // Use crypto.randomUUID if available (React Native 0.71+, modern browsers)
     if (typeof crypto !== 'undefined' && (crypto as any).randomUUID) return (crypto as any).randomUUID();
@@ -109,19 +119,26 @@ export const api = {
     const qs = params.toString();
     return req(qs ? `/transactions?${qs}` : '/transactions');
   },
-  createTransaction: (body: any) => {
-    const mid = generateMutationId();
+  createTransaction: (body: any, mutationId = generateMutationId()) => {
+    const mid = mutationId;
     const b = { ...body, client_mutation_id: body.client_mutation_id || mid };
     return req('/transactions', { method: 'POST', body: JSON.stringify(b), headers: { 'X-Client-Mutation-Id': mid } });
   },
-  updateTransaction: (id: string, body: any) => {
-    const mid = generateMutationId();
+  updateTransaction: (id: string, body: any, mutationId = generateMutationId()) => {
+    const mid = mutationId;
     const b = { ...body, client_mutation_id: body.client_mutation_id || mid };
     return req(`/transactions/${id}`, { method: 'PATCH', body: JSON.stringify(b), headers: { 'X-Client-Mutation-Id': mid } });
   },
-  deleteTransaction: (id: string) => {
-    const mid = generateMutationId();
+  deleteTransaction: (id: string, mutationId = generateMutationId()) => {
+    const mid = mutationId;
     return req(`/transactions/${id}`, { method: 'DELETE', headers: { 'X-Client-Mutation-Id': mid } });
+  },
+
+  reports: {
+    getSummary: ({ from_date, to_date }: { from_date: string; to_date: string }): Promise<ReportSummary> => {
+      const params = new URLSearchParams({ from_date, to_date });
+      return req(`/reports/summary?${params.toString()}`) as Promise<ReportSummary>;
+    },
   },
 
   budgets: () => req('/budgets'),
