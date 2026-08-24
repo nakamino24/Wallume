@@ -43,3 +43,7 @@ async def create_indexes() -> None:
     await db.transactions.create_index([("user_id", 1), ("id", 1)])
     await db.transactions.create_index([("user_id", 1), ("wallet_id", 1)])
     await db.transactions.create_index([("user_id", 1), ("to_wallet_id", 1)])
+    # Idempotency: clientMutationId must be unique per user to prevent duplicate
+    # financial effects from retries, double taps, or network replays.
+    await db.transactions.create_index([("user_id", 1), ("client_mutation_id", 1)], unique=True, sparse=True)
+    await db.wallets.create_index([("user_id", 1), ("client_mutation_id", 1)], unique=True, sparse=True)

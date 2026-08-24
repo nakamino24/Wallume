@@ -52,6 +52,7 @@ class WalletCreate(BaseModel):
     currency: Optional[str] = None
     color: Optional[str] = None
     icon: Optional[str] = None
+    client_mutation_id: Optional[str] = None
 
 # --- Transaction ---
 class TransactionCreate(BaseModel):
@@ -62,6 +63,7 @@ class TransactionCreate(BaseModel):
     category: str
     note: Optional[str] = ""
     date: Optional[str] = None
+    client_mutation_id: Optional[str] = None
 
     @field_validator("amount")
     @classmethod

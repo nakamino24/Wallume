@@ -68,8 +68,14 @@ async def list_transactions(
 
 
 @router.post("")
-async def create_transaction(payload: TransactionCreate, authorization: Optional[str] = Header(None)):
+async def create_transaction(payload: TransactionCreate, authorization: Optional[str] = Header(None), x_client_mutation_id: Optional[str] = Header(None, alias="X-Client-Mutation-Id")):
     u = await auth_service.get_current_user(authorization)
+    client_mid = x_client_mutation_id or payload.client_mutation_id
+    if client_mid:
+        db_raw = await get_database()
+        existing_raw = await db_raw.transactions.find_one({"user_id": u["user_id"], "client_mutation_id": client_mid}, {"_id": 0})
+        if existing_raw:
+            return {"success": True, "data": {"transaction": {k: v for k, v in existing_raw.items() if k != "_id"}}}
     _require_positive_amount(payload.amount)
     # Canonical-or-today. The fallback MUST itself be canonical — an empty
     # string date used to fall through to now_utc().isoformat() (full ISO) and
@@ -77,6 +83,9 @@ async def create_transaction(payload: TransactionCreate, authorization: Optional
     tx_date = strict_canonical_date(payload.date) or now_utc().strftime("%Y-%m-%d")
     doc = {"id": new_id("tx"), "user_id": u["user_id"], **payload.model_dump(),
            "date": tx_date, "created_at": now_utc()}
+    # Ensure client_mutation_id from header is stored if provided there
+    if client_mid and not doc.get("client_mutation_id"):
+        doc["client_mutation_id"] = client_mid
 
     w = await wallets.find_one({"id": payload.wallet_id, "user_id": u["user_id"]})
     if not w:
@@ -153,7 +162,7 @@ async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Op
 
 
 @router.delete("/{tx_id}")
-async def delete_transaction(tx_id: str, authorization: Optional[str] = Header(None)):
+async def delete_transaction(tx_id: str, authorization: Optional[str] = Header(None), x_client_mutation_id: Optional[str] = Header(None, alias="X-Client-Mutation-Id")):
     u = await auth_service.get_current_user(authorization)
 
     db = await get_database()
@@ -161,6 +170,13 @@ async def delete_transaction(tx_id: str, authorization: Optional[str] = Header(N
         async with session.start_transaction():
             tx = await txs.find_one({"id": tx_id, "user_id": u["user_id"]}, session)
             if not tx:
+                # Idempotency: if already soft-deleted and retry has same clientMutationId, treat as success.
+                # Without clientMutationId, preserve 404 for genuine not-found.
+                if x_client_mutation_id:
+                    # Check raw collection for soft-deleted record
+                    raw = await db.transactions.find_one({"id": tx_id, "user_id": u["user_id"]}, {"_id": 0, "deleted_at": 1, "client_mutation_id": 1}, session=session)
+                    if raw and raw.get("deleted_at"):
+                        return {"success": True, "data": None}
                 raise HTTPException(404, "Not found")
 
             # Atomic + idempotent: both sides reverted together, then the record

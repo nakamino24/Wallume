@@ -32,9 +32,18 @@ async def list_wallets(authorization: Optional[str] = Header(None)):
 
 
 @router.post("")
-async def create_wallet(payload: WalletCreate, authorization: Optional[str] = Header(None)):
+async def create_wallet(payload: WalletCreate, authorization: Optional[str] = Header(None), x_client_mutation_id: Optional[str] = Header(None, alias="X-Client-Mutation-Id")):
     u = await auth_service.get_current_user(authorization)
+    client_mid = x_client_mutation_id or payload.client_mutation_id
+    if client_mid:
+        from app.database.mongo import get_database
+        db = await get_database()
+        existing = await db.wallets.find_one({"user_id": u["user_id"], "client_mutation_id": client_mid}, {"_id": 0})
+        if existing:
+            return {"success": True, "data": {"wallet": existing}}
     doc = {"id": new_id("wal"), "user_id": u["user_id"], **payload.model_dump(), "created_at": now_utc()}
+    if client_mid and not doc.get("client_mutation_id"):
+        doc["client_mutation_id"] = client_mid
     await wallets.insert_one(doc)
     return {"success": True, "data": {"wallet": {k: v for k, v in doc.items() if k != "_id"}}}
 

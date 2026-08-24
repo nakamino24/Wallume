@@ -28,6 +28,15 @@ export async function setToken(t: string | null) {
   else await storage.secureRemove(TOKEN_KEY);
 }
 
+function generateMutationId(): string {
+  try {
+    // Use crypto.randomUUID if available (React Native 0.71+, modern browsers)
+    if (typeof crypto !== 'undefined' && (crypto as any).randomUUID) return (crypto as any).randomUUID();
+  } catch {}
+  // Fallback: timestamp + random
+  return `cm_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 async function req(path: string, opts: RequestInit = {}) {
   const token = await getToken();
   const headers: Record<string, string> = {
@@ -75,9 +84,20 @@ export const api = {
 
   // core
   wallets: () => req('/wallets'),
-  createWallet: (body: any) => req('/wallets', { method: 'POST', body: JSON.stringify(body) }),
-  updateWallet: (id: string, body: any) => req(`/wallets/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-  deleteWallet: (id: string) => req(`/wallets/${id}`, { method: 'DELETE' }),
+  createWallet: (body: any) => {
+    const mid = generateMutationId();
+    const b = { ...body, client_mutation_id: body.client_mutation_id || mid };
+    return req('/wallets', { method: 'POST', body: JSON.stringify(b), headers: { 'X-Client-Mutation-Id': mid } });
+  },
+  updateWallet: (id: string, body: any) => {
+    const mid = generateMutationId();
+    const b = { ...body, client_mutation_id: body.client_mutation_id || mid };
+    return req(`/wallets/${id}`, { method: 'PATCH', body: JSON.stringify(b), headers: { 'X-Client-Mutation-Id': mid } });
+  },
+  deleteWallet: (id: string) => {
+    const mid = generateMutationId();
+    return req(`/wallets/${id}`, { method: 'DELETE', headers: { 'X-Client-Mutation-Id': mid } });
+  },
 
   transactions: (type?: string, limit?: number, wallet_id?: string, from_date?: string, to_date?: string) => {
     const params = new URLSearchParams();
@@ -89,9 +109,20 @@ export const api = {
     const qs = params.toString();
     return req(qs ? `/transactions?${qs}` : '/transactions');
   },
-  createTransaction: (body: any) => req('/transactions', { method: 'POST', body: JSON.stringify(body) }),
-  updateTransaction: (id: string, body: any) => req(`/transactions/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-  deleteTransaction: (id: string) => req(`/transactions/${id}`, { method: 'DELETE' }),
+  createTransaction: (body: any) => {
+    const mid = generateMutationId();
+    const b = { ...body, client_mutation_id: body.client_mutation_id || mid };
+    return req('/transactions', { method: 'POST', body: JSON.stringify(b), headers: { 'X-Client-Mutation-Id': mid } });
+  },
+  updateTransaction: (id: string, body: any) => {
+    const mid = generateMutationId();
+    const b = { ...body, client_mutation_id: body.client_mutation_id || mid };
+    return req(`/transactions/${id}`, { method: 'PATCH', body: JSON.stringify(b), headers: { 'X-Client-Mutation-Id': mid } });
+  },
+  deleteTransaction: (id: string) => {
+    const mid = generateMutationId();
+    return req(`/transactions/${id}`, { method: 'DELETE', headers: { 'X-Client-Mutation-Id': mid } });
+  },
 
   budgets: () => req('/budgets'),
   createBudget: (body: any) => req('/budgets', { method: 'POST', body: JSON.stringify(body) }),
