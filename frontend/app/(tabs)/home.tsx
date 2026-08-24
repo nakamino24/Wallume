@@ -14,6 +14,8 @@ import { Screen, Card, H2, Body, Label, DisplayNumber, ProgressRing, Chip, Empty
 import { Skeleton, SkeletonCard, SkeletonRow } from '@/src/components/Skeleton';
 import { ErrorBanner } from '@/src/components/ErrorBanner';
 import { refreshNetWorthWidget } from '@/src/widgets/refresh-widget';
+import { invalidateWalletsCache } from '@/src/hooks/use-wallets';
+import { invalidateTransactionsCache } from '@/src/hooks/use-transactions';
 
 const CATEGORY_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
@@ -111,6 +113,9 @@ export default function Home() {
           try {
             await api.deleteTransaction(t.id);
             setTxs((prev) => prev.filter((x: any) => x.id !== t.id));
+            invalidateWalletsCache();
+            invalidateTransactionsCache();
+            await storage.removeItem(HOME_CACHE_KEY);
           } catch {}
         },
       },

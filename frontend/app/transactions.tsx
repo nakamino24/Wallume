@@ -9,7 +9,9 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font, formatMoney } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H2, Body, Chip, EmptyState } from '@/src/components/ui';
-import { useTransactions } from '@/src/hooks/use-transactions';
+import { useTransactions, invalidateTransactionsCache } from '@/src/hooks/use-transactions';
+import { invalidateWalletsCache } from '@/src/hooks/use-wallets';
+import { storage } from '@/src/utils/storage';
 
 const CAT_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
@@ -33,7 +35,13 @@ export default function Transactions() {
   const remove = (t: any) => {
     Alert.alert('Delete transaction?', undefined, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await api.deleteTransaction(t.id); refresh(); } },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        try { await api.deleteTransaction(t.id); } catch (e: any) { return; }
+        invalidateTransactionsCache();
+        invalidateWalletsCache();
+        await storage.removeItem('mf.home.cache.v1');
+        refresh();
+      } },
     ]);
   };
 
