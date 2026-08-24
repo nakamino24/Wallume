@@ -111,7 +111,9 @@ export default function Home() {
           try {
             await api.deleteTransaction(t.id);
             setTxs((prev) => prev.filter((x: any) => x.id !== t.id));
-          } catch {}
+          } catch {
+            Alert.alert('Delete failed', 'Could not delete this transaction. Please try again.');
+          }
         },
       },
     ]);

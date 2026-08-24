@@ -36,7 +36,14 @@ export default function Transactions() {
   const remove = (t: any) => {
     Alert.alert('Delete transaction?', undefined, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await api.deleteTransaction(t.id); load(); } },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try { await api.deleteTransaction(t.id); load(); }
+          catch { Alert.alert('Delete failed', 'Could not delete this transaction. Please try again.'); }
+        },
+      },
     ]);
   };
 
