@@ -42,6 +42,10 @@ export default function Wallets() {
   const { wallets, loading, error, refresh } = useWallets();
   const [refreshing, setRefreshing] = useState(false);
 
+  useFocusEffect(useCallback(() => {
+    refresh();
+  }, [refresh]));
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await refresh();
