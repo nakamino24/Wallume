@@ -2,10 +2,12 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [1.0.6c] — 2026-08-24 (HOTFIX — preview crash)
+## [1.0.6c] — 2026-08-24 (HOTFIX — preview crash, wallet selector & balance staleness)
 
 ### Fixed
 - **Preview crash `ReferenceError: Property 'useCallback' doesn't exist` in `ThemeProvider`** — `useCallback` was used but not imported; added missing import. Also fixed `app/transaction/new.tsx` missing `radius` import and stray `setFieldErrors` calls that broke `tsc` and would crash at runtime.
+- **Wallet selector empty in New/Edit Transaction form (critical)** — `api.wallets()` in `transaction/new.tsx` and `transaction/[id].tsx` had no `try/catch` or loading/error state; any fetch failure (network, auth, FX conversion timeout) left the chip list empty forever with no feedback and no retry. Root cause: silent promise rejection, no retry, and no UI for the empty/error case. Fix: added `walletsLoading`/`walletsError` states, `try/catch` with `console.error` logging, inline loading text, error message with **Retry** button, and empty-state handling. Verified for Income, Expense, and Transfer tabs and for tab switches within the same form session. The underlying `GET /api/wallets` is the same endpoint the Wallets tab uses (which worked), so the divergence was purely the missing error handling, not a different code path.
+- **Wallet balance stale for tens of seconds after transfer (and floating spinner)** — `app/(tabs)/wallets.tsx` showed stale wallets while refetching, with no anchored loading indicator; the previous `load()` on `useFocusEffect` used `RefreshControl` only for manual pull-to-refresh, so the automatic refetch after `router.back()` from a successful transfer appeared as a floating, unanchored spinner and the stale balance looked like fresh data. Root cause: no loading/error state for the focus-triggered refetch, silent `catch {}` swallowing errors, and no distinction between initial load vs. refetch. Fix: added `loading`/`error` states, focus-triggered fetch now sets `loading` on initial mount and `refreshing` on subsequent focuses (so the `RefreshControl` spinner is properly anchored to the `ScrollView`), shows inline error with **Retry**, and logs failures. Balances now reflect the post-transaction state on the next focus without an extended plausible-but-stale window.
 
 ## [1.0.5c] — 2026-08-24 (HOTFIX — Reports date range filtering)
 

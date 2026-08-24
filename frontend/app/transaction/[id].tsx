@@ -43,10 +43,22 @@ export default function EditTransaction() {
   const [date, setDate] = useState(params.date || todayLocalISO());
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  const [walletsLoading, setWalletsLoading] = useState(true);
+  const [walletsError, setWalletsError] = useState('');
 
   const load = useCallback(async () => {
-    const r = await api.wallets();
-    setWallets(r.wallets || []);
+    setWalletsLoading(true);
+    setWalletsError('');
+    try {
+      const r = await api.wallets();
+      setWallets(r.wallets || []);
+    } catch (e: any) {
+      console.error('[EditTransaction] failed to load wallets:', e?.message || e);
+      setWalletsError(e?.message || 'Failed to load wallets');
+      setWallets([]);
+    } finally {
+      setWalletsLoading(false);
+    }
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -122,20 +134,50 @@ export default function EditTransaction() {
 
             {/* Wallet */}
             <Label style={{ marginTop: spacing.md }}>{type === 'transfer' ? 'From' : 'Wallet'}</Label>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-              {wallets.map((w) => (
-                <Chip key={w.id} testID={`edit-wallet-from-${w.id}`} label={w.name} active={walletId === w.id} onPress={() => setWalletId(w.id)} />
-              ))}
-            </ScrollView>
+            {walletsLoading ? (
+              <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
+                <Body muted>Loading wallets…</Body>
+              </View>
+            ) : walletsError ? (
+              <View style={{ paddingVertical: spacing.md, gap: spacing.sm }}>
+                <Body style={{ color: colors.error }}>{walletsError}</Body>
+                <Button label="Retry" onPress={load} />
+              </View>
+            ) : wallets.length === 0 ? (
+              <View style={{ paddingVertical: spacing.md }}>
+                <Body muted>No wallets found.</Body>
+              </View>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+                {wallets.map((w) => (
+                  <Chip key={w.id} testID={`edit-wallet-from-${w.id}`} label={w.name} active={walletId === w.id} onPress={() => setWalletId(w.id)} />
+                ))}
+              </ScrollView>
+            )}
 
             {type === 'transfer' && (
               <>
                 <Label style={{ marginTop: spacing.md }}>To</Label>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-                  {wallets.map((w) => (
-                    <Chip key={w.id} testID={`edit-wallet-to-${w.id}`} label={w.name} active={toWalletId === w.id} onPress={() => setToWalletId(w.id)} />
-                  ))}
-                </ScrollView>
+                {walletsLoading ? (
+                  <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
+                    <Body muted>Loading wallets…</Body>
+                  </View>
+                ) : walletsError ? (
+                  <View style={{ paddingVertical: spacing.md, gap: spacing.sm }}>
+                    <Body style={{ color: colors.error }}>{walletsError}</Body>
+                    <Button label="Retry" onPress={load} />
+                  </View>
+                ) : wallets.length === 0 ? (
+                  <View style={{ paddingVertical: spacing.md }}>
+                    <Body muted>No wallets found.</Body>
+                  </View>
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+                    {wallets.map((w) => (
+                      <Chip key={w.id} testID={`edit-wallet-to-${w.id}`} label={w.name} active={toWalletId === w.id} onPress={() => setToWalletId(w.id)} />
+                    ))}
+                  </ScrollView>
+                )}
               </>
             )}
 

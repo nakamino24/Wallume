@@ -40,15 +40,30 @@ export default function Wallets() {
   const router = useRouter();
   const [wallets, setWallets] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     try {
+      setError('');
       const r = await api.wallets();
       setWallets(r.wallets || []);
-    } catch {}
+    } catch (e: any) {
+      console.error('[Wallets] failed to load:', e?.message || e);
+      setError(e?.message || 'Failed to load wallets');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
-  useFocusEffect(useCallback(() => { load(); }, [load]));
-  const onRefresh = useCallback(async () => { setRefreshing(true); await load(); setRefreshing(false); }, [load]);
+  useFocusEffect(useCallback(() => {
+    // Only show full loading on initial load; on refocus keep stale wallets visible
+    // with RefreshControl spinner to avoid flashing empty state.
+    if (wallets.length === 0) setLoading(true);
+    else setRefreshing(true);
+    load();
+  }, [load, wallets.length]));
+  const onRefresh = useCallback(async () => { setRefreshing(true); await load(); }, [load]);
 
   const cur = user?.currency || 'USD';
   const total = wallets.reduce((s, w) => s + (Number(w.converted_balance ?? w.balance) || 0), 0);
@@ -107,7 +122,19 @@ export default function Wallets() {
             </View>
           </View>
 
-          {wallets.length === 0 ? (
+          {loading ? (
+            <View style={{ paddingHorizontal: spacing.xl, paddingVertical: spacing.xl, alignItems: 'center' }}>
+              <Body muted>Loading wallets…</Body>
+            </View>
+          ) : error ? (
+            <View style={{ paddingHorizontal: spacing.xl, gap: spacing.md }}>
+              <Body style={{ color: colors.error, textAlign: 'center' }}>{error}</Body>
+              <TouchableOpacity onPress={() => { setLoading(true); load(); }}
+                style={{ alignSelf: 'center', paddingVertical: 10, paddingHorizontal: spacing.lg, backgroundColor: colors.brandPrimary, borderRadius: radius.md }}>
+                <Body style={{ color: colors.onBrand, fontFamily: font.textBold }}>Retry</Body>
+              </TouchableOpacity>
+            </View>
+          ) : wallets.length === 0 ? (
             <EmptyState
               testID="wallets-empty"
               title="No wallets yet"
