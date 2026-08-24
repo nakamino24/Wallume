@@ -81,4 +81,5 @@ export function invalidateWalletsCache() {
   cache = null;
   cacheError = null;
   lastFetch = 0;
+  inFlight = null;
 }

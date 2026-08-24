@@ -365,11 +365,18 @@ async def mark_recurring_paid(rec_id: str, authorization: Optional[str] = Header
         "date": to_canonical_date(now_utc().isoformat()),
         "created_at": now_utc(),
     }
-    await tx_repo.insert_one(tx_doc)
-    delta = r["amount"] if r["type"] == "income" else -r["amount"]
-    await wallets_repo.adjust_balance(r["wallet_id"], u["user_id"], delta)
     next_date = advance_date(r["next_date"], r["frequency"])
-    await recurring_repo.update_one({"id": rec_id, "user_id": u["user_id"]}, {"$set": {"next_date": next_date}})
+    delta = r["amount"] if r["type"] == "income" else -r["amount"]
+    # Atomic: transaction + balance + next_date update together, or nothing.
+    # Previously 3 separate writes could leave a ghost tx with no balance change
+    # or a double-charge on retry if the last update failed.
+    from app.database.mongo import get_database
+    db = await get_database()
+    async with await db.client.start_session() as session:
+        async with session.start_transaction():
+            await tx_repo.insert_one(tx_doc, session)
+            await wallets_repo.adjust_balance(r["wallet_id"], u["user_id"], delta, session)
+            await recurring_repo.update_one({"id": rec_id, "user_id": u["user_id"]}, {"$set": {"next_date": next_date}}, session=session)
     updated = await recurring_repo.find_one({"id": rec_id, "user_id": u["user_id"]})
     return {"success": True, "data": {"recurring": updated, "transaction": tx_doc}}
 

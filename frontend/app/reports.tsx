@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle as SvgCircle, G } from 'react-native-svg';
 
@@ -55,8 +55,6 @@ const [fromDate, setFromDate] = useState(monthStart());
     }
   }, [fromDate, toDate]);
 
-  // useFocusEffect for when screen regains focus; useEffect for when dates change while focused.
-  useFocusEffect(useCallback(() => { load(); }, [load]));
   useEffect(() => { load(); }, [load]);
 
   return (

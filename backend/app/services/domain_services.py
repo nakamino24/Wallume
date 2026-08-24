@@ -84,21 +84,15 @@ class AnalyticsService:
             self.assets.find_by_user(uid),
         )
 
-        wallet_total = 0.0
-        for w in wallets:
-            wallet_total += await FxService.convert(
-                float(w.get("balance", 0.0)), w.get("currency", home_ccy), home_ccy
-            )
-        debt_total = 0.0
-        for d in debts_list:
-            debt_total += await FxService.convert(float(d.get("remaining", 0.0)), d.get("currency", home_ccy), home_ccy)
-        inv_total = 0.0
-        for i in investments:
-            val = float(i.get("quantity", 0.0)) * float(i.get("current_price", 0.0))
-            inv_total += await FxService.convert(val, i.get("currency", home_ccy), home_ccy)
-        asset_total = 0.0
-        for a in assets_list:
-            asset_total += await FxService.convert(float(a.get("value", 0.0)), a.get("currency", home_ccy), home_ccy)
+        # Parallelize FX conversions — sequential 20×8s on cold cache is slow.
+        wallet_vals = await asyncio.gather(*[FxService.convert(float(w.get("balance", 0.0)), w.get("currency", home_ccy), home_ccy) for w in wallets])
+        debt_vals = await asyncio.gather(*[FxService.convert(float(d.get("remaining", 0.0)), d.get("currency", home_ccy), home_ccy) for d in debts_list])
+        inv_vals = await asyncio.gather(*[FxService.convert(float(i.get("quantity", 0.0)) * float(i.get("current_price", 0.0)), i.get("currency", home_ccy), home_ccy) for i in investments])
+        asset_vals = await asyncio.gather(*[FxService.convert(float(a.get("value", 0.0)), a.get("currency", home_ccy), home_ccy) for a in assets_list])
+        wallet_total = sum(wallet_vals)
+        debt_total = sum(debt_vals)
+        inv_total = sum(inv_vals)
+        asset_total = sum(asset_vals)
         net_worth = wallet_total + inv_total + asset_total - debt_total
 
         month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)

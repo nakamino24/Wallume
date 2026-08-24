@@ -53,5 +53,10 @@ async def delete_wallet(wallet_id: str, authorization: Optional[str] = Header(No
     u = await auth_service.get_current_user(authorization)
     await wallets.delete_one({"id": wallet_id, "user_id": u["user_id"]})
     from app.repositories.repos import TransactionRepository
-    await TransactionRepository().delete_many({"user_id": u["user_id"], "wallet_id": wallet_id})
+    tx_repo = TransactionRepository()
+    # Soft-delete all transactions where this wallet was source OR destination.
+    # Previously only wallet_id was covered, leaving transfer counter-legs
+    # (to_wallet_id) as orphaned records and destination balances inflated.
+    await tx_repo.delete_many({"user_id": u["user_id"], "wallet_id": wallet_id})
+    await tx_repo.delete_many({"user_id": u["user_id"], "to_wallet_id": wallet_id})
     return {"success": True, "data": None}
