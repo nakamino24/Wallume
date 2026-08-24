@@ -9,6 +9,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font, formatMoney } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H2, Body, Chip, EmptyState } from '@/src/components/ui';
+import { useTransactions } from '@/src/hooks/use-transactions';
 
 const CAT_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
@@ -21,14 +22,10 @@ export default function Transactions() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
-  const [txs, setTxs] = useState<any[]>([]);
+  const { transactions: txs, loading, error, refresh } = useTransactions();
   const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
 
-  const load = useCallback(async () => {
-    const r = await api.transactions();
-    setTxs(r.transactions || []);
-  }, []);
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   const shown = filter === 'all' ? txs : txs.filter((t) => t.type === filter);
   const cur = user?.currency || 'USD';
@@ -36,7 +33,7 @@ export default function Transactions() {
   const remove = (t: any) => {
     Alert.alert('Delete transaction?', undefined, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await api.deleteTransaction(t.id); load(); } },
+      { text: 'Delete', style: 'destructive', onPress: async () => { await api.deleteTransaction(t.id); refresh(); } },
     ]);
   };
 
@@ -60,7 +57,18 @@ export default function Transactions() {
         </ScrollView>
 
         <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 60, gap: spacing.sm }}>
-          {shown.length === 0 ? (
+          {loading ? (
+            <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
+              <Body muted>Loading transactions…</Body>
+            </View>
+          ) : error ? (
+            <View style={{ gap: spacing.md, alignItems: 'center', paddingVertical: spacing.xl }}>
+              <Body style={{ color: colors.error, textAlign: 'center' }}>{error}</Body>
+              <TouchableOpacity onPress={refresh} style={{ paddingVertical: 10, paddingHorizontal: spacing.lg, backgroundColor: colors.brandPrimary, borderRadius: 8 }}>
+                <Body style={{ color: colors.onBrand, fontFamily: font.textBold }}>Retry</Body>
+              </TouchableOpacity>
+            </View>
+          ) : shown.length === 0 ? (
             <EmptyState testID="tx-empty" title="No transactions" subtitle="Add one to get started." actionLabel="Add transaction" onAction={() => router.push('/transaction/new')} />
           ) : shown.map((t) => {
             const positive = t.type === 'income';

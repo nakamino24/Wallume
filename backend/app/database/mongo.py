@@ -36,3 +36,10 @@ async def create_indexes() -> None:
     for coll in ("wallets", "transactions", "budgets", "goals", "plans",
                  "debts", "investments", "assets", "chat_messages", "recurring", "categories"):
         await db[coll].create_index("user_id")
+    # Compound indexes for hot paths: wallet lookup by id+user, transaction
+    # filtering by user+date (Reports, Home recent) and direct id lookup.
+    await db.wallets.create_index([("user_id", 1), ("id", 1)])
+    await db.transactions.create_index([("user_id", 1), ("date", -1)])
+    await db.transactions.create_index([("user_id", 1), ("id", 1)])
+    await db.transactions.create_index([("user_id", 1), ("wallet_id", 1)])
+    await db.transactions.create_index([("user_id", 1), ("to_wallet_id", 1)])

@@ -10,6 +10,8 @@ import { Button, Body, Label, Chip, Input } from '@/src/components/ui';
 import { useToast } from '@/src/components/Toast';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
 import { useWallets, invalidateWalletsCache } from '@/src/hooks/use-wallets';
+import { invalidateTransactionsCache } from '@/src/hooks/use-transactions';
+import { storage } from '@/src/utils/storage';
 import { DateField } from '@/src/components/DateField';
 import { CategorySelector } from '@/src/components/CategorySelector';
 import { FormLayout } from '@/src/components/FormLayout';
@@ -65,6 +67,8 @@ export default function NewTransaction() {
         type, amount: amt, category, note, date: date || undefined,
       });
       invalidateWalletsCache();
+      invalidateTransactionsCache();
+      await storage.removeItem('mf.home.cache.v1');
       toast.show(`${type === 'income' ? 'Income' : type === 'expense' ? 'Expense' : 'Transfer'} added`, 'success');
       router.back();
     } catch (e: any) { setErr(e.message); }
