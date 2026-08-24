@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Optional
 from fastapi import APIRouter, Header, HTTPException
 from app.schemas.models import WalletCreate
@@ -18,10 +19,15 @@ async def list_wallets(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     items = await wallets.find_by_user(u["user_id"])
     home_ccy = u.get("currency", "USD")
-    for w in items:
+    # Parallelize FX conversions — all wallets share the same home_ccy, so
+    # the first call warms the 6h cache and the rest are dict lookups.
+    # Sequential 14× await would hold the response up to 8s on cold cache.
+    async def _convert_one(w: dict) -> None:
         w_ccy = w.get("currency", home_ccy)
         w["converted_balance"] = round(await FxService.convert(float(w.get("balance", 0.0)), w_ccy, home_ccy), 2)
         w["home_currency"] = home_ccy
+    if items:
+        await asyncio.gather(*(_convert_one(w) for w in items))
     return {"success": True, "data": {"wallets": items}}
 
 
