@@ -68,12 +68,20 @@ class TransactionRepository(BaseRepository):
         super().__init__("transactions")
 
     async def find_by_user(self, user_id: str, type_filter: Optional[str] = None,
-                           wallet_id: Optional[str] = None, limit: int = 100) -> list[dict]:
+                           wallet_id: Optional[str] = None, limit: int = 100,
+                           from_date: Optional[str] = None, to_date: Optional[str] = None) -> list[dict]:
         q = self._active_filter({"user_id": user_id})
         if type_filter in {"income", "expense", "transfer"}:
             q["type"] = type_filter
         if wallet_id:
             q["$or"] = [{"wallet_id": wallet_id}, {"to_wallet_id": wallet_id}]
+        if from_date or to_date:
+            date_q: dict[str, str] = {}
+            if from_date:
+                date_q["$gte"] = from_date
+            if to_date:
+                date_q["$lte"] = to_date
+            q["date"] = date_q
         cursor = (await self._collection()).find(q, {"_id": 0}).sort([
             ("date", -1), ("created_at", -1), ("id", -1)
         ]).limit(limit)

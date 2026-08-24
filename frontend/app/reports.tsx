@@ -30,21 +30,16 @@ export default function Reports() {
   const router = useRouter();
   const cur = user?.currency || 'USD';
 
-  const [fromDate, setFromDate] = useState(monthStart());
+const [fromDate, setFromDate] = useState(monthStart());
   const [toDate, setToDate] = useState(todayISO());
   const [txs, setTxs] = useState<any[]>([]);
 
-  const filtered = txs.filter((t) => {
-    const d = (t.date || '').split('T')[0];
-    return d >= fromDate && d <= toDate;
-  });
-
-  const income = filtered.filter((t) => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0);
-  const expense = filtered.filter((t) => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0);
   const netFlow = income - expense;
 
   const catTotals: Record<string, number> = {};
-  filtered.filter((t) => t.type === 'expense').forEach((t) => {
+  txs.filter((t) => t.type === 'expense').forEach((t) => {
     catTotals[t.category] = (catTotals[t.category] || 0) + (Number(t.amount) || 0);
   });
   const categoryBreakdown = Object.entries(catTotals)
@@ -53,11 +48,10 @@ export default function Reports() {
 
   const load = useCallback(async () => {
     try {
-      // Load more transactions to cover date range
-      const r = await api.transactions(undefined, 500);
+      const r = await api.transactions(undefined, 500, undefined, fromDate, toDate);
       setTxs(r.transactions || []);
     } catch {}
-  }, []);
+  }, [fromDate, toDate]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -95,7 +89,7 @@ export default function Reports() {
             <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.xl }}>
               <MiniStat label="Income" value={formatMoney(income, cur)} color={colors.success} />
               <MiniStat label="Expense" value={formatMoney(expense, cur)} color={colors.error} />
-              <MiniStat label="Transactions" value={String(filtered.length)} />
+              <MiniStat label="Transactions" value={String(txs.length)} />
             </View>
           </Card>
 

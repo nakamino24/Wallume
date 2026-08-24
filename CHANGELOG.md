@@ -2,6 +2,14 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.5c] — 2026-08-24 (HOTFIX — Reports date range filtering)
+
+### Fixed
+- **Reports showing wrong period (pie chart/data only from start of month to end date)** — `GET /api/transactions` accepted no date parameters, so `Reports` loaded the 500 most-recent transactions and filtered client-side. Any custom range that went beyond those 500 was silently incomplete. The API now accepts `from_date`/`to_date` (`$gte`/`$lte` on `date`) and `Reports` passes the selected range server-side, so the chart and totals reflect the exact period chosen.
+
+### Changed
+- Frontend `app.json` version bumped `1.0.6a → 1.0.6b`; backend version `1.0.5b → 1.0.5c`.
+
 ## [1.0.5b] — 2026-08-24 (HOTFIX — transaction writes 500 in production)
 
 ### Fixed

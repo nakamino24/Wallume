@@ -79,11 +79,13 @@ export const api = {
   updateWallet: (id: string, body: any) => req(`/wallets/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteWallet: (id: string) => req(`/wallets/${id}`, { method: 'DELETE' }),
 
-  transactions: (type?: string, limit?: number, wallet_id?: string) => {
+  transactions: (type?: string, limit?: number, wallet_id?: string, from_date?: string, to_date?: string) => {
     const params = new URLSearchParams();
     if (type) params.append('type', type);
     if (limit) params.append('limit', String(limit));
     if (wallet_id) params.append('wallet_id', wallet_id);
+    if (from_date) params.append('from_date', from_date);
+    if (to_date) params.append('to_date', to_date);
     const qs = params.toString();
     return req(qs ? `/transactions?${qs}` : '/transactions');
   },
