@@ -80,7 +80,18 @@ class TransactionRepository(BaseRepository):
             if from_date:
                 date_q["$gte"] = from_date
             if to_date:
-                date_q["$lte"] = to_date
+                # Exclusive upper bound: date < start_of_day_after_to_date
+                # e.g., to_date 2026-08-24 → date < "2026-08-25"
+                # This correctly includes all of Aug 24 regardless of whether
+                # stored date is "2026-08-24" or "2026-08-24T14:00:00Z",
+                # and avoids 23:59:59 edge cases. Stored dates are canonical
+                # YYYY-MM-DD, so string comparison with next_day is correct.
+                try:
+                    from datetime import datetime, timedelta
+                    next_day = (datetime.fromisoformat(to_date) + timedelta(days=1)).strftime("%Y-%m-%d")
+                    date_q["$lt"] = next_day
+                except ValueError:
+                    date_q["$lte"] = to_date
             q["date"] = date_q
         cursor = (await self._collection()).find(q, {"_id": 0}).sort([
             ("date", -1), ("created_at", -1), ("id", -1)
