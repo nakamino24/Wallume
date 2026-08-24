@@ -15,23 +15,17 @@ import { todayLocalISO } from '@/src/utils/dates';
 
 const CAT_COLORS = ['#3FA796', '#F4A261', '#D32F2F', '#2E7D32', '#16213E', '#ED6C02', '#6B7280', '#222222'];
 
-function todayISO() {
-  return todayLocalISO();
-}
-
-function monthStart() {
-  const d = new Date(); d.setDate(1);
-  return todayLocalISO(d);
-}
-
 export default function Reports() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
   const cur = user?.currency || 'USD';
 
-const [fromDate, setFromDate] = useState(monthStart());
-  const [toDate, setToDate] = useState(todayISO());
+  const [fromDate, setFromDate] = useState(() => {
+    const d = new Date(); d.setDate(1);
+    return todayLocalISO(d);
+  });
+  const [toDate, setToDate] = useState(() => todayLocalISO());
   const [txs, setTxs] = useState<any[]>([]);
 
   const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0);

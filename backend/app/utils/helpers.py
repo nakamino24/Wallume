@@ -50,6 +50,7 @@ def clean_user(user: dict[str, Any]) -> dict[str, Any]:
 
 
 def advance_date(iso_date: str, frequency: str) -> str:
+    import calendar
     from datetime import timedelta
     d = datetime.fromisoformat(iso_date.replace("Z", "+00:00")) if "T" in iso_date else datetime.fromisoformat(iso_date)
     if frequency == "weekly":
@@ -63,6 +64,7 @@ def advance_date(iso_date: str, frequency: str) -> str:
         month = d.month + 1
         year = d.year + (1 if month > 12 else 0)
         month = 1 if month > 12 else month
-        day = min(d.day, 28)
+        last_day = calendar.monthrange(year, month)[1]
+        day = min(d.day, last_day)
         d = d.replace(year=year, month=month, day=day)
     return d.isoformat()

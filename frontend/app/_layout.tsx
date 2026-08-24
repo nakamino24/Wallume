@@ -33,7 +33,6 @@ if (__DEV__) {
   }) as typeof console.warn;
 }
 
-LogBox.ignoreAllLogs(true);
 LogBox.ignoreLogs(['props.pointerEvents is deprecated', 'Cannot record touch end without a touch start']);
 SplashScreen.preventAutoHideAsync();
 
