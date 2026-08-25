@@ -54,10 +54,10 @@ export default function PlanScreen() {
   return (
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+        <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.md }}>
           <H1>{t('plans')}</H1>
           <Body muted style={{ marginTop: 4 }}>{t('hub.subtitle')}</Body>
-          <View style={{ marginTop: spacing.lg }}><FinancialHubSwitcher current={section} onPress={() => setHubOpen(true)} /></View>
+          <View style={{ marginTop: spacing.md }}><FinancialHubSwitcher current={section} onPress={() => setHubOpen(true)} /></View>
         </View>
 
         <ScrollView
@@ -100,11 +100,11 @@ function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
   const { colors } = useTheme();
   return (
     <>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <H2>Monthly budgets</H2>
-        <TouchableOpacity testID="budget-add-btn" onPress={onAdd}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="add" size={18} color={colors.onBrand} />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
+        <H2 style={{ flex: 1, minWidth: 0 }}>Monthly budgets</H2>
+        <TouchableOpacity testID="budget-add-btn" onPress={onAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="add" size={16} color={colors.onBrand} />
         </TouchableOpacity>
       </View>
       {budgets.length === 0 ? (
@@ -147,11 +147,11 @@ function GoalsSection({ goals, currency, onAdd, onOpen, onReload }: any) {
   const { colors } = useTheme();
   return (
     <>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <H2>Saving goals</H2>
-        <TouchableOpacity testID="goal-add-btn" onPress={onAdd}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="add" size={18} color={colors.onBrand} />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
+        <H2 style={{ flex: 1, minWidth: 0 }}>Saving goals</H2>
+        <TouchableOpacity testID="goal-add-btn" onPress={onAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="add" size={16} color={colors.onBrand} />
         </TouchableOpacity>
       </View>
       {goals.length === 0 ? (
@@ -253,11 +253,11 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
   };
   return (
     <>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <H2>Debts</H2>
-        <TouchableOpacity testID="debt-add-btn" onPress={onAdd}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="add" size={18} color={colors.onBrand} />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
+        <H2 style={{ flex: 1, minWidth: 0 }}>Debts</H2>
+        <TouchableOpacity testID="debt-add-btn" onPress={onAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="add" size={16} color={colors.onBrand} />
         </TouchableOpacity>
       </View>
       {debts.length > 0 && (
@@ -303,18 +303,18 @@ function AssetsSection({ assets, investments, currency, onAddAsset, onAddInv, on
   const router = useRouter();
   return (
     <>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <H2>Investments</H2>
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
+        <H2 style={{ flex: 1, minWidth: 0 }}>Investments</H2>
+        <View style={{ flexDirection: 'row', gap: spacing.sm, flexShrink: 0 }}>
           {investments.length > 0 && (
-            <TouchableOpacity testID="inv-portfolio-btn" onPress={() => router.push('/portfolio' as any)}
-              style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="pie-chart" size={16} color={colors.onBrandSoft} />
+            <TouchableOpacity testID="inv-portfolio-btn" onPress={() => router.push('/portfolio' as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="pie-chart" size={15} color={colors.onBrandSoft} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity testID="inv-add-btn" onPress={onAddInv}
-            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="add" size={18} color={colors.onBrand} />
+          <TouchableOpacity testID="inv-add-btn" onPress={onAddInv} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="add" size={16} color={colors.onBrand} />
           </TouchableOpacity>
         </View>
       </View>
@@ -341,11 +341,11 @@ function AssetsSection({ assets, investments, currency, onAddAsset, onAddInv, on
         );
       })}
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.lg }}>
-        <H2>Assets</H2>
-        <TouchableOpacity testID="asset-add-btn" onPress={onAddAsset}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="add" size={18} color={colors.onBrand} />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md, marginTop: spacing.lg }}>
+        <H2 style={{ flex: 1, minWidth: 0 }}>Assets</H2>
+        <TouchableOpacity testID="asset-add-btn" onPress={onAddAsset} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="add" size={16} color={colors.onBrand} />
         </TouchableOpacity>
       </View>
       {assets.length === 0 ? (

@@ -29,7 +29,7 @@ export function Card({ children, style, onPress, testID }: {
   return inner;
 }
 
-// Typography
+// Typography — Inter-only, tabular for money
 export function DisplayNumber({ children, size = 40, style, color }: {
   children: React.ReactNode; size?: number; style?: StyleProp<TextStyle>; color?: string;
 }) {
@@ -45,18 +45,19 @@ export function DisplayNumber({ children, size = 40, style, color }: {
         fontSize: scale(size),
         letterSpacing: -0.5,
         fontWeight: '600',
-      }, style]}
+        fontVariant: ['tabular-nums'],
+      } as TextStyle, style]}
     >{children}</Text>
   );
 }
 
-export function H1({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
+export function H1({ children, style, ...rest }: TextProps & { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
   const { colors } = useTheme();
-  return <Text style={[{ color: colors.onSurface, fontFamily: font.textBold, fontSize: scale(font.sizes.xl), fontWeight: '600', letterSpacing: -0.3, lineHeight: scale(32) }, style]}>{children}</Text>;
+  return <Text style={[{ color: colors.onSurface, fontFamily: font.textBold, fontSize: scale(font.sizes.xl), fontWeight: '600', letterSpacing: -0.3, lineHeight: scale(32) }, style]} {...rest}>{children}</Text>;
 }
-export function H2({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
+export function H2({ children, style, ...rest }: TextProps & { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
   const { colors } = useTheme();
-  return <Text style={[{ color: colors.onSurface, fontFamily: font.textBold, fontSize: scale(font.sizes.lg), fontWeight: '600', letterSpacing: -0.2, lineHeight: scale(22) }, style]}>{children}</Text>;
+  return <Text style={[{ color: colors.onSurface, fontFamily: font.textBold, fontSize: scale(font.sizes.lg), fontWeight: '600', letterSpacing: -0.2, lineHeight: scale(22) }, style]} {...rest}>{children}</Text>;
 }
 export function Body({ children, style, muted, testID, ...rest }: TextProps & { children: React.ReactNode; style?: StyleProp<TextStyle>; muted?: boolean; testID?: string }) {
   const { colors } = useTheme();

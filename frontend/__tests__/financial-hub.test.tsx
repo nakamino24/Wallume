@@ -23,4 +23,13 @@ describe('Financial Hub', () => {
     fireEvent.press(getByTestId('financial-module-budgets'));
     expect(onSelect).toHaveBeenCalledWith('budgets');
   });
+
+  it('switcher chevron and section + action do not share competing layout space', () => {
+    const { getByTestId } = render(<FinancialHubSwitcher current="plans" onPress={jest.fn()} />);
+    const node = getByTestId('financial-hub-switcher');
+    const style = node.props.style;
+    const resolved = typeof style === 'function' ? style({ pressed: false }) : style;
+    expect(resolved.minHeight).toBeLessThanOrEqual(52);
+    expect(resolved.gap).toBeDefined();
+  });
 });

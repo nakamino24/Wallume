@@ -1,18 +1,17 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, TouchableOpacity, ImageBackground, Alert } from 'react-native';
+import { View, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, font, formatMoney, images, cv } from '@/src/theme/tokens';
+import { spacing, radius, font, formatMoney, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, Button, Input, ProgressBar } from '@/src/components/ui';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 
-const HERO: Record<string, string> = { wedding: images.wedding, house: images.house, car: images.car, vacation: images.vacation };
+const planIcon: Record<string, any> = { wedding: 'heart-outline', house: 'home-outline', car: 'car-sport-outline', vacation: 'airplane-outline' };
 
 export default function PlanDetail() {
   const { colors } = useTheme();
@@ -74,32 +73,43 @@ export default function PlanDetail() {
 
   return (
     <Screen>
-      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <KeyboardAwareContainer contentContainerStyle={{ paddingBottom: 100 }}>
-          <ImageBackground source={{ uri: HERO[plan.kind] }} style={{ height: 260 }}>
-            <LinearGradient colors={['#00000088', 'transparent', '#000000ee']} style={{ flex: 1, padding: spacing.xl, justifyContent: 'space-between' }}>
-              <SafeAreaView edges={['top']}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <TouchableOpacity testID="plan-back" onPress={() => router.back()} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#00000066', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="chevron-back" size={22} color="#fff" />
-                  </TouchableOpacity>
-                  <TouchableOpacity testID="plan-delete" onPress={deletePlan} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#00000066', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="trash" size={18} color="#fff" />
-                  </TouchableOpacity>
+          <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.md }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <TouchableOpacity testID="plan-back" onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="chevron-back" size={18} color={colors.onSurface} />
+              </TouchableOpacity>
+              <TouchableOpacity testID="plan-delete" onPress={deletePlan} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="trash-outline" size={16} color={colors.error} />
+              </TouchableOpacity>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.lg }}>
+              <View style={{ width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name={planIcon[plan.kind] || 'compass-outline'} size={22} color={colors.onBrandSoft} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Body muted style={{ textTransform: 'uppercase', letterSpacing: 0.6, fontSize: 11, fontFamily: font.textMedium }}>{plan.kind}</Body>
+                <H1 numberOfLines={2} style={{ marginTop: 2 }}>{plan.name}</H1>
+              </View>
+            </View>
+            <View style={{ marginTop: spacing.lg }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <View>
+                  <Body muted style={{ fontSize: 12 }}>Terkumpul</Body>
+                  <Body style={{ fontFamily: font.textBold, fontSize: 18, fontVariant: ['tabular-nums'] }}>{formatMoney(totals.paid, cur)}</Body>
                 </View>
-              </SafeAreaView>
-              <View>
-                <Body style={{ color: '#ffffffcc', textTransform: 'uppercase', letterSpacing: 0.8, fontSize: 11, fontFamily: font.textMedium }}>{plan.kind}</Body>
-                <H1 style={{ color: '#fff', marginTop: 4 }}>{plan.name}</H1>
-                <Body style={{ color: '#ffffffcc', marginTop: 4 }}>
-                  {formatMoney(totals.paid, cur)} paid of {formatMoney(budget, cur)}
-                </Body>
-                <View style={{ marginTop: 10 }}>
-                  <ProgressBar progress={progress} color={colors.brandPrimary} height={6} />
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Body muted style={{ fontSize: 12 }}>Target</Body>
+                  <Body style={{ fontFamily: font.textBold, fontSize: 16, fontVariant: ['tabular-nums'] }}>{formatMoney(budget, cur)}</Body>
                 </View>
               </View>
-            </LinearGradient>
-          </ImageBackground>
+              <View style={{ marginTop: spacing.md }}>
+                <ProgressBar progress={progress} color={colors.brandPrimary} height={6} />
+                <Body muted style={{ fontSize: 12, marginTop: 6 }}>{Math.round(progress * 100)}% · {formatMoney(totals.paid, cur)} / {formatMoney(budget, cur)}</Body>
+              </View>
+            </View>
+          </View>
 
           <View style={{ padding: spacing.xl, gap: spacing.md }}>
             <Card>

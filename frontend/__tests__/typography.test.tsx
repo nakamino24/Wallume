@@ -18,18 +18,19 @@ const { DisplayNumber } = require('@/src/components/ui');
 const { TransactionDayGroup } = require('@/src/components/transactions/TransactionDayGroup');
 
 describe('Typography tokens', () => {
-  it('maps Fraunces for display hero values and Inter for UI text', () => {
-    expect(font.display).toBe('Fraunces');
-    expect(font.displayBold).toBe('Fraunces-SemiBold');
+  it('maps Inter for all typography (one-font)', () => {
+    expect(font.display).toBe('Inter');
+    expect(font.displayBold).toBe('Inter-SemiBold');
     expect(font.text).toBe('Inter');
     expect(font.textBold).toBe('Inter-SemiBold');
   });
 
-  it('DisplayNumber hero value renders with Fraunces', () => {
+  it('DisplayNumber hero value renders with Inter', () => {
     const { getByText } = render(<DisplayNumber size={34}>Rp1.000</DisplayNumber>);
     const node = getByText('Rp1.000');
     const style = Array.isArray(node.props.style) ? Object.assign({}, ...node.props.style) : node.props.style;
-    expect(style.fontFamily).toBe('Fraunces-SemiBold');
+    expect(style.fontFamily).toBe('Inter-SemiBold');
+    expect(style.fontVariant).toContain('tabular-nums');
   });
 });
 

@@ -30,18 +30,21 @@ export function FinancialHubSwitcher({ current, onPress }: { current: FinancialM
       accessibilityLabel={`${t('hub.current.section')}: ${label}`}
       accessibilityState={{ expanded: false, selected: true }}
       onPress={onPress}
+      hitSlop={6}
       style={({ pressed }) => ({
-        flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface2, borderColor: colors.border,
-        borderWidth: 1, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: 52, opacity: pressed ? 0.86 : 1,
+        flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface2, borderColor: colors.border,
+        borderWidth: 1, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 10, minHeight: 48, opacity: pressed ? 0.86 : 1,
       })}
     >
-      <View style={{ width: 32, height: 32, borderRadius: radius.sm, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm }}>
-        <Ionicons name={module.icon} size={17} color={colors.onBrandSoft} />
+      <View style={{ width: 30, height: 30, borderRadius: radius.sm, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={module.icon} size={16} color={colors.onBrandSoft} />
       </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Body style={{ fontFamily: font.textMedium }}>{label}</Body>
+      <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.sm }}>
+        <Body numberOfLines={1} style={{ fontFamily: font.textMedium }}>{label}</Body>
       </View>
-      <Ionicons name="chevron-down" size={20} color={colors.muted} />
+      <View style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name="chevron-down" size={18} color={colors.muted} />
+      </View>
     </Pressable>
   );
 }

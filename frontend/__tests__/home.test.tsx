@@ -187,4 +187,33 @@ describe('Home Screen', () => {
     const { getByTestId } = render(<Home />);
     await waitFor(() => expect(getByTestId('home-tx-empty')).toBeTruthy());
   });
+
+  it('displays authoritative Net Worth from summary, not wallet total', async () => {
+    mockUser.currency = 'IDR';
+    const api = require('@/src/api/client').api;
+    api.summary.mockResolvedValueOnce({
+      net_worth: 42000, month_income: 0, month_expense: 0, cash_flow: 0,
+      health_score: 0, saving_rate: 0, debt_ratio: 0,
+      category_breakdown: [], trend: [], spending_alerts: [], counts: {},
+    });
+    const Home = require('@/app/(tabs)/home').default;
+    const { getByText, queryByText } = render(<Home />);
+    await waitFor(() => expect(getByText('Rp42.000')).toBeTruthy());
+    expect(queryByText('Rp3.450')).toBeNull();
+    mockUser.currency = 'USD';
+  });
+
+  it('supports negative Net Worth display', async () => {
+    mockUser.currency = 'IDR';
+    const api = require('@/src/api/client').api;
+    api.summary.mockResolvedValueOnce({
+      net_worth: -7500, month_income: 0, month_expense: 0, cash_flow: 0,
+      health_score: 0, saving_rate: 0, debt_ratio: 0,
+      category_breakdown: [], trend: [], spending_alerts: [], counts: {},
+    });
+    const Home = require('@/app/(tabs)/home').default;
+    const { getByText } = render(<Home />);
+    await waitFor(() => expect(getByText('-Rp7.500')).toBeTruthy());
+    mockUser.currency = 'USD';
+  });
 });

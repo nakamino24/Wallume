@@ -90,8 +90,10 @@ export default function Home() {
   const walletBalance = wallets.reduce((sum: number, wallet: any) => sum + (Number(wallet.converted_balance ?? wallet.balance) || 0), 0);
   const monthIncome = txs.reduce((sum: number, tx: any) => sum + ((tx.type === 'income' && Number(tx.amount)) || 0), 0);
   const monthExpense = txs.reduce((sum: number, tx: any) => sum + ((tx.type === 'expense' && Number(tx.amount)) || 0), 0);
+  // Net Worth must be the authoritative value from /analytics/summary (wallet + assets + investments - debts).
+  // Do NOT fall back to walletBalance alone — that is semantically incorrect.
   const derivedSummary = {
-    net_worth: summary?.net_worth ?? walletBalance,
+    net_worth: summary?.net_worth ?? 0,
     month_income: summary?.month_income ?? monthIncome,
     month_expense: summary?.month_expense ?? monthExpense,
     cash_flow: summary?.cash_flow ?? (monthIncome - monthExpense),
@@ -223,19 +225,19 @@ export default function Home() {
               <View style={{ flexDirection: 'row', marginTop: spacing.lg, gap: spacing.sm }}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Income (mo)</Label>
-                  <Body testID="net-worth-income" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.success, fontFamily: font.displayBold, fontSize: font.sizes.base, marginTop: 2 }}>
+                  <Body testID="net-worth-income" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.success, fontFamily: font.textBold, fontSize: font.sizes.base, marginTop: 2, fontVariant: ['tabular-nums'] }}>
                     +{formatMoneyCompact(derivedSummary.month_income, cur)}
                   </Body>
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Expense (mo)</Label>
-                  <Body testID="net-worth-expense" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.error, fontFamily: font.displayBold, fontSize: font.sizes.base, marginTop: 2 }}>
+                  <Body testID="net-worth-expense" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.error, fontFamily: font.textBold, fontSize: font.sizes.base, marginTop: 2, fontVariant: ['tabular-nums'] }}>
                     -{formatMoneyCompact(derivedSummary.month_expense, cur)}
                   </Body>
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Cash flow</Label>
-                  <Body testID="net-worth-cash-flow" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: font.sizes.base, marginTop: 2 }}>
+                  <Body testID="net-worth-cash-flow" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: font.sizes.base, marginTop: 2, fontVariant: ['tabular-nums'] }}>
                     {formatMoneyCompact(derivedSummary.cash_flow, cur)}
                   </Body>
                 </View>
@@ -463,7 +465,7 @@ function TxRow({ tx, last, currency, onPress, onLongPress }: any) {
           <Body style={{ fontFamily: font.textMedium }}>{tx.category}</Body>
           {!!tx.note && <Body muted style={{ fontSize: 12, marginTop: 2 }} numberOfLines={1}>{tx.note}</Body>}
         </View>
-        <Body style={{ fontFamily: font.displayBold, color: positive ? colors.success : negative ? colors.error : colors.onSurface }}>
+        <Body style={{ fontFamily: font.textBold, color: positive ? colors.success : negative ? colors.error : colors.onSurface, fontVariant: ['tabular-nums'] }}>
           {positive ? '+' : negative ? '-' : ''}{formatMoney(tx.amount, currency)}
         </Body>
       </View>

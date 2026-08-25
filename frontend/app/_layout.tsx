@@ -7,8 +7,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
-import { Fraunces_400Regular, Fraunces_500Medium, Fraunces_600SemiBold } from '@expo-google-fonts/fraunces';
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 
 import { useIconFonts } from '@/src/hooks/use-icon-fonts';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
@@ -49,12 +48,10 @@ function StackWithTheme() {
 }
 
 const CUSTOM_FONTS = {
-  Fraunces: Fraunces_400Regular,
-  'Fraunces-Medium': Fraunces_500Medium,
-  'Fraunces-SemiBold': Fraunces_600SemiBold,
   Inter: Inter_400Regular,
   'Inter-Medium': Inter_500Medium,
   'Inter-SemiBold': Inter_600SemiBold,
+  'Inter-Bold': Inter_700Bold,
 };
 
 function BottomSheetGate({ children }: { children: ReactNode }) {
