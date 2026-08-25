@@ -7,7 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { usePayday } from '@/src/hooks/use-payday';
-import { spacing, radius, font, formatMoneyFull, formatMoney, cv } from '@/src/theme/tokens';
+import { spacing, radius, font, formatMoneyFull, formatMoney, formatMoneyCompact, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H2, Body, Label, DisplayNumber, ProgressRing, Chip, EmptyState, Caption } from '@/src/components/ui';
 import { Skeleton, SkeletonCard, SkeletonRow } from '@/src/components/Skeleton';
@@ -220,23 +220,23 @@ export default function Home() {
               <DisplayNumber size={40} color={colors.onInverse} style={{ marginTop: 6 }}>
                 {formatMoneyFull(derivedSummary.net_worth, cur)}
               </DisplayNumber>
-              <View style={{ flexDirection: 'row', marginTop: spacing.lg, gap: spacing.xl }}>
-                <View>
+              <View style={{ flexDirection: 'row', marginTop: spacing.lg, gap: spacing.sm }}>
+                <View style={{ flex: 1, minWidth: 0 }}>
                   <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Income (mo)</Label>
-                  <Body style={{ color: colors.success, fontFamily: font.displayBold, fontSize: 16, marginTop: 2 }}>
-                    +{formatMoney(derivedSummary.month_income, cur)}
+                  <Body testID="net-worth-income" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.success, fontFamily: font.displayBold, fontSize: font.sizes.base, marginTop: 2 }}>
+                    +{formatMoneyCompact(derivedSummary.month_income, cur)}
                   </Body>
                 </View>
-                <View>
+                <View style={{ flex: 1, minWidth: 0 }}>
                   <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Expense (mo)</Label>
-                  <Body style={{ color: colors.error, fontFamily: font.displayBold, fontSize: 16, marginTop: 2 }}>
-                    -{formatMoney(derivedSummary.month_expense, cur)}
+                  <Body testID="net-worth-expense" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.error, fontFamily: font.displayBold, fontSize: font.sizes.base, marginTop: 2 }}>
+                    -{formatMoneyCompact(derivedSummary.month_expense, cur)}
                   </Body>
                 </View>
-                <View>
+                <View style={{ flex: 1, minWidth: 0 }}>
                   <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Cash flow</Label>
-                  <Body style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 16, marginTop: 2 }}>
-                    {formatMoney(derivedSummary.cash_flow, cur)}
+                  <Body testID="net-worth-cash-flow" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: font.sizes.base, marginTop: 2 }}>
+                    {formatMoneyCompact(derivedSummary.cash_flow, cur)}
                   </Body>
                 </View>
               </View>

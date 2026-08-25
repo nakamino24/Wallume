@@ -133,6 +133,25 @@ describe('Home Screen', () => {
     });
   });
 
+  it('renders compact supporting Net Worth metrics', async () => {
+    mockUser.currency = 'IDR';
+    const Home = require('@/app/(tabs)/home').default;
+    const { getByText, getByTestId } = render(<Home />);
+
+    await waitFor(() => {
+      expect(getByText('Income (mo)')).toBeTruthy();
+      expect(getByText('Expense (mo)')).toBeTruthy();
+      expect(getByText('Cash flow')).toBeTruthy();
+      expect(getByText('+Rp5,0K')).toBeTruthy();
+      expect(getByText('-Rp3,2K')).toBeTruthy();
+      expect(getByText('Rp1,8K')).toBeTruthy();
+      expect(getByTestId('net-worth-income').props.numberOfLines).toBe(1);
+      expect(getByTestId('net-worth-expense').props.numberOfLines).toBe(1);
+      expect(getByTestId('net-worth-cash-flow').props.numberOfLines).toBe(1);
+    });
+    mockUser.currency = 'USD';
+  });
+
   it('navigates to transaction new on FAB press', async () => {
     const Home = require('@/app/(tabs)/home').default;
     const { getByTestId } = render(<Home />);

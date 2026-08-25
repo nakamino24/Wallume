@@ -30,10 +30,10 @@ jest.mock('@/src/components/DateField', () => {
   const React = require('react');
   const { TouchableOpacity, Text } = require('react-native');
   return {
-    DateField: ({ label, onChange, testID }: any) => React.createElement(
+    DateField: ({ label, value, onChange, testID }: any) => React.createElement(
       TouchableOpacity,
-      { testID, onPress: () => onChange(label === 'From' ? '2026-08-02' : '2026-08-26') },
-      React.createElement(Text, null, label),
+      { testID, onPress: () => onChange(label === 'From' ? '2026-07-01' : '2026-08-26') },
+      React.createElement(Text, { testID: `${testID}-value` }, `${label}:${value}`),
     ),
   };
 });
@@ -86,6 +86,17 @@ describe('Reports screen', () => {
     fireEvent.press(getByTestId('report-to'));
     await waitFor(() => expect(mockGetSummary).toHaveBeenCalledTimes(2));
     expect(mockGetSummary.mock.calls[1][0]).toEqual(expect.objectContaining({ to_date: '2026-08-26' }));
+  });
+
+  it('preserves an exact earlier From boundary when refetching', async () => {
+    const Reports = require('@/app/reports').default;
+    const { getByTestId } = render(<Reports />);
+
+    await waitFor(() => expect(mockGetSummary).toHaveBeenCalledTimes(1));
+    fireEvent.press(getByTestId('report-from'));
+
+    await waitFor(() => expect(mockGetSummary).toHaveBeenCalledWith(expect.objectContaining({ from_date: '2026-07-01' })));
+    expect(getByTestId('report-from-value').props.children).toBe('From:2026-07-01');
   });
 
   it('keeps the loading state separate from an API failure', async () => {
