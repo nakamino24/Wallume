@@ -17,6 +17,7 @@ from pymongo import ASCENDING
 from pymongo.errors import DuplicateKeyError
 
 from app.core.config import settings
+from app.database.mongo import _ensure_obsolete_transaction_mutation_index_removed
 from app.repositories.repos import TransactionRepository
 
 
@@ -33,6 +34,28 @@ class MongoRuntimeTransactions(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         await self.client.drop_database(self.db.name)
         self.client.close()
+
+    async def test_obsolete_transaction_mutation_index_accepts_historical_missing_and_null_values(self):
+        await self.db.transactions.insert_many([
+            {"id": "missing-1", "user_id": "u"},
+            {"id": "missing-2", "user_id": "u"},
+            {"id": "null-1", "user_id": "u", "client_mutation_id": None},
+            {"id": "null-2", "user_id": "u", "client_mutation_id": None},
+        ])
+        # The old unique index cannot be built on this historical shape. The
+        # dedicated ledger remains the mutation-ID uniqueness authority.
+        with patch("app.database.mongo.get_database", return_value=self.db):
+            await _ensure_obsolete_transaction_mutation_index_removed(self.db)
+            await _ensure_obsolete_transaction_mutation_index_removed(self.db)
+
+        index_names = [index["name"] for index in await self.db.transactions.list_indexes().to_list(None)]
+        self.assertNotIn("user_id_1_client_mutation_id_1", index_names)
+
+    async def test_idempotency_ledger_rejects_same_user_mutation_id_but_allows_other_users(self):
+        await self.db.idempotency.insert_one({"user_id": "u", "client_mutation_id": "mut-123"})
+        with self.assertRaises(DuplicateKeyError):
+            await self.db.idempotency.insert_one({"user_id": "u", "client_mutation_id": "mut-123"})
+        await self.db.idempotency.insert_one({"user_id": "other-user", "client_mutation_id": "mut-123"})
 
     async def _seed_wallets(self):
         await self.db.wallets.insert_many([
