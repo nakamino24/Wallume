@@ -17,6 +17,7 @@ import { spacing, radius, font, CURRENCIES } from '@/src/theme/tokens';
 import { Screen, Card, H1, H2, Body, Label, Button, Chip } from '@/src/components/ui';
 import { AppVersion } from '@/src/components/AppVersion';
 import { WallumeMark } from '@/src/components/WallumeMark';
+import { refreshNetWorthWidget } from '@/src/widgets/refresh-widget';
 
 export default function Profile() {
   const { colors, mode, toggle } = useTheme();
@@ -191,7 +192,7 @@ export default function Profile() {
             <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
               {(['en', 'id'] as const).map((l) => (
                 <Chip key={l} testID={`profile-lang-${l}`} label={l === 'en' ? 'English' : 'Indonesia'}
-                  active={lang === l} onPress={async () => { setLangState(l); await setLocale(l); }} />
+                  active={lang === l} onPress={async () => { setLangState(l); await setLocale(l); await refreshNetWorthWidget(); }} />
               ))}
             </View>
           </Card>

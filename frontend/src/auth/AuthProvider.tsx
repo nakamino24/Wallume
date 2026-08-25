@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { api, getToken, setToken } from '@/src/api/client';
 import { clearTransactionsState } from '@/src/hooks/use-transactions';
+import { storage } from '@/src/utils/storage';
 
 type User = {
   user_id: string;
@@ -40,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const r = await api.me();
       setUser(r.user);
+      storage.setItem('mf.widget.currency', r.user.currency || 'USD');
     } catch {
       await setToken(null);
       setUser(null);
@@ -58,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const r = await api.login({ email, password });
     await setToken(r.token);
     setUser(r.user);
+    storage.setItem('mf.widget.currency', r.user.currency || 'USD');
   };
 
   const signup = async (name: string, email: string, password: string) => {
@@ -65,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const r = await api.signup({ name, email, password });
     await setToken(r.token);
     setUser(r.user);
+    storage.setItem('mf.widget.currency', r.user.currency || 'USD');
   };
 
   const loginWithEmergentToken = async (session_token: string) => {
@@ -72,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const r = await api.emergentSession(session_token);
     await setToken(r.token);
     setUser(r.user);
+    storage.setItem('mf.widget.currency', r.user.currency || 'USD');
   };
 
   const logout = async () => {
@@ -84,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = async (patch: Partial<User>) => {
     const r = await api.updateMe(patch);
     setUser(r.user);
+    storage.setItem('mf.widget.currency', r.user.currency || 'USD');
   };
 
   return (

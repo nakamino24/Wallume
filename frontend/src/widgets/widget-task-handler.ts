@@ -3,6 +3,8 @@ import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 import { NetWorthWidget, NetWorthWidgetData } from './NetWorthWidged';
 import { getToken } from '@/src/api/client';
 import { formatMoney } from '@/src/theme/tokens';
+import { initLocale } from '@/src/lib/i18n';
+import { storage } from '@/src/utils/storage';
 
 const BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -30,7 +32,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 
 export async function fetchWidgetData(): Promise<NetWorthWidgetData> {
   const token = await getToken();
-  if (!token) return { signedOut: true, netWorth: '', income: '', healthScore: 0, chartUri: undefined, categories: [], updatedAt: '' };
+  if (!token) return { signedOut: true, balance: '', income: '', expense: '', cashFlow: '', healthScore: 0, chartUri: undefined, categories: [], updatedAt: '' };
 
   try {
     const headers = { Authorization: `Bearer ${token}` };
@@ -52,16 +54,21 @@ export async function fetchWidgetData(): Promise<NetWorthWidgetData> {
 
     const now = new Date();
     const categories = (s.category_breakdown || []).slice(0, 5).map((c: any) => ({ label: c.category, amount: c.amount }));
+    const locale = await initLocale();
+    const currency = (await storage.getItem<string>('mf.widget.currency', 'USD')) || 'USD';
     return {
-      netWorth: formatMoney(s.net_worth ?? 0, 'USD').replace('$', ''),
-      income: formatMoney(s.month_income ?? 0, 'USD').replace('$', ''),
+      balance: formatMoney(s.wallet_total ?? 0, currency),
+      income: formatMoney(s.month_income ?? 0, currency),
+      expense: formatMoney(s.month_expense ?? 0, currency),
+      cashFlow: formatMoney(s.cash_flow ?? 0, currency),
       healthScore: s.health_score ?? 0,
       chartUri,
       categories,
       updatedAt: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      locale,
     };
   } catch {
-    return { signedOut: false, netWorth: '—', income: '', healthScore: 0, chartUri: undefined, categories: [], updatedAt: 'offline' };
+    return { signedOut: false, balance: '—', income: '', expense: '', cashFlow: '', healthScore: 0, chartUri: undefined, categories: [], updatedAt: 'offline' };
   }
 }
 

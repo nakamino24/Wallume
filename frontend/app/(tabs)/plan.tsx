@@ -1,31 +1,29 @@
 import React, { useCallback, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, ImageBackground, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney, images, cv } from '@/src/theme/tokens';
+import { spacing, radius, font, formatMoney, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H1, H2, Body, Label, ProgressRing, ProgressBar, EmptyState, Chip } from '@/src/components/ui';
+import { Screen, Card, H1, H2, Body, Label, ProgressRing, ProgressBar, EmptyState } from '@/src/components/ui';
 import { computeInvestmentMetrics, kindLabel, quantitySummary } from '@/src/lib/investmentKinds';
+import { FinancialHubSwitcher, type FinancialModuleKey } from '@/src/components/finance/FinancialHubSwitcher';
+import { FinancialHubSheet } from '@/src/components/finance/FinancialHubSheet';
+import { PlanCard } from '@/src/components/plans/PlanCard';
+import { PlanTemplateCard } from '@/src/components/plans/PlanTemplateCard';
+import { t } from '@/src/lib/i18n';
 
-type Section = 'budgets' | 'goals' | 'plans' | 'debts' | 'assets';
-
-const PLAN_HERO: Record<string, string> = {
-  wedding: images.wedding, house: images.house, car: images.car, vacation: images.vacation,
-};
-const PLAN_ICON: Record<string, any> = {
-  wedding: 'heart', house: 'home', car: 'car-sport', vacation: 'airplane',
-};
+type Section = FinancialModuleKey;
 
 export default function PlanScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
-  const [section, setSection] = useState<Section>('budgets');
+  const [section, setSection] = useState<Section>('plans');
+  const [hubOpen, setHubOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const [budgets, setBudgets] = useState<any[]>([]);
@@ -56,20 +54,11 @@ export default function PlanScreen() {
   return (
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* Sticky header */}
         <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-          <H1>Plan</H1>
-          <Body muted style={{ marginTop: 4 }}>Budgets, goals, and life plans.</Body>
+          <H1>{t('plans')}</H1>
+          <Body muted style={{ marginTop: 4 }}>{t('hub.subtitle')}</Body>
+          <View style={{ marginTop: spacing.lg }}><FinancialHubSwitcher current={section} onPress={() => setHubOpen(true)} /></View>
         </View>
-        <ScrollView
-          horizontal showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: spacing.sm, paddingVertical: spacing.md }}
-        >
-          {(['budgets', 'goals', 'plans', 'debts', 'assets'] as Section[]).map((s) => (
-            <Chip key={s} testID={`plan-chip-${s}`} label={s[0].toUpperCase() + s.slice(1)} active={section === s} onPress={() => setSection(s)} />
-          ))}
-          <Chip testID="plan-chip-bills" label="Bills" onPress={() => router.push('/recurring')} />
-        </ScrollView>
 
         <ScrollView
           contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: spacing.xl, gap: spacing.md }}
@@ -88,12 +77,19 @@ export default function PlanScreen() {
             <DebtsSection debts={debts} currency={cur} onAdd={() => router.push('/debt/new')} onReload={load} />
           )}
           {section === 'assets' && (
-            <AssetsSection assets={assets} investments={investments} currency={cur}
+            <AssetsSection assets={assets} investments={[]} currency={cur}
+              onAddAsset={() => router.push('/asset/new')}
+              onAddInv={() => router.push('/investment/new')}
+              onReload={load} />
+          )}
+          {section === 'investments' && (
+            <AssetsSection assets={[]} investments={investments} currency={cur}
               onAddAsset={() => router.push('/asset/new')}
               onAddInv={() => router.push('/investment/new')}
               onReload={load} />
           )}
         </ScrollView>
+        <FinancialHubSheet visible={hubOpen} current={section} onClose={() => setHubOpen(false)} onSelect={(next) => { setHubOpen(false); if (next === 'bills') router.push('/recurring'); else setSection(next); }} />
       </SafeAreaView>
     </Screen>
   );
@@ -204,53 +200,21 @@ function goalIcon(kind: string): any {
 
 /* --------------------- PLANS --------------------- */
 function PlansSection({ plans, currency, onAdd, onOpen }: any) {
-  const { colors } = useTheme();
   const kinds: ('wedding' | 'house' | 'car' | 'vacation')[] = ['wedding', 'house', 'car', 'vacation'];
   return (
     <>
-      <H2>Life plans</H2>
-      <Body muted style={{ marginTop: -6, marginBottom: spacing.sm }}>Structured plans with budget & checklist.</Body>
-      {plans.length > 0 && plans.map((p: any) => {
-        const totalPaid = (p.items || []).reduce((s: number, i: any) => s + cv(i, 'paid'), 0);
-        const budget = cv(p, 'total_budget');
-        const progress = budget > 0 ? Math.min(1, totalPaid / budget) : 0;
-        return (
-          <TouchableOpacity key={p.id} testID={`plan-open-${p.id}`} activeOpacity={0.9} onPress={() => onOpen(p.id)}>
-            <ImageBackground
-              source={{ uri: PLAN_HERO[p.kind] }}
-              style={styles.planHero}
-              imageStyle={{ borderRadius: radius.lg }}
-            >
-              <LinearGradient colors={['transparent', '#000000ee']} style={styles.planScrim}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                  <Ionicons name={PLAN_ICON[p.kind]} size={16} color="#ffffffcc" />
-                  <Body style={{ color: '#ffffffcc', marginLeft: 6, fontFamily: font.textMedium, textTransform: 'uppercase', letterSpacing: 0.8, fontSize: 11 }}>{p.kind}</Body>
-                </View>
-                <H2 style={{ color: '#fff' }}>{p.name}</H2>
-                <Body style={{ color: '#ffffffcc', marginTop: 4 }}>
-                  {formatMoney(totalPaid, currency)} of {formatMoney(budget, currency)}
-                </Body>
-                <View style={{ marginTop: 8 }}>
-                  <ProgressBar progress={progress} color={colors.brandPrimary} />
-                </View>
-              </LinearGradient>
-            </ImageBackground>
-          </TouchableOpacity>
-        );
-      })}
+      <H2>{t('plans.active')}</H2>
+      <Body muted style={{ marginTop: -6, marginBottom: spacing.sm }}>{t('plans.subtitle')}</Body>
+      {plans.length > 0 ? plans.map((p: any) => <PlanCard key={p.id} plan={p} currency={currency} onPress={() => onOpen(p.id)} />) : (
+        <View testID="plans-empty" style={{ paddingVertical: spacing.lg }}>
+          <Body style={{ fontFamily: font.textMedium }}>{t('plans.empty')}</Body>
+          <Body muted style={{ marginTop: 3 }}>{t('plans.empty.subtitle')}</Body>
+        </View>
+      )}
 
-      <Label style={{ marginTop: spacing.lg }}>Start a new plan</Label>
+      <Label style={{ marginTop: spacing.lg }}>{t('plans.start')}</Label>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
-        {kinds.map((k) => (
-          <TouchableOpacity key={k} testID={`plan-new-${k}`} activeOpacity={0.9} onPress={() => onAdd(k)} style={{ width: '48%' }}>
-            <ImageBackground source={{ uri: PLAN_HERO[k] }} style={styles.planTile} imageStyle={{ borderRadius: radius.lg }}>
-              <LinearGradient colors={['transparent', '#000000cc']} style={styles.planTileScrim}>
-                <Ionicons name={PLAN_ICON[k]} size={20} color="#fff" />
-                <Body style={{ color: '#fff', fontFamily: font.textBold, marginTop: 4, textTransform: 'capitalize' }}>{k}</Body>
-              </LinearGradient>
-            </ImageBackground>
-          </TouchableOpacity>
-        ))}
+        {kinds.map((k) => <PlanTemplateCard key={k} kind={k} onPress={() => onAdd(k)} />)}
       </View>
     </>
   );
@@ -407,10 +371,3 @@ function confirmDialog(msg: string, onOk: () => Promise<void>) {
     { text: 'Delete', style: 'destructive', onPress: () => { onOk(); } },
   ]);
 }
-
-const styles = StyleSheet.create({
-  planHero: { height: 180, borderRadius: radius.lg, overflow: 'hidden', justifyContent: 'flex-end' },
-  planScrim: { padding: spacing.lg, borderRadius: radius.lg },
-  planTile: { height: 120, overflow: 'hidden', borderRadius: radius.lg, justifyContent: 'flex-end' },
-  planTileScrim: { padding: spacing.md, borderRadius: radius.lg, minHeight: 120, justifyContent: 'flex-end' },
-});

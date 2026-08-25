@@ -46,8 +46,8 @@
           "widgets": [
             {
               "name": "NetWorth",
-              "label": "Wallume — Net Worth",
-              "description": "Net worth, income, and a spending pie chart. Resize large to see your Financial Health score.",
+              "label": "Wallume Balance",
+              "description": "Your balance and this month's income, expense, and cash flow. Resize large for Financial Health.",
               "minWidth": "180dp",
               "minHeight": "110dp",
               "targetCellWidth": 3,
