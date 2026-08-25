@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Body, Label } from '@/src/components/ui';
+import { Body } from '@/src/components/ui';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { radius, spacing, font } from '@/src/theme/tokens';
 import { t } from '@/src/lib/i18n';
@@ -32,15 +32,14 @@ export function FinancialHubSwitcher({ current, onPress }: { current: FinancialM
       onPress={onPress}
       style={({ pressed }) => ({
         flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface2, borderColor: colors.border,
-        borderWidth: 1, borderRadius: radius.md, padding: spacing.md, opacity: pressed ? 0.86 : 1,
+        borderWidth: 1, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: 52, opacity: pressed ? 0.86 : 1,
       })}
     >
-      <View style={{ width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
-        <Ionicons name={module.icon} size={18} color={colors.onBrandSoft} />
+      <View style={{ width: 32, height: 32, borderRadius: radius.sm, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm }}>
+        <Ionicons name={module.icon} size={17} color={colors.onBrandSoft} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Label>{t('hub.title').toUpperCase()}</Label>
-        <Body style={{ marginTop: 2, fontFamily: font.textMedium }}>{label}</Body>
+        <Body style={{ fontFamily: font.textMedium }}>{label}</Body>
       </View>
       <Ionicons name="chevron-down" size={20} color={colors.muted} />
     </Pressable>

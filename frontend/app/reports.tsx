@@ -92,7 +92,7 @@ export default function Reports() {
                 <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.sm }}>
                   <MiniStat label="Income" value={formatMoneyCompact(income, cur)} color={colors.success} />
                   <MiniStat label="Expense" value={formatMoneyCompact(expense, cur)} color={colors.error} />
-                  <MiniStat label="Transactions" value={String(summary?.transaction_count ?? 0)} />
+                  <MiniStat label="Transactions" value={String(summary?.transaction_count ?? 0)} color={colors.onInverse} />
                 </View>
               </Card>
 

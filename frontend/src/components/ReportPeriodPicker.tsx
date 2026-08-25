@@ -33,6 +33,7 @@ export function ReportPeriodPicker({ fromDate, toDate, onChange }: {
       return todayLocalISO(date);
     };
     return [
+      { label: 'Last 7 days', from: daysAgo(6), to: todayLocalISO(today) },
       { label: 'This month', from: todayLocalISO(startOfMonth), to: todayLocalISO(today) },
       { label: 'Last month', from: todayLocalISO(startOfLastMonth), to: todayLocalISO(endOfLastMonth) },
       { label: 'Last 30 days', from: daysAgo(29), to: todayLocalISO(today) },

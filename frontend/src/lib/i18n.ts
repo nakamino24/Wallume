@@ -225,6 +225,10 @@ function getDeviceLocale(): Locale {
   return 'en';
 }
 
+export function getLocale(): Locale {
+  return _forcedLocale || getDeviceLocale();
+}
+
 export async function initLocale(): Promise<Locale> {
   const saved = await storage.getItem<Locale | null>(KEY, null);
   if (saved === 'en' || saved === 'id') {

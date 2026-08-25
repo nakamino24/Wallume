@@ -6,16 +6,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, font, radius, formatMoney } from '@/src/theme/tokens';
-import { Screen, Card, H2, Body, Chip, EmptyState } from '@/src/components/ui';
+import { spacing, font, radius } from '@/src/theme/tokens';
+import { Screen, H2, Body, Chip, EmptyState } from '@/src/components/ui';
 import { useTransactions } from '@/src/hooks/use-transactions';
-
-const CAT_ICON: Record<string, any> = {
-  Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
-  Entertainment: 'film', Bills: 'receipt', Health: 'medkit',
-  Rent: 'home', Salary: 'cash', Groceries: 'basket', Other: 'ellipsis-horizontal',
-  Freelance: 'laptop', Investment: 'trending-up', Business: 'briefcase', Gift: 'gift',
-};
+import { groupTransactionsByDate, TransactionDayGroup } from '@/src/components/transactions/TransactionDayGroup';
 
 export default function Transactions() {
   const { colors } = useTheme();
@@ -27,6 +21,7 @@ export default function Transactions() {
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   const shown = filter === 'all' ? txs : txs.filter((t) => t.type === filter);
+  const dayGroups = groupTransactionsByDate(shown);
   const cur = user?.currency || 'USD';
 
   const remove = (t: any) => {
@@ -71,52 +66,7 @@ export default function Transactions() {
             </View>
           ) : shown.length === 0 ? (
             <EmptyState testID="tx-empty" title="No transactions" subtitle="Add one to get started." actionLabel="Add transaction" onAction={() => router.push('/transaction/new')} />
-          ) : shown.map((t) => {
-            const positive = t.type === 'income';
-            const negative = t.type === 'expense';
-            const color = positive ? colors.success : negative ? colors.error : colors.brandPrimary;
-            const iconName = t.type === 'transfer' ? 'swap-horizontal' : (CAT_ICON[t.category] || 'ellipsis-horizontal');
-            const d = /^\d{4}-\d{2}-\d{2}$/.test(t.date || '') ? new Date(`${t.date}T00:00:00`) : new Date(t.date);
-            const label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-            return (
-              <TouchableOpacity
-                key={t.id}
-                activeOpacity={0.85}
-                onPress={() => router.push({
-                  pathname: '/transaction/[id]',
-                  params: {
-                    id: t.id,
-                    wallet_id: t.wallet_id,
-                    to_wallet_id: t.to_wallet_id || '',
-                    type: t.type,
-                    amount: String(t.amount),
-                    category: t.category,
-                    note: t.note || '',
-                    date: (t.date || '').split('T')[0],
-                  },
-                })}
-                onLongPress={() => remove(t)}
-              >
-                <Card style={{ padding: spacing.md, borderWidth: 0, borderRadius: 0, backgroundColor: 'transparent', borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: color + '22', alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
-                      <Ionicons name={iconName} size={18} color={color} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Body style={{ fontFamily: font.textBold }}>{t.category}</Body>
-                      <Body muted style={{ fontSize: 12, marginTop: 2 }} numberOfLines={1}>{t.note || label}</Body>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Body style={{ fontFamily: font.displayBold, color }}>
-                        {positive ? '+' : negative ? '-' : ''}{formatMoney(t.amount, cur)}
-                      </Body>
-                      <Body muted style={{ fontSize: 11, marginTop: 2 }}>{label}</Body>
-                    </View>
-                  </View>
-                </Card>
-              </TouchableOpacity>
-            );
-          })}
+          ) : dayGroups.map((group) => <TransactionDayGroup key={group.key} group={group} currency={cur} onRemove={remove} onOpen={(t) => router.push({ pathname: '/transaction/[id]', params: { id: t.id, wallet_id: t.wallet_id, to_wallet_id: t.to_wallet_id || '', type: t.type, amount: String(t.amount), category: t.category, note: t.note || '', date: (t.date || '').split('T')[0] } })} />)}
         </ScrollView>
       </SafeAreaView>
     </Screen>

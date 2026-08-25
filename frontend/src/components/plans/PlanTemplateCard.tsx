@@ -19,11 +19,11 @@ export function PlanTemplateCard({ kind, onPress }: { kind: keyof typeof templat
   const template = templates[kind];
   const label = t(template.labelKey);
   return (
-    <Pressable testID={`plan-new-${kind}`} accessibilityRole="button" accessibilityLabel={`${t('plans.template.start')} ${label}`} onPress={onPress} style={({ pressed }) => ({ width: '48.5%', minHeight: 124, borderRadius: radius.md, padding: spacing.md, backgroundColor: mode === 'dark' ? colors.surface3 : template.tint, opacity: pressed ? 0.84 : 1 })}>
-      <View style={{ width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' }}>
-        <Ionicons name={template.icon} size={19} color={colors.onBrandSoft} />
+    <Pressable testID={`plan-new-${kind}`} accessibilityRole="button" accessibilityLabel={`${t('plans.template.start')} ${label}`} onPress={onPress} style={({ pressed }) => ({ width: '48.5%', minHeight: 104, borderRadius: radius.md, padding: spacing.md, backgroundColor: mode === 'dark' ? colors.surface3 : template.tint, opacity: pressed ? 0.84 : 1 })}>
+      <View style={{ width: 32, height: 32, borderRadius: radius.sm, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={template.icon} size={17} color={colors.onBrandSoft} />
       </View>
-      <Body style={{ marginTop: spacing.md, fontFamily: font.textMedium }}>{label}</Body>
+      <Body style={{ marginTop: spacing.sm, fontFamily: font.textMedium }}>{label}</Body>
       <Body muted style={{ marginTop: 2, fontSize: 12 }}>{t('plans.template.start')}</Body>
     </Pressable>
   );

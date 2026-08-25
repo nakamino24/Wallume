@@ -7,11 +7,8 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
-import {
-  PlusJakartaSans_400Regular,
-  PlusJakartaSans_500Medium,
-  PlusJakartaSans_600SemiBold,
-} from '@expo-google-fonts/plus-jakarta-sans';
+import { Fraunces_400Regular, Fraunces_500Medium, Fraunces_600SemiBold } from '@expo-google-fonts/fraunces';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 
 import { useIconFonts } from '@/src/hooks/use-icon-fonts';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
@@ -52,9 +49,12 @@ function StackWithTheme() {
 }
 
 const CUSTOM_FONTS = {
-  PlusJakarta: PlusJakartaSans_400Regular,
-  'PlusJakarta-Medium': PlusJakartaSans_500Medium,
-  'PlusJakarta-SemiBold': PlusJakartaSans_600SemiBold,
+  Fraunces: Fraunces_400Regular,
+  'Fraunces-Medium': Fraunces_500Medium,
+  'Fraunces-SemiBold': Fraunces_600SemiBold,
+  Inter: Inter_400Regular,
+  'Inter-Medium': Inter_500Medium,
+  'Inter-SemiBold': Inter_600SemiBold,
 };
 
 function BottomSheetGate({ children }: { children: ReactNode }) {
@@ -66,22 +66,19 @@ export default function RootLayout() {
   const [iconsLoaded, iconsErr] = useIconFonts();
   const [fontsLoaded, fontsErr] = useFonts(CUSTOM_FONTS);
 
-  // Don't block the app on custom font fetch failures — fall through to system font.
-  const ready = (iconsLoaded || iconsErr) && (fontsLoaded || fontsErr);
+  const ready = (iconsLoaded || iconsErr) && fontsLoaded;
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
 
-  // Always render *something* while fonts/init are still pending so the user is
-  // never left staring at a dead splash: once assets resolve we swap to the app.
   if (!ready) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <ThemeProvider>
             <AppErrorBoundary>
-              <SplashScreenHolder />
+              <SplashScreenHolder error={iconsErr || fontsErr} />
             </AppErrorBoundary>
           </ThemeProvider>
         </SafeAreaProvider>
@@ -114,10 +111,7 @@ export default function RootLayout() {
 // the native splash on screen (it will be hidden once `ready` flips true). This
 // branch exists purely to satisfy the requirement that a mounted component tree
 // exists while initialization completes.
-function SplashScreenHolder() {
-  useEffect(() => {
-    const t = setTimeout(() => SplashScreen.hideAsync(), 15000);
-    return () => clearTimeout(t);
-  }, []);
+function SplashScreenHolder({ error }: { error: Error | null }) {
+  if (error) throw error;
   return null;
 }

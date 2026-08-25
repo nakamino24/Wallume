@@ -37,12 +37,12 @@ export function FinancialHubSheet({ visible, current, onClose, onSelect }: {
                   accessibilityLabel={`${label}. ${selected ? t('hub.current') : t(module.detailKey)}`}
                   accessibilityState={{ selected }}
                   onPress={() => onSelect(key)}
-                  style={({ pressed }) => ({ width: '48.8%', minHeight: 104, borderRadius: radius.md, padding: spacing.md, backgroundColor: selected ? colors.brandSoft : colors.surface3, borderWidth: 1, borderColor: selected ? colors.brandPrimary : 'transparent', opacity: pressed ? 0.82 : 1 })}
+                  style={({ pressed }) => ({ width: '48.8%', minHeight: 88, borderRadius: radius.md, padding: spacing.sm, backgroundColor: selected ? colors.brandSoft : colors.surface3, borderWidth: 1, borderColor: selected ? colors.brandPrimary : 'transparent', opacity: pressed ? 0.82 : 1 })}
                 >
                   <View style={{ width: 32, height: 32, borderRadius: radius.sm, backgroundColor: selected ? colors.surface2 : colors.surface2, alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name={module.icon} size={17} color={selected ? colors.brandPrimary : colors.onSurface2} />
                   </View>
-                  <Body numberOfLines={2} style={{ fontFamily: font.textMedium, marginTop: spacing.sm }}>{label}</Body>
+                  <Body numberOfLines={2} style={{ fontFamily: font.textMedium, marginTop: 6 }}>{label}</Body>
                   <Body numberOfLines={1} muted style={{ fontSize: 11, marginTop: 2 }}>{selected ? t('hub.current') : t(module.detailKey)}</Body>
                 </Pressable>
               );

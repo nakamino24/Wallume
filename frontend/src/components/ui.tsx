@@ -6,10 +6,10 @@ import { spacing, radius, font } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
 import Svg, { Circle } from 'react-native-svg';
 import { useKeyboardScroll } from '@/src/components/KeyboardAwareContainer';
+import { AppBackground } from '@/src/components/AppBackground';
 
 export function Screen({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
-  const { colors } = useTheme();
-  return <View style={[{ flex: 1, backgroundColor: colors.surface }, style]}>{children}</View>;
+  return <AppBackground><View style={[{ flex: 1 }, style]}>{children}</View></AppBackground>;
 }
 
 export function Card({ children, style, onPress, testID }: {
@@ -52,11 +52,11 @@ export function DisplayNumber({ children, size = 40, style, color }: {
 
 export function H1({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
   const { colors } = useTheme();
-  return <Text style={[{ color: colors.onSurface, fontFamily: font.displayBold, fontSize: scale(font.sizes.xl), fontWeight: '600', letterSpacing: -0.3, lineHeight: scale(32) }, style]}>{children}</Text>;
+  return <Text style={[{ color: colors.onSurface, fontFamily: font.textBold, fontSize: scale(font.sizes.xl), fontWeight: '600', letterSpacing: -0.3, lineHeight: scale(32) }, style]}>{children}</Text>;
 }
 export function H2({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
   const { colors } = useTheme();
-  return <Text style={[{ color: colors.onSurface, fontFamily: font.displayBold, fontSize: scale(font.sizes.lg), fontWeight: '600', letterSpacing: -0.2, lineHeight: scale(22) }, style]}>{children}</Text>;
+  return <Text style={[{ color: colors.onSurface, fontFamily: font.textBold, fontSize: scale(font.sizes.lg), fontWeight: '600', letterSpacing: -0.2, lineHeight: scale(22) }, style]}>{children}</Text>;
 }
 export function Body({ children, style, muted, testID, ...rest }: TextProps & { children: React.ReactNode; style?: StyleProp<TextStyle>; muted?: boolean; testID?: string }) {
   const { colors } = useTheme();

@@ -10,7 +10,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { font } from '@/src/theme/tokens';
 
 export default function TabsLayout() {
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
   const { user, loading } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -44,7 +44,7 @@ export default function TabsLayout() {
         tabBarLabelStyle: { fontFamily: font.textMedium, fontSize: 11, marginTop: 2 },
         tabBarItemStyle: { paddingVertical: 5 },
         tabBarStyle: {
-          backgroundColor: colors.surface2,
+          backgroundColor: mode === 'dark' ? '#191D28' : colors.surface2,
           borderTopColor: colors.border,
           borderTopWidth: 1,
           // 'relative' keeps the bar in normal flow so screens and floating
