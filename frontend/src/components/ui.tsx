@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ViewStyle, TextStyle, StyleProp, TextInput, TextInputProps } from 'react-native';
+import { View, Text, ActivityIndicator, ViewStyle, TextStyle, StyleProp, TextInput, TextInputProps, Pressable } from 'react-native';
 import type { TextProps } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, radius, font } from '@/src/theme/tokens';
@@ -25,7 +25,7 @@ export function Card({ children, style, onPress, testID }: {
       borderColor: colors.border,
     }, style]}>{children}</View>
   );
-  if (onPress) return <TouchableOpacity testID={testID} activeOpacity={0.7} onPress={onPress}>{inner}</TouchableOpacity>;
+  if (onPress) return <Pressable testID={testID} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] })}>{inner}</Pressable>;
   return inner;
 }
 
@@ -62,9 +62,9 @@ export function Body({ children, style, muted, testID, ...rest }: TextProps & { 
   const { colors } = useTheme();
   return <Text testID={testID} style={[{ color: muted ? colors.muted : colors.onSurface2, fontFamily: font.text, fontSize: scale(font.sizes.base), lineHeight: scale(22) }, style]} {...rest}>{children}</Text>;
 }
-export function Caption({ children, style, muted }: { children: React.ReactNode; style?: StyleProp<TextStyle>; muted?: boolean }) {
+export function Caption({ children, style, muted, testID }: { children: React.ReactNode; style?: StyleProp<TextStyle>; muted?: boolean; testID?: string }) {
   const { colors } = useTheme();
-  return <Text style={[{ color: muted ? colors.muted : colors.onSurface3, fontFamily: font.text, fontSize: scale(font.sizes.sm), lineHeight: scale(16) }, style]}>{children}</Text>;
+  return <Text testID={testID} style={[{ color: muted ? colors.muted : colors.onSurface3, fontFamily: font.text, fontSize: scale(font.sizes.sm), lineHeight: scale(16) }, style]}>{children}</Text>;
 }
 export function Label({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
   const { colors } = useTheme();
@@ -89,19 +89,19 @@ export function Button({
   const fg = isPrimary ? colors.onBrand : isDanger ? colors.error : colors.onSurface;
   const bd = isPrimary ? 'transparent' : isDanger ? colors.error : colors.border;
   return (
-    <TouchableOpacity
+    <Pressable
       testID={testID}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.7}
-      style={[{
+      style={({ pressed }) => [{
         backgroundColor: bg,
         borderRadius: radius.sm,
         paddingVertical: 12,
         paddingHorizontal: spacing.lg,
         alignItems: 'center',
         justifyContent: 'center',
-        opacity: disabled ? 0.5 : 1,
+        opacity: disabled ? 0.5 : pressed ? 0.9 : 1,
+        transform: [{ scale: pressed ? 0.985 : 1 }],
         flexDirection: 'row',
         borderWidth: isPrimary ? 0 : 1,
         borderColor: bd,
@@ -113,7 +113,7 @@ export function Button({
           <Text style={{ color: fg, fontFamily: font.textMedium, fontSize: 14, fontWeight: '500' }}>{label}</Text>
         </>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -163,27 +163,27 @@ export function ProgressBar({ progress, color, height = 6 }: { progress: number;
 export function Chip({ label, active, onPress, testID }: { label: string; active?: boolean; onPress?: () => void; testID?: string }) {
   const { colors } = useTheme();
   return (
-    <TouchableOpacity
+    <Pressable
       testID={testID}
       onPress={onPress}
-      activeOpacity={0.7}
-      style={{
+      style={({ pressed }) => ({
         height: 34,
         flexShrink: 0,
         paddingHorizontal: spacing.md,
-        borderRadius: radius.sm,
+        borderRadius: radius.pill,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: active ? colors.brandPrimary : colors.border,
-        backgroundColor: active ? colors.brandPrimary : 'transparent',
-      }}
+        backgroundColor: active ? colors.brandPrimary : colors.surface2,
+        opacity: pressed ? 0.85 : 1,
+      })}
     >
       <Text style={{
         color: active ? colors.onBrand : colors.onSurface,
         fontFamily: font.textMedium, fontSize: 13,
       }}>{label}</Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 

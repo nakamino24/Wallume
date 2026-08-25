@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, font, formatMoney } from '@/src/theme/tokens';
+import { spacing, font, radius, formatMoney } from '@/src/theme/tokens';
 import { Screen, Card, H2, Body, Chip, EmptyState } from '@/src/components/ui';
 import { useTransactions } from '@/src/hooks/use-transactions';
 
@@ -41,11 +41,11 @@ export default function Transactions() {
   return (
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.lg }}>
           <TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
           <H2 style={{ marginLeft: spacing.md, flex: 1 }}>Transactions</H2>
           <TouchableOpacity testID="tx-add-fab" onPress={() => router.push('/transaction/new')}
-            style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+            style={{ width: 42, height: 42, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="add" size={20} color={colors.onBrand} />
           </TouchableOpacity>
         </View>
@@ -57,7 +57,7 @@ export default function Transactions() {
           ))}
         </ScrollView>
 
-        <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 60, gap: spacing.sm }}>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: 60, gap: spacing.sm }}>
           {loading ? (
             <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
               <Body muted>Loading transactions…</Body>

@@ -41,11 +41,12 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.brandPrimary,
         tabBarInactiveTintColor: colors.muted,
-        tabBarLabelStyle: { fontFamily: font.textMedium, fontSize: 11 },
-        tabBarItemStyle: { paddingVertical: 4 },
+        tabBarLabelStyle: { fontFamily: font.textMedium, fontSize: 11, marginTop: 2 },
+        tabBarItemStyle: { paddingVertical: 5 },
         tabBarStyle: {
           backgroundColor: colors.surface2,
           borderTopColor: colors.border,
+          borderTopWidth: 1,
           // 'relative' keeps the bar in normal flow so screens and floating
           // buttons (e.g. the Home "+") never scroll under / overlap it.
           position: 'relative',

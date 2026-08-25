@@ -171,10 +171,10 @@ export default function Home() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
         >
           {/* Header */}
-          <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View>
-              <Body muted>Welcome back</Body>
-              <H2 style={{ marginTop: 2 }}>{user?.name?.split(' ')[0] || 'there'}</H2>
+            <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View>
+                <Body muted style={{ fontSize: font.sizes.sm }}>Welcome back</Body>
+                <H2 style={{ marginTop: 2 }}>{user?.name?.split(' ')[0] || 'there'}</H2>
             </View>
             <TouchableOpacity testID="home-profile-btn" onPress={() => router.push('/profile')}>
               <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center' }}>
@@ -193,7 +193,7 @@ export default function Home() {
           {payday && (
             <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
               <TouchableOpacity onPress={() => router.push('/profile')} activeOpacity={0.7}>
-                <Card style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md }}>
+                <Card style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, backgroundColor: colors.surface3, borderColor: 'transparent' }}>
                   <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: payday.isPaydayToday ? colors.success + '22' : colors.brandSoft, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
                     <Ionicons name={payday.isPaydayToday ? 'gift' : 'calendar-outline'} size={18} color={payday.isPaydayToday ? colors.success : colors.brandPrimary} />
                   </View>
@@ -215,7 +215,7 @@ export default function Home() {
 
           {/* Net Worth hero */}
           <View style={{ padding: spacing.xl }}>
-            <Card style={{ padding: spacing.xl, backgroundColor: colors.inverse }}>
+            <Card style={{ padding: spacing.xl, backgroundColor: colors.inverse, borderColor: 'transparent', borderRadius: radius.lg }}>
               <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Net worth</Label>
               <DisplayNumber size={40} color={colors.onInverse} style={{ marginTop: 6 }}>
                 {formatMoneyFull(derivedSummary.net_worth, cur)}

@@ -74,7 +74,7 @@ export default function Wallets() {
           </View>
 
           <View style={{ paddingHorizontal: spacing.xl, marginBottom: spacing.md }}>
-            <View style={[styles.summary, { backgroundColor: colors.surface2, borderColor: colors.border }]}> 
+            <View style={[styles.summary, { backgroundColor: colors.brandSoft, borderColor: 'transparent', borderRadius: radius.lg }]}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View style={{ flex: 1 }}>
                   <Body muted style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8 }}>Total balance</Body>

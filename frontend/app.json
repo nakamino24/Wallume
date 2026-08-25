@@ -15,7 +15,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#000000"
+          "backgroundColor": "#164B43"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.nakamino.wallume"
@@ -36,7 +36,7 @@
       [
         "expo-notifications",
         {
-          "color": "#16213E",
+          "color": "#164B43",
           "icon": "./assets/images/icon.png"
         }
       ],
@@ -63,8 +63,8 @@
 [
         "expo-navigation-bar",
         {
-          "backgroundColor": "#09090B",
-          "borderColor": "#09090B",
+          "backgroundColor": "#101816",
+          "borderColor": "#101816",
           "barStyle": "light-content",
           "enforceContrast": false,
           "visibility": "visible"
@@ -75,7 +75,7 @@
         {
           "image": "./assets/images/splash-logo.png",
           "resizeMode": "contain",
-          "backgroundColor": "#F8F7F4"
+          "backgroundColor": "#F6F7F3"
         }
       ]
     ],

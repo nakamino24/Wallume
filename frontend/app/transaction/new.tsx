@@ -72,7 +72,7 @@ export default function NewTransaction() {
     <FormLayout title="New transaction" onBack={() => router.back()}>
 
       {/* Type selector */}
-      <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.md, padding: 4, marginBottom: spacing.xl }}>
+      <View style={{ flexDirection: 'row', backgroundColor: colors.surface3, borderRadius: radius.md, padding: 4, marginBottom: spacing.xl }}>
               {(['expense', 'income', 'transfer'] as const).map((t) => (
                 <TouchableOpacity
                   key={t}
@@ -81,7 +81,7 @@ export default function NewTransaction() {
                   style={{
                     flex: 1,
                     paddingVertical: 10,
-                    borderRadius: radius.md,
+                    borderRadius: radius.sm,
                     alignItems: 'center',
                     backgroundColor: type === t
                       ? (t === 'income' ? colors.success : t === 'expense' ? colors.error : colors.brandPrimary)

@@ -38,6 +38,18 @@ jest.mock('@/src/components/DateField', () => {
   };
 });
 
+jest.mock('@/src/components/ReportPeriodPicker', () => {
+  const React = require('react');
+  const { TouchableOpacity, Text } = require('react-native');
+  return {
+    ReportPeriodPicker: ({ fromDate, toDate, onChange }: any) => React.createElement(
+      TouchableOpacity,
+      { testID: 'report-period-picker', onPress: () => onChange({ from: '2026-07-01', to: toDate }) },
+      React.createElement(Text, { testID: 'report-period-value' }, `${fromDate}:${toDate}`),
+    ),
+  };
+});
+
 const summary = {
   from_date: '2026-08-01',
   to_date: '2026-08-24',
@@ -66,8 +78,8 @@ describe('Reports screen', () => {
     expect(mockGetSummary).toHaveBeenCalledWith(expect.objectContaining({ from_date: expect.any(String), to_date: expect.any(String) }));
     expect(mockTransactions).not.toHaveBeenCalled();
     expect(getByText('Rp200.000')).toBeTruthy();
-    expect(getByText('Rp300.000')).toBeTruthy();
-    expect(getByText('Rp100.000')).toBeTruthy();
+    expect(getByText('Rp300,0K')).toBeTruthy();
+    expect(getByText('Rp100,0K')).toBeTruthy();
     expect(getByText('Food')).toBeTruthy();
     expect(getByText('Travel')).toBeTruthy();
     expect(getByText('Rp75,0K')).toBeTruthy();
@@ -83,9 +95,9 @@ describe('Reports screen', () => {
     const { getByTestId } = render(<Reports />);
 
     await waitFor(() => expect(mockGetSummary).toHaveBeenCalledTimes(1));
-    fireEvent.press(getByTestId('report-to'));
+    fireEvent.press(getByTestId('report-period-picker'));
     await waitFor(() => expect(mockGetSummary).toHaveBeenCalledTimes(2));
-    expect(mockGetSummary.mock.calls[1][0]).toEqual(expect.objectContaining({ to_date: '2026-08-26' }));
+    expect(mockGetSummary.mock.calls[1][0]).toEqual(expect.objectContaining({ from_date: '2026-07-01' }));
   });
 
   it('preserves an exact earlier From boundary when refetching', async () => {
@@ -93,10 +105,10 @@ describe('Reports screen', () => {
     const { getByTestId } = render(<Reports />);
 
     await waitFor(() => expect(mockGetSummary).toHaveBeenCalledTimes(1));
-    fireEvent.press(getByTestId('report-from'));
+    fireEvent.press(getByTestId('report-period-picker'));
 
     await waitFor(() => expect(mockGetSummary).toHaveBeenCalledWith(expect.objectContaining({ from_date: '2026-07-01' })));
-    expect(getByTestId('report-from-value').props.children).toBe('From:2026-07-01');
+    expect(getByTestId('report-period-value').props.children).toMatch(/^2026-07-01:/);
   });
 
   it('keeps the loading state separate from an API failure', async () => {

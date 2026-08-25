@@ -14,8 +14,9 @@ import { api } from '@/src/api/client';
 import { t, setLocale } from '@/src/lib/i18n';
 import { getNotifSettings, setNotifSettings, type NotifSettings } from '@/src/utils/notifications';
 import { spacing, radius, font, CURRENCIES } from '@/src/theme/tokens';
-import { scale } from '@/src/utils/responsive';
 import { Screen, Card, H1, H2, Body, Label, Button, Chip } from '@/src/components/ui';
+import { AppVersion } from '@/src/components/AppVersion';
+import { WallumeMark } from '@/src/components/WallumeMark';
 
 export default function Profile() {
   const { colors, mode, toggle } = useTheme();
@@ -93,15 +94,16 @@ export default function Profile() {
           <H2 style={{ marginLeft: spacing.md }}>Profile</H2>
         </View>
         <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.md, paddingBottom: 60 }}>
-          <Card style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+          <Card style={{ alignItems: 'center', paddingVertical: spacing.xl, backgroundColor: colors.brandSoft, borderColor: 'transparent', borderRadius: radius.lg }}>
             <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
-              <Body style={{ color: colors.onBrand, fontFamily: font.displayBold, fontSize: scale(28) }}>{(user?.name || 'M')[0].toUpperCase()}</Body>
+              <WallumeMark size={38} color={colors.onBrand} />
             </View>
             <H1 style={{ marginTop: spacing.md }}>{user?.name}</H1>
             <Body muted>{user?.email}</Body>
             <Body muted style={{ fontSize: 12, marginTop: 4 }}>via {user?.provider}</Body>
           </Card>
 
+          <Label style={{ marginTop: spacing.sm }}>PREFERENCES</Label>
           <Card>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View>
@@ -112,6 +114,7 @@ export default function Profile() {
             </View>
           </Card>
 
+          <Label style={{ marginTop: spacing.sm }}>ACCOUNT</Label>
           <Card>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flex: 1, marginRight: spacing.md }}>
@@ -243,6 +246,9 @@ export default function Profile() {
             </View>
           </Card>
 
+          <View style={{ alignItems: 'center', paddingTop: spacing.lg }}>
+            <AppVersion />
+          </View>
           <Button testID="profile-signout" label="Sign out" variant="danger" onPress={doLogout} style={{ marginTop: spacing.md }} />
 
           <TouchableOpacity testID="profile-delete-account" onPress={doDeleteAccount}

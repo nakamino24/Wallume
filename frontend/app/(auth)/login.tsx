@@ -12,6 +12,7 @@ import { font, spacing } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
 import { Screen, Body, Button, Input } from '@/src/components/ui';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
+import { WallumeMark } from '@/src/components/WallumeMark';
 
 export default function Login() {
   const { colors } = useTheme();
@@ -71,7 +72,7 @@ export default function Login() {
         <KeyboardAwareContainer contentContainerStyle={{ flexGrow: 1, padding: spacing.xl, justifyContent: 'center' }}>
           <View style={{ marginBottom: spacing.xxl }}>
               <View style={[styles.logoBadge, { backgroundColor: colors.brand }]}>
-                <Body style={{ color: '#FFFFFF', fontFamily: font.displayBold, fontSize: 20, fontWeight: '600', letterSpacing: -0.5 }}>W</Body>
+                <WallumeMark size={28} color={colors.onBrand} />
               </View>
               <Body style={{ fontFamily: font.displayBold, fontSize: scale(24), color: colors.onSurface, fontWeight: '600', letterSpacing: -0.3 }}>
                 Welcome back.

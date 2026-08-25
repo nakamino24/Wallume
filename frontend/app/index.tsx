@@ -6,6 +6,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useOnboarding } from '@/src/hooks/use-onboarding';
 import { font, radius, spacing } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
+import { WallumeMark } from '@/src/components/WallumeMark';
 
 export default function Index() {
   const { user, loading } = useAuth();
@@ -18,7 +19,7 @@ export default function Index() {
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.shell}>
             <View style={[styles.logoWrap, { backgroundColor: colors.brandPrimary }]}>
-              <Text style={styles.logoText}>W</Text>
+              <WallumeMark size={36} />
             </View>
             <Text style={[styles.title, { color: colors.onSurface, fontFamily: font.displayBold }]}>Wallume</Text>
             <Text style={[styles.subtitle, { color: colors.muted, fontFamily: font.text }]}>Organize your money with clarity.</Text>
@@ -50,12 +51,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
-  },
-  logoText: {
-    fontSize: scale(24),
-    fontFamily: font.displayBold,
-    color: '#FFFFFF',
-    fontWeight: '600',
   },
   title: {
     fontSize: scale(24),

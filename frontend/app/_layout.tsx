@@ -7,6 +7,11 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
 
 import { useIconFonts } from '@/src/hooks/use-icon-fonts';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
@@ -46,14 +51,10 @@ function StackWithTheme() {
   );
 }
 
-const LOCAL_FONT = require('../assets/fonts/SpaceMono-Regular.ttf');
 const CUSTOM_FONTS = {
-  SpaceGrotesk: LOCAL_FONT,
-  'SpaceGrotesk-Medium': LOCAL_FONT,
-  'SpaceGrotesk-Bold': LOCAL_FONT,
-  PlusJakarta: LOCAL_FONT,
-  'PlusJakarta-Medium': LOCAL_FONT,
-  'PlusJakarta-SemiBold': LOCAL_FONT,
+  PlusJakarta: PlusJakartaSans_400Regular,
+  'PlusJakarta-Medium': PlusJakartaSans_500Medium,
+  'PlusJakarta-SemiBold': PlusJakartaSans_600SemiBold,
 };
 
 function BottomSheetGate({ children }: { children: ReactNode }) {

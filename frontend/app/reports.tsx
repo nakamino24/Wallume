@@ -7,13 +7,13 @@ import Svg, { Circle as SvgCircle, G } from 'react-native-svg';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, font, formatMoney, formatMoneyCompact } from '@/src/theme/tokens';
+import { spacing, font, radius, formatMoney, formatMoneyCompact } from '@/src/theme/tokens';
 import { api, type ReportSummary } from '@/src/api/client';
 import { Screen, Card, H2, Body, Label, DisplayNumber } from '@/src/components/ui';
-import { DateField } from '@/src/components/DateField';
 import { todayLocalISO } from '@/src/utils/dates';
+import { ReportPeriodPicker } from '@/src/components/ReportPeriodPicker';
 
-const CAT_COLORS = ['#3FA796', '#F4A261', '#D32F2F', '#2E7D32', '#16213E', '#ED6C02', '#6B7280', '#222222'];
+const CAT_COLORS = ['#287565', '#D69A57', '#527C8A', '#7C9A6A', '#B86C20', '#8B7763', '#70807A', '#B64A4A'];
 
 export default function Reports() {
   const { colors } = useTheme();
@@ -65,14 +65,8 @@ export default function Reports() {
           </TouchableOpacity>
         </View>
 
-        {/* Date range */}
-        <View style={{ flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-          <View style={{ flex: 1 }}>
-            <DateField testID="report-from" label="From" value={fromDate} onChange={setFromDate} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <DateField testID="report-to" label="To" value={toDate} onChange={setToDate} />
-          </View>
+        <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.lg }}>
+          <ReportPeriodPicker fromDate={fromDate} toDate={toDate} onChange={({ from, to }) => { setFromDate(from); setToDate(to); }} />
         </View>
 
         <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.md, paddingBottom: 60 }}>
@@ -90,14 +84,14 @@ export default function Reports() {
           ) : (
             <>
               {/* Summary */}
-              <Card style={{ backgroundColor: colors.inverse }}>
+              <Card style={{ backgroundColor: colors.inverse, borderColor: 'transparent', borderRadius: radius.lg }}>
                 <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Net cash flow</Label>
                 <DisplayNumber size={34} color={colors.onInverse} style={{ marginTop: 6 }}>
                   {formatMoney(netFlow, cur)}
                 </DisplayNumber>
-                <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.xl }}>
-                  <MiniStat label="Income" value={formatMoney(income, cur)} color={colors.success} />
-                  <MiniStat label="Expense" value={formatMoney(expense, cur)} color={colors.error} />
+                <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.sm }}>
+                  <MiniStat label="Income" value={formatMoneyCompact(income, cur)} color={colors.success} />
+                  <MiniStat label="Expense" value={formatMoneyCompact(expense, cur)} color={colors.error} />
                   <MiniStat label="Transactions" value={String(summary?.transaction_count ?? 0)} />
                 </View>
               </Card>
@@ -144,14 +138,15 @@ export default function Reports() {
 function MiniStat({ label, value, color }: any) {
   const { colors } = useTheme();
   return (
-    <View style={{ minWidth: 80 }}>
+    <View style={{ flex: 1, minWidth: 0 }}>
       <Body style={{ color: colors.muted, fontSize: 12 }}>{label}</Body>
-      <Body style={{ color: color || colors.onSurface, fontFamily: font.displayBold, fontSize: 18, marginTop: 2 }}>{value}</Body>
+      <Body numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: color || colors.onSurface, fontFamily: font.displayBold, fontSize: 16, marginTop: 2 }}>{value}</Body>
     </View>
   );
 }
 
 function DonutChart({ data, total }: any) {
+  const { colors } = useTheme();
   const size = 180; const r = 70; const stroke = 24;
   const c = 2 * Math.PI * r;
   let accum = 0;
@@ -159,7 +154,7 @@ function DonutChart({ data, total }: any) {
   return (
     <Svg width={size} height={size}>
       <G transform={`translate(${size / 2}, ${size / 2}) rotate(-90)`}>
-        <SvgCircle r={r} cx={0} cy={0} fill="none" stroke="#E5E7EB" strokeWidth={stroke} />
+        <SvgCircle r={r} cx={0} cy={0} fill="none" stroke={colors.surface3} strokeWidth={stroke} />
         {data.map((d: any, i: number) => {
           const frac = d.amount / total;
           const dash = frac * c;
