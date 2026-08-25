@@ -8,7 +8,8 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font, formatMoney, formatMoneyFull, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H2, Body, Label, Button, Input, ProgressBar, DisplayNumber } from '@/src/components/ui';
+import { Screen, Card, H2, Body, Label, Button, ProgressBar, DisplayNumber } from '@/src/components/ui';
+import { MoneyInput } from '@/src/components/MoneyInput';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 
 export default function GoalDetail() {
@@ -71,7 +72,7 @@ export default function GoalDetail() {
 
           <Card>
             <Label>Add contribution</Label>
-            <Input testID="goal-contribute-amt" keyboardType="decimal-pad" value={amt} onChangeText={setAmt} placeholder="100" />
+            <MoneyInput testID="goal-contribute-amt" currency={cur} value={amt} onChange={setAmt} placeholder="100" />
             <Button testID="goal-contribute-btn" label="Add" onPress={contribute} />
           </Card>
 

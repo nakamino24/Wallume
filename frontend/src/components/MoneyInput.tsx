@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { TextInput, Text, View, type TextStyle } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { spacing, radius, font } from '@/src/theme/tokens';
+import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
 import { Label } from '@/src/components/ui';
 import { useKeyboardScroll } from '@/src/components/KeyboardAwareContainer';
-import { computeInputAmount, formatInputDigits, stripFormatting } from '@/src/lib/money';
+import { computeInputAmount, formatInputDigits, stripFormatting, getCurrencyFractionDigits } from '@/src/lib/money';
 
 /**
  * Smart currency input. Internal state holds ONLY raw digits; the display
@@ -48,6 +48,8 @@ export function MoneyInput({
   // Previous raw digit value, kept fresh so the change handler can diff against it.
   const rawValueRef = useRef(String(value ?? ''));
 
+  const fractionDigits = getCurrencyFractionDigits(currency);
+  const resolvedSymbol = symbol ?? currencySymbol(currency);
   const [display, setDisplay] = useState(() => formatInputDigits(String(value ?? '')));
 
   const valueStr = String(value ?? '');
@@ -144,20 +146,23 @@ export function MoneyInput({
           />
         </View>
       ) : (
-        <TextInput
-          ref={inputRef}
-          testID={testID}
-          value={display}
-          onChangeText={handleChange}
-          keyboardType="decimal-pad"
-          editable={editable}
-          autoFocus={autoFocus}
-          onFocus={() => focusToInput(inputRef.current)}
-          onSelectionChange={onSelectionChange}
-          placeholder={placeholder ?? '0'}
-          placeholderTextColor={colors.muted}
-          style={baseInputStyle}
-        />
+        <View style={[baseInputStyle, { flexDirection: 'row', alignItems: 'center', paddingVertical: 0, paddingHorizontal: spacing.md }]}>
+          <Text style={{ fontFamily: font.textMedium, fontSize: 15, color: colors.muted, marginRight: 6 }}>{resolvedSymbol}</Text>
+          <TextInput
+            ref={inputRef}
+            testID={testID}
+            value={display}
+            onChangeText={handleChange}
+            keyboardType={fractionDigits === 0 ? 'number-pad' : 'decimal-pad'}
+            editable={editable}
+            autoFocus={autoFocus}
+            onFocus={() => focusToInput(inputRef.current)}
+            onSelectionChange={onSelectionChange}
+            placeholder={placeholder ?? '0'}
+            placeholderTextColor={colors.muted}
+            style={{ flex: 1, color: colors.onSurface, fontFamily: font.textBold, fontSize: 15, paddingVertical: 12, fontVariant: ['tabular-nums'] }}
+          />
+        </View>
       )}
     </View>
   );

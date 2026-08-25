@@ -8,6 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
+import { MoneyInput } from '@/src/components/MoneyInput';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 
 const KINDS = [
@@ -56,7 +57,7 @@ export default function NewAsset() {
               <Chip key={k.id} testID={`asset-kind-${k.id}`} label={k.label} active={kind === k.id} onPress={() => setKind(k.id)} />
             ))}
           </ScrollView>
-          <Input testID="asset-value" label="Current value" keyboardType="decimal-pad" value={value} onChangeText={setValue} placeholder="150000" />
+          <MoneyInput testID="asset-value" label="Current value" value={value} onChange={setValue} placeholder="150000" />
           {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
           <Button testID="asset-save" label="Add asset" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
         </KeyboardAwareContainer>

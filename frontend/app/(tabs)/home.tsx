@@ -8,6 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { usePayday } from '@/src/hooks/use-payday';
 import { spacing, radius, font, formatMoneyFull, formatMoney, formatMoneyCompact, cv } from '@/src/theme/tokens';
+import { t } from '@/src/lib/i18n';
 import { api } from '@/src/api/client';
 import { Screen, Card, H2, Body, Label, DisplayNumber, ProgressRing, Chip, EmptyState, Caption } from '@/src/components/ui';
 import { Skeleton, SkeletonCard, SkeletonRow } from '@/src/components/Skeleton';
@@ -90,9 +91,11 @@ export default function Home() {
   const walletBalance = wallets.reduce((sum: number, wallet: any) => sum + (Number(wallet.converted_balance ?? wallet.balance) || 0), 0);
   const monthIncome = txs.reduce((sum: number, tx: any) => sum + ((tx.type === 'income' && Number(tx.amount)) || 0), 0);
   const monthExpense = txs.reduce((sum: number, tx: any) => sum + ((tx.type === 'expense' && Number(tx.amount)) || 0), 0);
-  // Net Worth must be the authoritative value from /analytics/summary (wallet + assets + investments - debts).
-  // Do NOT fall back to walletBalance alone — that is semantically incorrect.
+  // Home hero is Total Balance (wallet_total), not Net Worth. Widget shows the same wallet_total as Total Saldo.
+  // True Net Worth (wallet + assets + investments - debts) is authoritative in summary.net_worth via AnalyticsService,
+  // but Home hero must not mislabel wallet total as Net Worth.
   const derivedSummary = {
+    total_balance: summary?.wallet_total ?? walletBalance,
     net_worth: summary?.net_worth ?? 0,
     month_income: summary?.month_income ?? monthIncome,
     month_expense: summary?.month_expense ?? monthExpense,
@@ -215,12 +218,12 @@ export default function Home() {
             </View>
           )}
 
-          {/* Net Worth hero */}
+          {/* Total Balance hero — wallet_total, not Net Worth */}
           <View style={{ padding: spacing.xl }}>
             <Card style={{ padding: spacing.xl, backgroundColor: colors.inverse, borderColor: 'transparent', borderRadius: radius.lg }}>
-              <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Net worth</Label>
+              <Label style={{ color: colors.onInverse, opacity: 0.6 }}>{t('total.balance')}</Label>
               <DisplayNumber size={40} color={colors.onInverse} style={{ marginTop: 6 }}>
-                {formatMoneyFull(derivedSummary.net_worth, cur)}
+                {formatMoneyFull(derivedSummary.total_balance, cur)}
               </DisplayNumber>
               <View style={{ flexDirection: 'row', marginTop: spacing.lg, gap: spacing.sm }}>
                 <View style={{ flex: 1, minWidth: 0 }}>

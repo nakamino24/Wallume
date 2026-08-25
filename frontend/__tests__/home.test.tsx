@@ -188,32 +188,36 @@ describe('Home Screen', () => {
     await waitFor(() => expect(getByTestId('home-tx-empty')).toBeTruthy());
   });
 
-  it('displays authoritative Net Worth from summary, not wallet total', async () => {
+  it('displays Total Balance from wallet_total, not mislabeled Net Worth', async () => {
     mockUser.currency = 'IDR';
     const api = require('@/src/api/client').api;
     api.summary.mockResolvedValueOnce({
-      net_worth: 42000, month_income: 0, month_expense: 0, cash_flow: 0,
+      wallet_total: 42000, net_worth: 999999, month_income: 0, month_expense: 0, cash_flow: 0,
       health_score: 0, saving_rate: 0, debt_ratio: 0,
       category_breakdown: [], trend: [], spending_alerts: [], counts: {},
     });
     const Home = require('@/app/(tabs)/home').default;
     const { getByText, queryByText } = render(<Home />);
     await waitFor(() => expect(getByText('Rp42.000')).toBeTruthy());
-    expect(queryByText('Rp3.450')).toBeNull();
+    // Net Worth must not be used as hero; wallet_total is authoritative for Total Balance
+    expect(queryByText('Rp999.999')).toBeNull();
+    expect(queryByText('Net worth')).toBeNull();
     mockUser.currency = 'USD';
   });
 
-  it('supports negative Net Worth display', async () => {
+  it('supports negative Net Worth via authoritative summary (not wallet total)', async () => {
     mockUser.currency = 'IDR';
     const api = require('@/src/api/client').api;
+    // Even if wallet_total is positive, net_worth can be negative when debts > assets
     api.summary.mockResolvedValueOnce({
-      net_worth: -7500, month_income: 0, month_expense: 0, cash_flow: 0,
+      wallet_total: 5000, net_worth: -7500, month_income: 0, month_expense: 0, cash_flow: 0,
       health_score: 0, saving_rate: 0, debt_ratio: 0,
       category_breakdown: [], trend: [], spending_alerts: [], counts: {},
     });
     const Home = require('@/app/(tabs)/home').default;
     const { getByText } = render(<Home />);
-    await waitFor(() => expect(getByText('-Rp7.500')).toBeTruthy());
+    // Home hero is Total Balance, so it shows wallet_total 5000, not negative net_worth
+    await waitFor(() => expect(getByText('Rp5.000')).toBeTruthy());
     mockUser.currency = 'USD';
   });
 });

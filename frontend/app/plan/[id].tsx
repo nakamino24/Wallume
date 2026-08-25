@@ -9,6 +9,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, formatMoney, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, Button, Input, ProgressBar } from '@/src/components/ui';
+import { MoneyInput } from '@/src/components/MoneyInput';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 
 const planIcon: Record<string, any> = { wedding: 'heart-outline', house: 'home-outline', car: 'car-sport-outline', vacation: 'airplane-outline' };
@@ -152,13 +153,13 @@ export default function PlanDetail() {
                     <Ionicons name="close-circle" size={20} color={colors.muted} />
                   </TouchableOpacity>
                 </View>
-                <View style={{ marginTop: spacing.sm }}>
-                  <Input testID={`item-amount-${it.id}`} keyboardType="decimal-pad" value={String(it.amount ?? '')} label="Budget"
-                    onChangeText={(v) => updateItem(it.id, { amount: parseFloat(v) || 0 })}
+                <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
+                  <MoneyInput testID={`item-amount-${it.id}`} currency={cur} value={String(it.amount ?? '')} label="Budget"
+                    onChange={(v) => updateItem(it.id, { amount: parseFloat(v) || 0 })}
                     style={{ marginBottom: 0 }} />
-                  <Input testID={`item-paid-${it.id}`} keyboardType="decimal-pad" value={String(it.paid ?? '')} label="Funds collected"
-                    onChangeText={(v) => updateItem(it.id, { paid: parseFloat(v) || 0 })}
-                    style={{ marginTop: spacing.sm, marginBottom: 0 }} />
+                  <MoneyInput testID={`item-paid-${it.id}`} currency={cur} value={String(it.paid ?? '')} label="Funds collected"
+                    onChange={(v) => updateItem(it.id, { paid: parseFloat(v) || 0 })}
+                    style={{ marginBottom: 0 }} />
                 </View>
               </Card>
             ))}

@@ -63,6 +63,36 @@ export function formatNumberFull(amount: number): string {
   return groupThousands(String(Math.round(Math.abs(amount))));
 }
 
+export function getCurrencyFractionDigits(currency: string): number {
+  return ['IDR', 'JPY', 'KRW', 'VND', 'CLP'].includes(currency) ? 0 : 2;
+}
+
+export function formatMoneyInput(raw: string, currency: string = 'IDR'): string {
+  if (!raw) return '';
+  const digits = getCurrencyFractionDigits(currency);
+  if (digits === 0) return groupThousands(raw.replace(/\D/g, ''));
+  const clean = raw.replace(/[^0-9]/g, '');
+  if (!clean) return '';
+  // For 2-decimal currencies, treat raw as major units with optional decimal comma
+  // Keep raw as canonical string (e.g. "25.50"), format display with comma decimal
+  if (clean.includes('.') || clean.includes(',')) {
+    const normalized = clean.replace(',', '.');
+    const parts = normalized.split('.');
+    const intPart = groupThousands(parts[0] || '0');
+    const frac = (parts[1] || '').slice(0, 2).padEnd(2, '0');
+    return `${intPart},${frac}`;
+  }
+  return groupThousands(clean);
+}
+
+export function parseMoneyInput(display: string, currency: string = 'IDR'): number {
+  if (!display) return 0;
+  const digits = getCurrencyFractionDigits(currency);
+  if (digits === 0) return parseFloat(display.replace(/\./g, '').replace(/,/g, '.')) || 0;
+  const normalized = display.replace(/\./g, '').replace(',', '.');
+  return parseFloat(normalized) || 0;
+}
+
 /**
  * Live formatting while typing in an amount input.
  * Takes a raw digit string (already stripped of separators) and returns the
