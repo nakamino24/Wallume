@@ -11,7 +11,7 @@ import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable }
 import { useOnboarding } from '@/src/hooks/use-onboarding';
 import { usePayday } from '@/src/hooks/use-payday';
 import { api } from '@/src/api/client';
-import { t, setLocale } from '@/src/lib/i18n';
+import { t, setLocale, initLocale } from '@/src/lib/i18n';
 import { getNotifSettings, setNotifSettings, type NotifSettings } from '@/src/utils/notifications';
 import { spacing, radius, font, CURRENCIES } from '@/src/theme/tokens';
 import { Screen, Card, H1, H2, Body, Label, Button, Chip } from '@/src/components/ui';
@@ -35,7 +35,6 @@ export default function Profile() {
       setBioAvailable(await isBiometricAvailable());
       setBioEnabled(await isBiometricLockEnabled());
       setNotifState(await getNotifSettings());
-      const { initLocale } = await import('@/src/lib/i18n');
       setLangState(await initLocale());
     })();
   }, []);
@@ -186,6 +185,7 @@ export default function Profile() {
           </Card>
 
           {/* Language */}
+          <Label style={{ marginTop: spacing.sm }}>NOTIFICATIONS</Label>
           <Card>
             <Label>{t('language')}</Label>
             <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
@@ -206,6 +206,7 @@ export default function Profile() {
             </View>
           </Card>
 
+          <Label style={{ marginTop: spacing.sm }}>DATA & ABOUT</Label>
           <Card onPress={() => router.push('/reports')}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View>

@@ -97,7 +97,7 @@ export default function Transactions() {
                 })}
                 onLongPress={() => remove(t)}
               >
-                <Card style={{ padding: spacing.md }}>
+                <Card style={{ padding: spacing.md, borderWidth: 0, borderRadius: 0, backgroundColor: 'transparent', borderBottomWidth: 1, borderBottomColor: colors.border }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: color + '22', alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
                       <Ionicons name={iconName} size={18} color={color} />
