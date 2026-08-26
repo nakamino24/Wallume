@@ -8,7 +8,8 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, formatMoneyFull } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, H1, Body, DisplayNumber, EmptyState, Caption } from '@/src/components/ui';
+import { Screen, H1, Body, EmptyState, Caption } from '@/src/components/ui';
+import { MoneyValue } from '@/src/components/MoneyValue';
 import { confirmAction } from '@/src/utils/confirm';
 import { useWallets } from '@/src/hooks/use-wallets';
 
@@ -78,7 +79,7 @@ export default function Wallets() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View style={{ flex: 1 }}>
                   <Body muted style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8 }}>Total balance</Body>
-                  <DisplayNumber size={24} style={{ marginTop: 6 }}>{formatMoneyFull(total, cur)}</DisplayNumber>
+                  <MoneyValue value={total} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 24, marginTop: 6 }} />
                 </View>
                 <View style={[styles.pill, { backgroundColor: colors.brandSoft }]}> 
                   <Body style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 12 }}>{wallets.length} accounts</Body>
@@ -187,9 +188,12 @@ function WalletCard({ wallet, currency, onLongPress, onPress }: any) {
 
       <View style={{ marginTop: spacing.md }}>
         <Body muted style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7 }}>Balance</Body>
-        <DisplayNumber size={22} style={{ marginTop: 4 }}>
-          {formatMoneyFull(wallet.converted_balance ?? (wallet.balance || 0), wallet.home_currency || currency)}
-        </DisplayNumber>
+        <MoneyValue
+          value={wallet.converted_balance ?? (wallet.balance || 0)}
+          currency={wallet.home_currency || currency}
+          privacy="financial"
+          style={{ fontFamily: font.textBold, fontSize: 22, marginTop: 4 }}
+        />
         {wallet.currency && wallet.currency !== (wallet.home_currency || currency) && (
           <Caption muted style={{ marginTop: 2 }}>{formatMoneyFull(wallet.balance || 0, wallet.currency)} · {wallet.currency}</Caption>
         )}

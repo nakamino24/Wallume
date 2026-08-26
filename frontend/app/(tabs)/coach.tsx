@@ -9,6 +9,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font } from '@/src/theme/tokens';
 import { api, getToken, BASE_URL } from '@/src/api/client';
 import { Screen, H1, H2, Body } from '@/src/components/ui';
+import { CoachMarkdown } from '@/src/components/CoachMarkdown';
 
 type Msg = { id: string; role: 'user' | 'assistant'; text: string; pending?: boolean };
 
@@ -213,10 +214,10 @@ export default function Coach() {
                 }}>
                   {m.pending && !m.text ? (
                     <TypingDots color={colors.brandPrimary} />
+                  ) : m.role === 'assistant' ? (
+                    <CoachMarkdown isUser={false}>{m.text}</CoachMarkdown>
                   ) : (
-                    <Body style={{ color: m.role === 'user' ? colors.onBrand : colors.onSurface, lineHeight: 20 }}>
-                      {m.text}
-                    </Body>
+                    <Body style={{ color: colors.onBrand, lineHeight: 20 }}>{m.text}</Body>
                   )}
                 </View>
               </View>

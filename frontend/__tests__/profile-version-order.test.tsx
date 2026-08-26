@@ -6,6 +6,17 @@ jest.mock('expo-constants', () => ({
   default: { expoConfig: { version: '1.0.6c' } },
 }));
 
+jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({
+  useBalancePrivacy: () => ({
+    isBalanceVisible: true,
+    isPrivacyReady: true,
+    showBalance: jest.fn(),
+    hideBalance: jest.fn(),
+    toggleBalanceVisibility: jest.fn(),
+  }),
+  BalancePrivacyProvider: ({ children }: any) => children,
+}));
+
 jest.mock('@/src/theme/ThemeProvider', () => ({
   useTheme: () => ({
     mode: 'light',

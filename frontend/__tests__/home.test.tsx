@@ -11,6 +11,17 @@ jest.mock('@/src/auth/AuthProvider', () => ({
   useAuth: () => ({ user: mockUser, loading: false }),
 }));
 
+jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({
+  useBalancePrivacy: () => ({
+    isBalanceVisible: true,
+    isPrivacyReady: true,
+    showBalance: jest.fn(),
+    hideBalance: jest.fn(),
+    toggleBalanceVisibility: jest.fn(),
+  }),
+  BalancePrivacyProvider: ({ children }: any) => children,
+}));
+
 jest.mock('@/src/theme/ThemeProvider', () => ({
   useTheme: () => ({
     colors: {
@@ -142,7 +153,7 @@ describe('Home Screen', () => {
       expect(getByText('Income (mo)')).toBeTruthy();
       expect(getByText('Expense (mo)')).toBeTruthy();
       expect(getByText('Cash flow')).toBeTruthy();
-      expect(getByText('+Rp5,0K')).toBeTruthy();
+      expect(getByText('Rp5,0K')).toBeTruthy();
       expect(getByText('-Rp3,2K')).toBeTruthy();
       expect(getByText('Rp1,8K')).toBeTruthy();
       expect(getByTestId('net-worth-income').props.numberOfLines).toBe(1);

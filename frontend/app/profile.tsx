@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
+import { useBalancePrivacy } from '@/src/privacy/BalancePrivacyProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable } from '@/src/auth/AppLockGate';
 import { useOnboarding } from '@/src/hooks/use-onboarding';
@@ -21,6 +22,7 @@ import { refreshNetWorthWidget } from '@/src/widgets/refresh-widget';
 
 export default function Profile() {
   const { colors, mode, toggle } = useTheme();
+  const { isBalanceVisible, toggleBalanceVisibility } = useBalancePrivacy();
   const { user, logout, updateProfile } = useAuth();
   const { resetOnboarding } = useOnboarding();
   const { info: payday, setPaydayDay, setWorkWeek } = usePayday(user?.payday_day, user?.work_week);
@@ -126,6 +128,19 @@ export default function Profile() {
               </View>
               <Switch testID="profile-biometric-toggle" value={bioEnabled} onValueChange={onToggleBiometric}
                 disabled={!bioAvailable} trackColor={{ true: colors.brandPrimary }} />
+            </View>
+          </Card>
+
+          <Card>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flex: 1, marginRight: spacing.md }}>
+                <Label>{t('privacy.balance')}</Label>
+                <Body style={{ marginTop: 4, fontFamily: font.textBold }}>{t('privacy.showAmounts')}</Body>
+                <Body muted style={{ marginTop: 2, fontSize: 12 }}>
+                  {isBalanceVisible ? 'Amounts visible' : 'Amounts hidden'}
+                </Body>
+              </View>
+              <Switch testID="profile-privacy-toggle" value={isBalanceVisible} onValueChange={toggleBalanceVisibility} trackColor={{ true: colors.brandPrimary }} />
             </View>
           </Card>
 

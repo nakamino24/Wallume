@@ -8,9 +8,10 @@ import * as Sharing from 'expo-sharing';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, font, formatMoneyFull, formatMoney } from '@/src/theme/tokens';
+import { spacing, font, formatMoneyFull } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H2, Body, Label, Button } from '@/src/components/ui';
+import { MoneyValue } from '@/src/components/MoneyValue';
 
 function monthLabel(d: Date) {
   return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -159,8 +160,14 @@ export default function ExportReport() {
             <Card style={{ marginTop: spacing.md }}>
               <Label>Preview</Label>
               <View style={{ marginTop: spacing.sm, gap: 6 }}>
-                <Body style={{ fontSize: 13 }}>Net worth: <Body style={{ fontFamily: font.textBold, fontSize: 13 }}>{formatMoney(summary.net_worth ?? 0, cur)}</Body></Body>
-                <Body style={{ fontSize: 13 }}>Cash flow: <Body style={{ fontFamily: font.textBold, fontSize: 13 }}>{formatMoney(summary.cash_flow ?? 0, cur)}</Body></Body>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Body style={{ fontSize: 13 }}>Net worth: </Body>
+                  <MoneyValue value={summary.net_worth ?? 0} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 13 }} />
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Body style={{ fontSize: 13 }}>Cash flow: </Body>
+                  <MoneyValue value={summary.cash_flow ?? 0} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 13 }} />
+                </View>
                 <Body style={{ fontSize: 13 }}>Health score: <Body style={{ fontFamily: font.textBold, fontSize: 13 }}>{summary.health_score ?? 0}/100</Body></Body>
               </View>
             </Card>

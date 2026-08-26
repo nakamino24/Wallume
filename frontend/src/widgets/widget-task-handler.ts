@@ -56,11 +56,18 @@ export async function fetchWidgetData(): Promise<NetWorthWidgetData> {
     const categories = (s.category_breakdown || []).slice(0, 5).map((c: any) => ({ label: c.category, amount: c.amount }));
     const locale = await initLocale();
     const currency = (await storage.getItem<string>('mf.widget.currency', 'USD')) || 'USD';
+    const showBalances = await storage.getItem<boolean | null>('wallume.privacy.showBalances', null);
+    const isVisible = showBalances === true;
+    // Default HIDDEN — if preference is null/false, mask amounts
+    const mask = (cur: string) => {
+      const sym = cur === 'IDR' ? 'Rp' : cur === 'USD' ? '$' : cur;
+      return `${sym}••••`;
+    };
     return {
-      balance: formatMoney(s.wallet_total ?? 0, currency),
-      income: formatMoney(s.month_income ?? 0, currency),
-      expense: formatMoney(s.month_expense ?? 0, currency),
-      cashFlow: formatMoney(s.cash_flow ?? 0, currency),
+      balance: isVisible ? formatMoney(s.wallet_total ?? 0, currency) : mask(currency),
+      income: isVisible ? formatMoney(s.month_income ?? 0, currency) : mask(currency),
+      expense: isVisible ? formatMoney(s.month_expense ?? 0, currency) : mask(currency),
+      cashFlow: isVisible ? formatMoney(s.cash_flow ?? 0, currency) : mask(currency),
       healthScore: s.health_score ?? 0,
       chartUri,
       categories,

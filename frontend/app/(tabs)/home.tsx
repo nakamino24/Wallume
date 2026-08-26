@@ -7,8 +7,10 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { usePayday } from '@/src/hooks/use-payday';
-import { spacing, radius, font, formatMoneyFull, formatMoney, formatMoneyCompact, cv } from '@/src/theme/tokens';
+import { spacing, radius, font, formatMoneyFull, formatMoney, cv } from '@/src/theme/tokens';
 import { t } from '@/src/lib/i18n';
+import { useBalancePrivacy } from '@/src/privacy/BalancePrivacyProvider';
+import { MoneyValue } from '@/src/components/MoneyValue';
 import { api } from '@/src/api/client';
 import { Screen, Card, H2, Body, Label, DisplayNumber, ProgressRing, Chip, EmptyState, Caption } from '@/src/components/ui';
 import { Skeleton, SkeletonCard, SkeletonRow } from '@/src/components/Skeleton';
@@ -27,6 +29,7 @@ export default function Home() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { isBalanceVisible, toggleBalanceVisibility } = useBalancePrivacy();
   const router = useRouter();
   const [summary, setSummary] = useState<any>(null);
   const { transactions: txs, remove: removeTransaction } = useTransactions();
@@ -221,28 +224,69 @@ export default function Home() {
           {/* Total Balance hero — wallet_total, not Net Worth */}
           <View style={{ padding: spacing.xl }}>
             <Card style={{ padding: spacing.xl, backgroundColor: colors.inverse, borderColor: 'transparent', borderRadius: radius.lg }}>
-              <Label style={{ color: colors.onInverse, opacity: 0.6 }}>{t('total.balance')}</Label>
-              <DisplayNumber size={40} color={colors.onInverse} style={{ marginTop: 6 }}>
-                {formatMoneyFull(derivedSummary.total_balance, cur)}
-              </DisplayNumber>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Label style={{ color: colors.onInverse, opacity: 0.6 }}>{t('total.balance')}</Label>
+                <TouchableOpacity
+                  testID="home-eye-toggle"
+                  onPress={toggleBalanceVisibility}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Ionicons name={isBalanceVisible ? 'eye-outline' : 'eye-off-outline'} size={20} color={colors.onInverse} />
+                </TouchableOpacity>
+              </View>
+              <MoneyValue
+                value={derivedSummary.total_balance}
+                currency={cur}
+                privacy="financial"
+                testID="home-total-balance"
+                style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 40, letterSpacing: -0.5, marginTop: 6 }}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.5}
+              />
               <View style={{ flexDirection: 'row', marginTop: spacing.lg, gap: spacing.sm }}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Income (mo)</Label>
-                  <Body testID="net-worth-income" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.success, fontFamily: font.textBold, fontSize: font.sizes.base, marginTop: 2, fontVariant: ['tabular-nums'] }}>
-                    +{formatMoneyCompact(derivedSummary.month_income, cur)}
-                  </Body>
+                  <MoneyValue
+                    value={derivedSummary.month_income}
+                    currency={cur}
+                    compact
+                    privacy="financial"
+                    testID="net-worth-income"
+                    style={{ color: colors.success, fontFamily: font.textBold, fontSize: font.sizes.base, marginTop: 2 }}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                  />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Expense (mo)</Label>
-                  <Body testID="net-worth-expense" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.error, fontFamily: font.textBold, fontSize: font.sizes.base, marginTop: 2, fontVariant: ['tabular-nums'] }}>
-                    -{formatMoneyCompact(derivedSummary.month_expense, cur)}
-                  </Body>
+                  <MoneyValue
+                    value={-derivedSummary.month_expense}
+                    currency={cur}
+                    compact
+                    privacy="financial"
+                    testID="net-worth-expense"
+                    style={{ color: colors.error, fontFamily: font.textBold, fontSize: font.sizes.base, marginTop: 2 }}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                  />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Cash flow</Label>
-                  <Body testID="net-worth-cash-flow" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: font.sizes.base, marginTop: 2, fontVariant: ['tabular-nums'] }}>
-                    {formatMoneyCompact(derivedSummary.cash_flow, cur)}
-                  </Body>
+                  <MoneyValue
+                    value={derivedSummary.cash_flow}
+                    currency={cur}
+                    compact
+                    privacy="financial"
+                    testID="net-worth-cash-flow"
+                    style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: font.sizes.base, marginTop: 2 }}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                  />
                 </View>
               </View>
             </Card>
@@ -458,19 +502,23 @@ function TxRow({ tx, last, currency, onPress, onLongPress }: any) {
   const negative = tx.type === 'expense';
   const iconName = CATEGORY_ICON[tx.category] || 'ellipsis-horizontal';
   const color = positive ? colors.success : negative ? colors.error : colors.brandPrimary;
+  const amount = positive ? tx.amount : negative ? -Math.abs(tx.amount) : tx.amount;
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress} onLongPress={onLongPress}>
       <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.border }}>
         <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: color + '22', alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
           <Ionicons name={tx.type === 'transfer' ? 'swap-horizontal' : iconName} size={18} color={color} />
         </View>
-        <View style={{ flex: 1 }}>
-          <Body style={{ fontFamily: font.textMedium }}>{tx.category}</Body>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Body style={{ fontFamily: font.textMedium }} numberOfLines={1}>{tx.category}</Body>
           {!!tx.note && <Body muted style={{ fontSize: 12, marginTop: 2 }} numberOfLines={1}>{tx.note}</Body>}
         </View>
-        <Body style={{ fontFamily: font.textBold, color: positive ? colors.success : negative ? colors.error : colors.onSurface, fontVariant: ['tabular-nums'] }}>
-          {positive ? '+' : negative ? '-' : ''}{formatMoney(tx.amount, currency)}
-        </Body>
+        <MoneyValue
+          value={amount}
+          currency={currency}
+          privacy="financial"
+          style={{ fontFamily: font.textBold, color: positive ? colors.success : negative ? colors.error : colors.onSurface }}
+        />
       </View>
     </TouchableOpacity>
   );
