@@ -99,15 +99,15 @@ export default function Reports() {
                 <MoneyValue value={netFlow} currency={cur} privacy="financial" style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 34, letterSpacing: -0.5, marginTop: 6 }} />
                 <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.sm }}>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Body style={{ color: colors.muted, fontSize: 12, opacity: 0.9 }}>Income</Body>
+                    <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>Income</Body>
                     <MoneyValue value={income} currency={cur} compact privacy="financial" style={{ color: colors.success, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Body style={{ color: colors.muted, fontSize: 12, opacity: 0.9 }}>Expense</Body>
+                    <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>Expense</Body>
                     <MoneyValue value={expense} currency={cur} compact privacy="financial" style={{ color: colors.error, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Body style={{ color: colors.muted, fontSize: 12, opacity: 0.9 }}>Transactions</Body>
+                    <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>Transactions</Body>
                     <Body numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }}>{String(summary?.transaction_count ?? 0)}</Body>
                   </View>
                 </View>

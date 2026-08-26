@@ -75,19 +75,19 @@ export default function Wallets() {
           </View>
 
           <View style={{ paddingHorizontal: spacing.xl, marginBottom: spacing.md }}>
-            <View style={[styles.summary, { backgroundColor: colors.brandSoft, borderColor: 'transparent', borderRadius: radius.lg }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View style={{ flex: 1 }}>
-                  <Body muted style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8 }}>Total balance</Body>
-                  <MoneyValue value={total} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 24, marginTop: 6 }} />
+              <View style={[styles.summary, { backgroundColor: colors.brandSoft, borderColor: 'transparent', borderRadius: radius.lg }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ flex: 1 }}>
+                    <Body style={{ color: colors.onBrandSoft, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8, opacity: 0.72 }}>Total balance</Body>
+                    <MoneyValue value={total} currency={cur} privacy="financial" style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 24, marginTop: 6 }} />
                 </View>
                 <View style={[styles.pill, { backgroundColor: colors.brandSoft }]}> 
                   <Body style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 12 }}>{wallets.length} accounts</Body>
                 </View>
               </View>
 
-              <View style={{ marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
-                <Body style={{ fontFamily: font.textBold, fontSize: 13 }}>Quick actions</Body>
+              <View style={{ marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.onBrandSoft + '2E' }}>
+                <Body style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 13 }}>Quick actions</Body>
                 <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, flexWrap: 'wrap' }}>
                   <TouchableOpacity onPress={() => router.push('/transaction/new')} style={[styles.actionBtn, { backgroundColor: colors.brandSoft }]}> 
                     <Ionicons name="add-circle-outline" size={16} color={colors.onBrandSoft} />
