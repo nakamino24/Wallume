@@ -13,6 +13,10 @@ jest.mock('@/src/theme/ThemeProvider', () => ({
   }),
 }));
 
+jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({
+  useBalancePrivacy: () => ({ isBalanceVisible: true, isPrivacyReady: true }),
+}));
+
 const { font, palette } = require('@/src/theme/tokens');
 const { DisplayNumber } = require('@/src/components/ui');
 const { TransactionDayGroup } = require('@/src/components/transactions/TransactionDayGroup');

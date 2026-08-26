@@ -6,6 +6,9 @@ jest.mock('@/src/theme/ThemeProvider', () => ({
 }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('@/src/lib/i18n', () => ({ t: (key: string) => ({ 'plans.of': 'of', 'plans.target': 'Target' }[key] || key) }));
+jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({
+  useBalancePrivacy: () => ({ isBalanceVisible: true, isPrivacyReady: true }),
+}));
 
 import { PlanCard, planProgress } from '@/src/components/plans/PlanCard';
 

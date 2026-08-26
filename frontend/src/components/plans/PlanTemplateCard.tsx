@@ -19,7 +19,7 @@ export function PlanTemplateCard({ kind, onPress }: { kind: keyof typeof templat
   const template = templates[kind];
   const label = t(template.labelKey);
   return (
-    <Pressable testID={`plan-new-${kind}`} accessibilityRole="button" accessibilityLabel={`${t('plans.template.start')} ${label}`} onPress={onPress} style={({ pressed }) => ({ width: '48.5%', minHeight: 104, borderRadius: radius.md, padding: spacing.md, backgroundColor: mode === 'dark' ? colors.surface3 : template.tint, opacity: pressed ? 0.84 : 1 })}>
+    <Pressable testID={`plan-new-${kind}`} accessibilityRole="button" accessibilityLabel={`${t('plans.template.start')} ${label}`} onPress={onPress} style={({ pressed }) => ({ flexGrow: 1, flexBasis: '46%', minWidth: 132, minHeight: 104, borderRadius: radius.md, padding: spacing.md, backgroundColor: mode === 'dark' ? colors.surface3 : template.tint, opacity: pressed ? 0.84 : 1 })}>
       <View style={{ width: 32, height: 32, borderRadius: radius.sm, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' }}>
         <Ionicons name={template.icon} size={17} color={colors.onBrandSoft} />
       </View>

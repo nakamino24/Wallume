@@ -6,10 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney, cv } from '@/src/theme/tokens';
+import { spacing, radius, font, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, Button, Input, ProgressBar } from '@/src/components/ui';
 import { MoneyInput } from '@/src/components/MoneyInput';
+import { MoneyValue } from '@/src/components/MoneyValue';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 
 const planIcon: Record<string, any> = { wedding: 'heart-outline', house: 'home-outline', car: 'car-sport-outline', vacation: 'airplane-outline' };
@@ -98,16 +99,21 @@ export default function PlanDetail() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <View>
                   <Body muted style={{ fontSize: 12 }}>Terkumpul</Body>
-                  <Body style={{ fontFamily: font.textBold, fontSize: 18, fontVariant: ['tabular-nums'] }}>{formatMoney(totals.paid, cur)}</Body>
+                  <MoneyValue value={totals.paid} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 18 }} />
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Body muted style={{ fontSize: 12 }}>Target</Body>
-                  <Body style={{ fontFamily: font.textBold, fontSize: 16, fontVariant: ['tabular-nums'] }}>{formatMoney(budget, cur)}</Body>
+                  <MoneyValue value={budget} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 16 }} />
                 </View>
               </View>
               <View style={{ marginTop: spacing.md }}>
                 <ProgressBar progress={progress} color={colors.brandPrimary} height={6} />
-                <Body muted style={{ fontSize: 12, marginTop: 6 }}>{Math.round(progress * 100)}% · {formatMoney(totals.paid, cur)} / {formatMoney(budget, cur)}</Body>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                  <Body muted style={{ fontSize: 12 }}>{Math.round(progress * 100)}% · </Body>
+                  <MoneyValue value={totals.paid} currency={cur} privacy="financial" style={{ color: colors.muted, fontSize: 12 }} />
+                  <Body muted style={{ fontSize: 12 }}> / </Body>
+                  <MoneyValue value={budget} currency={cur} privacy="financial" style={{ color: colors.muted, fontSize: 12 }} />
+                </View>
               </View>
             </View>
           </View>
@@ -118,17 +124,17 @@ export default function PlanDetail() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: spacing.sm }}>
                 <View>
                   <Body muted style={{ fontSize: 12 }}>Budget</Body>
-                  <Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>{formatMoney(budget, cur)}</Body>
+                  <MoneyValue value={budget} currency={cur} privacy="financial" style={{ fontFamily: font.displayBold, fontSize: 18 }} />
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Body muted style={{ fontSize: 12 }}>Allocated</Body>
-                  <Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>{formatMoney(totals.allocated, cur)}</Body>
+                  <MoneyValue value={totals.allocated} currency={cur} privacy="financial" style={{ fontFamily: font.displayBold, fontSize: 18 }} />
                 </View>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: spacing.lg, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border }}>
                 <View>
                   <Body muted style={{ fontSize: 12 }}>Funds collected</Body>
-                  <Body style={{ fontFamily: font.displayBold, fontSize: 18, color: colors.brandPrimary }}>{formatMoney(totals.paid, cur)}</Body>
+                  <MoneyValue value={totals.paid} currency={cur} privacy="financial" style={{ fontFamily: font.displayBold, fontSize: 18, color: colors.brandPrimary }} />
                 </View>
                 <Body muted style={{ fontSize: 12 }}>{Math.round(progress * 100)}% of budget</Body>
               </View>
@@ -145,8 +151,8 @@ export default function PlanDetail() {
                   <View style={{ flex: 1 }}>
                     <Body style={{ fontFamily: font.textBold, textDecorationLine: it.done ? 'line-through' : 'none' }}>{it.label}</Body>
                     <View style={{ marginTop: 4 }}>
-                      <Body muted style={{ fontSize: 12, lineHeight: 16 }}>Budget  <Body style={{ fontFamily: font.textBold, fontSize: 12, lineHeight: 16 }}>{formatMoney(cv(it, 'amount'), cur)}</Body></Body>
-                      <Body muted style={{ fontSize: 12, lineHeight: 16 }}>Funds collected  <Body style={{ fontFamily: font.textBold, fontSize: 12, lineHeight: 16, color: colors.brandPrimary }}>{formatMoney(cv(it, 'paid'), cur)}</Body></Body>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}><Body muted style={{ fontSize: 12, lineHeight: 16 }}>Budget  </Body><MoneyValue value={cv(it, 'amount')} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 12, lineHeight: 16 }} /></View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}><Body muted style={{ fontSize: 12, lineHeight: 16 }}>Funds collected  </Body><MoneyValue value={cv(it, 'paid')} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 12, lineHeight: 16, color: colors.brandPrimary }} /></View>
                     </View>
                   </View>
                   <TouchableOpacity onPress={() => removeItem(it.id)} style={{ padding: 4 }}>

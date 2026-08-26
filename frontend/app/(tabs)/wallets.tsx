@@ -6,7 +6,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoneyFull } from '@/src/theme/tokens';
+import { spacing, radius, font } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, H1, Body, EmptyState, Caption } from '@/src/components/ui';
 import { MoneyValue } from '@/src/components/MoneyValue';
@@ -195,7 +195,10 @@ function WalletCard({ wallet, currency, onLongPress, onPress }: any) {
           style={{ fontFamily: font.textBold, fontSize: 22, marginTop: 4 }}
         />
         {wallet.currency && wallet.currency !== (wallet.home_currency || currency) && (
-          <Caption muted style={{ marginTop: 2 }}>{formatMoneyFull(wallet.balance || 0, wallet.currency)} · {wallet.currency}</Caption>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+            <MoneyValue value={wallet.balance || 0} currency={wallet.currency} privacy="financial" style={{ color: colors.muted, fontSize: 12 }} />
+            <Caption muted> · {wallet.currency}</Caption>
+          </View>
         )}
       </View>
     </TouchableOpacity>

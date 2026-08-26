@@ -13,6 +13,9 @@ jest.mock('@/src/theme/ThemeProvider', () => ({
 
 const mockGetLocale = jest.fn(() => 'en');
 jest.mock('@/src/lib/i18n', () => ({ getLocale: () => mockGetLocale() }));
+jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({
+  useBalancePrivacy: () => ({ isBalanceVisible: true, isPrivacyReady: true }),
+}));
 
 const { groupTransactionsByDate, transactionDayLabel, TransactionDayGroup } = require('@/src/components/transactions/TransactionDayGroup');
 

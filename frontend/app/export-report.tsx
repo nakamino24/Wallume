@@ -9,22 +9,19 @@ import * as Sharing from 'expo-sharing';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font, formatMoneyFull } from '@/src/theme/tokens';
-import { api } from '@/src/api/client';
+import { api, type ReportSummary } from '@/src/api/client';
 import { Screen, Card, H2, Body, Label, Button } from '@/src/components/ui';
 import { MoneyValue } from '@/src/components/MoneyValue';
-
-function monthLabel(d: Date) {
-  return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-}
+import { useReportPeriod } from '@/src/hooks/use-report-period';
 
 function buildReportHTML(opts: {
   userName: string; currency: string; period: string;
-  summary: any; wallets: any[]; txs: any[];
+  report: ReportSummary; netWorth: number; healthScore: number; wallets: any[]; txs: any[];
 }) {
-  const { userName, currency, period, summary, wallets, txs } = opts;
+  const { userName, currency, period, report, netWorth, healthScore, wallets, txs } = opts;
   const fmt = (n: number) => formatMoneyFull(n, currency);
 
-  const catRows = (summary.category_breakdown || []).map((c: any) => `
+  const catRows = (report.expense_by_category || []).map((c: any) => `
     <tr><td>${c.category}</td><td style="text-align:right">${fmt(c.amount)}</td></tr>
   `).join('');
 
@@ -71,12 +68,12 @@ function buildReportHTML(opts: {
 
     <div class="hero">
       <div class="label">Net Worth</div>
-      <div class="value">${fmt(summary.net_worth ?? 0)}</div>
+      <div class="value">${fmt(netWorth)}</div>
       <div class="row">
-        <div class="col"><div class="label">Income</div><div class="value" style="color:#34D399">+${fmt(summary.month_income ?? 0)}</div></div>
-        <div class="col"><div class="label">Expense</div><div class="value" style="color:#F87171">-${fmt(summary.month_expense ?? 0)}</div></div>
-        <div class="col"><div class="label">Cash Flow</div><div class="value">${fmt(summary.cash_flow ?? 0)}</div></div>
-        <div class="col"><div class="label">Health Score</div><div class="value">${summary.health_score ?? 0}/100</div></div>
+        <div class="col"><div class="label">Income</div><div class="value" style="color:#34D399">+${fmt(report.income_total ?? 0)}</div></div>
+        <div class="col"><div class="label">Expense</div><div class="value" style="color:#F87171">-${fmt(report.expense_total ?? 0)}</div></div>
+        <div class="col"><div class="label">Cash Flow</div><div class="value">${fmt(report.net_total ?? 0)}</div></div>
+        <div class="col"><div class="label">Current Health Score</div><div class="value">${healthScore}/100</div></div>
       </div>
     </div>
 
@@ -84,7 +81,7 @@ function buildReportHTML(opts: {
     <table>${walletRows || '<tr><td class="muted">No wallets</td></tr>'}</table>
 
     <h2>Spending by Category</h2>
-    <table>${catRows || '<tr><td class="muted">No expenses this month</td></tr>'}</table>
+    <table>${catRows || '<tr><td class="muted">No expenses in this period</td></tr>'}</table>
 
     <h2>Recent Transactions</h2>
     <table>${txRows || '<tr><td class="muted">No transactions</td></tr>'}</table>
@@ -98,24 +95,52 @@ export default function ExportReport() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const { period } = useReportPeriod();
   const [generating, setGenerating] = useState(false);
-  const [summary, setSummary] = useState<any>(null);
+  const [reportSummary, setReportSummary] = useState<ReportSummary | null>(null);
+  const [analyticsSummary, setAnalyticsSummary] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const cur = user?.currency || 'USD';
 
+  const periodLabel = period.label || `${period.fromDate} – ${period.toDate}`;
+  const isMonthly = period.kind === 'this_month' || period.kind === 'monthly';
+
   const load = useCallback(async () => {
-    try { setSummary(await api.summary()); } catch {}
-  }, []);
+    setLoading(true);
+    setError(null);
+    try {
+      const [r, a] = await Promise.all([
+        api.reports.getSummary({ from_date: period.fromDate, to_date: period.toDate }),
+        api.summary(),
+      ]);
+      setReportSummary(r);
+      setAnalyticsSummary(a);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load report');
+    } finally {
+      setLoading(false);
+    }
+  }, [period.fromDate, period.toDate]);
+
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const generate = async () => {
+    if (loading || !reportSummary) return;
     setGenerating(true);
     try {
-      const [s, txRes, walletRes] = await Promise.all([api.summary(), api.transactions(), api.wallets()]);
+      const [walletRes, txRes] = await Promise.all([
+        api.wallets(),
+        api.transactions(undefined, undefined, undefined, period.fromDate, period.toDate),
+      ]);
+      // Reuse the same reportSummary already fetched for preview — preview = PDF
       const html = buildReportHTML({
         userName: user?.name || 'User',
         currency: cur,
-        period: monthLabel(new Date()),
-        summary: s,
+        period: periodLabel,
+        report: reportSummary,
+        netWorth: analyticsSummary?.net_worth ?? 0,
+        healthScore: analyticsSummary?.health_score ?? 0,
         wallets: walletRes.wallets || [],
         txs: txRes.transactions || [],
       });
@@ -148,39 +173,67 @@ export default function ExportReport() {
                 <Ionicons name="document-text" size={22} color={colors.error} />
               </View>
               <View style={{ flex: 1 }}>
-                <Body style={{ fontFamily: font.textBold }}>{monthLabel(new Date())} Report</Body>
+                <Body style={{ fontFamily: font.textBold }}>{isMonthly ? `${periodLabel} Report` : `Financial Report`}</Body>
+                {!isMonthly && <Body muted style={{ fontSize: 12, marginTop: 2 }}>{periodLabel}</Body>}
                 <Body muted style={{ fontSize: 12, marginTop: 2 }}>
-                  Net worth, cash flow, spending by category, and recent transactions.
+                  Net worth, cash flow, spending by category, and transactions.
                 </Body>
               </View>
             </View>
           </Card>
 
-          {!!summary && (
+          {loading ? (
+            <Card style={{ marginTop: spacing.md }}><Body>Loading preview…</Body></Card>
+          ) : error ? (
+            <Card style={{ marginTop: spacing.md }}>
+              <Body style={{ color: colors.error }}>{error}</Body>
+              <Button label="Retry" onPress={load} style={{ marginTop: spacing.md }} />
+            </Card>
+          ) : reportSummary ? (
             <Card style={{ marginTop: spacing.md }}>
               <Label>Preview</Label>
-              <View style={{ marginTop: spacing.sm, gap: 6 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Body style={{ fontSize: 13 }}>Net worth: </Body>
-                  <MoneyValue value={summary.net_worth ?? 0} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 13 }} />
+              <Body muted style={{ fontSize: 12, marginTop: 2 }}>{periodLabel}</Body>
+              <View style={{ marginTop: spacing.md, gap: 8 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Body style={{ color: colors.muted, fontSize: 12 }}>Net worth</Body>
+                  <MoneyValue value={analyticsSummary?.net_worth ?? 0} currency={cur} privacy="financial" style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 14, fontVariant: ['tabular-nums'] }} />
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Body style={{ fontSize: 13 }}>Cash flow: </Body>
-                  <MoneyValue value={summary.cash_flow ?? 0} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 13 }} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Body style={{ color: colors.muted, fontSize: 12 }}>Income</Body>
+                  <MoneyValue value={reportSummary.income_total ?? 0} currency={cur} privacy="financial" style={{ color: colors.success, fontFamily: font.textBold, fontSize: 14, fontVariant: ['tabular-nums'] }} />
                 </View>
-                <Body style={{ fontSize: 13 }}>Health score: <Body style={{ fontFamily: font.textBold, fontSize: 13 }}>{summary.health_score ?? 0}/100</Body></Body>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Body style={{ color: colors.muted, fontSize: 12 }}>Expense</Body>
+                  <MoneyValue value={-(reportSummary.expense_total ?? 0)} currency={cur} privacy="financial" style={{ color: colors.error, fontFamily: font.textBold, fontSize: 14, fontVariant: ['tabular-nums'] }} />
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Body style={{ color: colors.muted, fontSize: 12 }}>Net cash flow</Body>
+                  <MoneyValue value={reportSummary.net_total ?? 0} currency={cur} privacy="financial" style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 14, fontVariant: ['tabular-nums'] }} />
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Body style={{ color: colors.muted, fontSize: 12 }}>Transactions</Body>
+                  <Body style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 14 }}>{reportSummary.transaction_count ?? 0}</Body>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm, marginTop: 4 }}>
+                  <Body style={{ color: colors.muted, fontSize: 12 }}>Current health score</Body>
+                  <Body style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 14 }}>{analyticsSummary?.health_score ?? 0}/100</Body>
+                </View>
               </View>
             </Card>
-          )}
+          ) : null}
 
           <Button
             testID="export-generate-btn"
             label={generating ? 'Generating…' : 'Generate & Share PDF'}
             onPress={generate}
             loading={generating}
-            style={{ marginTop: spacing.xl }}
+            disabled={loading || !reportSummary}
+            style={{ marginTop: spacing.xl, opacity: loading || !reportSummary ? 0.5 : 1 }}
           />
           <Body muted style={{ fontSize: 11, marginTop: spacing.md, textAlign: 'center' }}>
+            Preview follows app privacy. The PDF contains real authoritative values.
+          </Body>
+          <Body muted style={{ fontSize: 11, marginTop: 4, textAlign: 'center' }}>
             The PDF is generated on your device and shared directly — nothing is uploaded anywhere.
           </Body>
         </View>

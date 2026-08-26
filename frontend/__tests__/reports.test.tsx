@@ -21,6 +21,18 @@ jest.mock('@/src/auth/AuthProvider', () => ({
   useAuth: () => ({ user: { currency: 'IDR' } }),
 }));
 
+jest.mock('@/src/hooks/use-report-period', () => ({
+  useReportPeriod: () => ({
+    period: { fromDate: '2026-08-01', toDate: '2026-08-24', kind: 'this_month', label: 'August 2026' },
+    setPeriod: jest.fn(),
+    isReady: true,
+  }),
+}));
+
+jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({
+  useBalancePrivacy: () => ({ isBalanceVisible: true, isPrivacyReady: true }),
+}));
+
 jest.mock('@/src/theme/ThemeProvider', () => ({
   useTheme: () => mockUseTheme(),
 }));

@@ -1,6 +1,10 @@
 import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 
+jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({
+  useBalancePrivacy: () => ({ isBalanceVisible: true, isPrivacyReady: true }),
+}));
+
 jest.mock('@/src/theme/ThemeProvider', () => ({
   useTheme: () => ({
     colors: {

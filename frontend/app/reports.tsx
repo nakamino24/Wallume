@@ -7,10 +7,11 @@ import Svg, { Circle as SvgCircle, G } from 'react-native-svg';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, font, radius, formatMoney, formatMoneyCompact } from '@/src/theme/tokens';
+import { spacing, font, radius } from '@/src/theme/tokens';
 import { api, type ReportSummary } from '@/src/api/client';
-import { Screen, Card, H2, Body, Label, DisplayNumber } from '@/src/components/ui';
-import { todayLocalISO } from '@/src/utils/dates';
+import { Screen, Card, H2, Body, Label } from '@/src/components/ui';
+import { MoneyValue } from '@/src/components/MoneyValue';
+import { useReportPeriod } from '@/src/hooks/use-report-period';
 import { ReportPeriodPicker } from '@/src/components/ReportPeriodPicker';
 
 const CAT_COLORS = ['#287565', '#D69A57', '#527C8A', '#7C9A6A', '#B86C20', '#8B7763', '#70807A', '#B64A4A'];
@@ -21,11 +22,10 @@ export default function Reports() {
   const router = useRouter();
   const cur = user?.currency || 'USD';
 
-  const [fromDate, setFromDate] = useState(() => {
-    const d = new Date(); d.setDate(1);
-    return todayLocalISO(d);
-  });
-  const [toDate, setToDate] = useState(() => todayLocalISO());
+  const { period, setPeriod } = useReportPeriod();
+  const [selectedPeriod, setSelectedPeriod] = useState(period);
+  const fromDate = selectedPeriod.fromDate;
+  const toDate = selectedPeriod.toDate;
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +66,17 @@ export default function Reports() {
         </View>
 
         <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.lg }}>
-          <ReportPeriodPicker fromDate={fromDate} toDate={toDate} onChange={({ from, to }) => { setFromDate(from); setToDate(to); }} />
+          <ReportPeriodPicker
+            fromDate={fromDate}
+            toDate={toDate}
+            onChange={({ from, to }) => {
+              const label = `${from} – ${to}`;
+              const isThisMonth = from.slice(0, 7) === new Date().toISOString().slice(0, 7) && from.endsWith('-01');
+              const next = { fromDate: from, toDate: to, kind: isThisMonth ? 'this_month' as const : 'custom' as const, label };
+              setSelectedPeriod(next);
+              setPeriod(next);
+            }}
+          />
         </View>
 
         <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.md, paddingBottom: 60 }}>
@@ -83,16 +93,23 @@ export default function Reports() {
             <Card><Body>No transactions in this period.</Body></Card>
           ) : (
             <>
-              {/* Summary */}
+              {/* Summary — Net cash flow is NOT Net Worth, privacy-aware */}
               <Card style={{ backgroundColor: colors.inverse, borderColor: 'transparent', borderRadius: radius.lg }}>
                 <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Net cash flow</Label>
-                <DisplayNumber size={34} color={colors.onInverse} style={{ marginTop: 6 }}>
-                  {formatMoney(netFlow, cur)}
-                </DisplayNumber>
+                <MoneyValue value={netFlow} currency={cur} privacy="financial" style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 34, letterSpacing: -0.5, marginTop: 6 }} />
                 <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.sm }}>
-                  <MiniStat label="Income" value={formatMoneyCompact(income, cur)} color={colors.success} />
-                  <MiniStat label="Expense" value={formatMoneyCompact(expense, cur)} color={colors.error} />
-                  <MiniStat label="Transactions" value={String(summary?.transaction_count ?? 0)} color={colors.onInverse} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Body style={{ color: colors.muted, fontSize: 12, opacity: 0.9 }}>Income</Body>
+                    <MoneyValue value={income} currency={cur} compact privacy="financial" style={{ color: colors.success, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Body style={{ color: colors.muted, fontSize: 12, opacity: 0.9 }}>Expense</Body>
+                    <MoneyValue value={expense} currency={cur} compact privacy="financial" style={{ color: colors.error, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Body style={{ color: colors.muted, fontSize: 12, opacity: 0.9 }}>Transactions</Body>
+                    <Body numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }}>{String(summary?.transaction_count ?? 0)}</Body>
+                  </View>
                 </View>
               </Card>
 
@@ -111,7 +128,7 @@ export default function Reports() {
                     <View key={c.category} style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: CAT_COLORS[i % CAT_COLORS.length], marginRight: 8 }} />
                       <Body style={{ flex: 1 }}>{c.category}</Body>
-                      <Body style={{ fontFamily: font.textBold }}>{formatMoneyCompact(c.amount, cur)}</Body>
+                      <MoneyValue value={c.amount} currency={cur} compact privacy="financial" style={{ fontFamily: font.textBold, fontSize: 14 }} />
                     </View>
                   ))}
                 </View>

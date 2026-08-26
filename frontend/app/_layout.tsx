@@ -12,6 +12,7 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } f
 import { useIconFonts } from '@/src/hooks/use-icon-fonts';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
 import { BalancePrivacyProvider } from '@/src/privacy/BalancePrivacyProvider';
+import { ReportPeriodProvider } from '@/src/hooks/use-report-period';
 import { AuthProvider } from '@/src/auth/AuthProvider';
 import { AppLockGate } from '@/src/auth/AppLockGate';
 import { AppErrorBoundary } from '@/src/components/ErrorBoundary';
@@ -90,15 +91,17 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <ThemeProvider>
             <BalancePrivacyProvider>
-              <AuthProvider>
-                <ToastProvider>
-                  <AppLockGate>
-                    <BottomSheetGate>
-                      <StackWithTheme />
-                    </BottomSheetGate>
-                  </AppLockGate>
-                </ToastProvider>
-              </AuthProvider>
+              <ReportPeriodProvider>
+                <AuthProvider>
+                  <ToastProvider>
+                    <AppLockGate>
+                      <BottomSheetGate>
+                        <StackWithTheme />
+                      </BottomSheetGate>
+                    </AppLockGate>
+                  </ToastProvider>
+                </AuthProvider>
+              </ReportPeriodProvider>
             </BalancePrivacyProvider>
           </ThemeProvider>
         </SafeAreaProvider>

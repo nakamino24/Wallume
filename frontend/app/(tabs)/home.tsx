@@ -7,7 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { usePayday } from '@/src/hooks/use-payday';
-import { spacing, radius, font, formatMoneyFull, formatMoney, cv } from '@/src/theme/tokens';
+import { spacing, radius, font, cv } from '@/src/theme/tokens';
 import { t } from '@/src/lib/i18n';
 import { useBalancePrivacy } from '@/src/privacy/BalancePrivacyProvider';
 import { MoneyValue } from '@/src/components/MoneyValue';
@@ -318,9 +318,16 @@ export default function Home() {
                 </View>
                 <View style={{ backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md }}>
                   <Body style={{ fontFamily: font.textBold }}>This month’s focus</Body>
-                  <Body muted style={{ marginTop: 4 }}>
-                    {insights.largestExpense ? `${insights.largestExpense.category}: ${formatMoney(insights.largestExpense.amount, cur)}` : 'No major expense yet.'}
-                  </Body>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+                    {insights.largestExpense ? (
+                      <>
+                        <Body muted>{insights.largestExpense.category}: </Body>
+                        <MoneyValue value={insights.largestExpense.amount} currency={cur} privacy="financial" style={{ color: colors.muted, fontFamily: font.textBold }} />
+                      </>
+                    ) : (
+                      <Body muted>No major expense yet.</Body>
+                    )}
+                  </View>
                   <Body muted style={{ marginTop: 6 }}>{insights.tip}</Body>
                 </View>
               </View>
@@ -370,7 +377,7 @@ export default function Home() {
                         <Body style={{ fontFamily: font.textMedium }}>{r.name}</Body>
                         <Body style={{ fontSize: 12, marginTop: 2, color: dueColor }}>{dueText}</Body>
                       </View>
-                      <Body style={{ fontFamily: font.displayBold }}>{formatMoney(cv(r, 'amount'), cur)}</Body>
+                      <MoneyValue value={cv(r, 'amount')} currency={cur} privacy="financial" style={{ fontFamily: font.displayBold }} />
                     </TouchableOpacity>
                   );
                 })}
@@ -431,9 +438,10 @@ export default function Home() {
                 )) : (
                   <View style={{ padding: spacing.xl }}>
                     <Body style={{ fontFamily: font.textMedium }}>Wallet balance available</Body>
-                    <Body muted style={{ marginTop: 4 }}>
-                      {formatMoneyFull(walletBalance, cur)} is ready to view from your wallets.
-                    </Body>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+                      <MoneyValue value={walletBalance} currency={cur} privacy="financial" style={{ color: colors.muted, fontFamily: font.textBold }} />
+                      <Body muted> is ready to view from your wallets.</Body>
+                    </View>
                   </View>
                 )}
               </Card>

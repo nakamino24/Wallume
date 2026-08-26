@@ -3,8 +3,9 @@ import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Body } from '@/src/components/ui';
+import { MoneyValue } from '@/src/components/MoneyValue';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { font, formatMoney, radius, spacing } from '@/src/theme/tokens';
+import { font, radius, spacing } from '@/src/theme/tokens';
 import { getLocale } from '@/src/lib/i18n';
 
 const CAT_ICON: Record<string, any> = {
@@ -77,9 +78,15 @@ function TransactionRow({ transaction, currency, isLast, onOpen, onRemove }: { t
         <Body numberOfLines={1} muted style={{ fontSize: 12, marginTop: 1 }}>{transaction.note || time || transaction.wallet_name || 'Transaction'}</Body>
       </View>
       <View style={{ alignItems: 'flex-end', flexShrink: 0 }}>
-        <Body numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color, fontFamily: font.textBold, fontVariant: ['tabular-nums'], fontSize: 14 }}>
-          {positive ? '+' : negative ? '-' : ''}{formatMoney(transaction.amount, currency)}
-        </Body>
+        <MoneyValue
+          value={positive ? transaction.amount : negative ? -Math.abs(transaction.amount) : transaction.amount}
+          currency={currency}
+          privacy="financial"
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+          style={{ color, fontFamily: font.textBold, fontSize: 14 }}
+        />
         {!!time && <Body muted style={{ fontSize: 11, marginTop: 1 }}>{time}</Body>}
       </View>
     </Pressable>
