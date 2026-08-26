@@ -100,11 +100,11 @@ export default function Reports() {
                 <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.sm }}>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>Income</Body>
-                    <MoneyValue value={income} currency={cur} compact privacy="financial" style={{ color: colors.success, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} />
+                    <MoneyValue value={income} currency={cur} compact privacy="financial" style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>Expense</Body>
-                    <MoneyValue value={expense} currency={cur} compact privacy="financial" style={{ color: colors.error, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} />
+                    <MoneyValue value={expense} currency={cur} compact privacy="financial" style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>Transactions</Body>
@@ -128,7 +128,7 @@ export default function Reports() {
                     <View key={c.category} style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: CAT_COLORS[i % CAT_COLORS.length], marginRight: 8 }} />
                       <Body style={{ flex: 1 }}>{c.category}</Body>
-                      <MoneyValue value={c.amount} currency={cur} compact privacy="financial" style={{ fontFamily: font.textBold, fontSize: 14 }} />
+                       <MoneyValue value={c.amount} currency={cur} compact privacy="balance" style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 14 }} />
                     </View>
                   ))}
                 </View>

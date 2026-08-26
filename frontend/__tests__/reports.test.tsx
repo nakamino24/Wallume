@@ -16,6 +16,7 @@ const darkColors = {
   onInverse: '#F7F8FC', muted: '#A7AEC0', border: '#303647', surface3: '#242938',
 };
 const mockUseTheme = jest.fn(() => ({ colors: lightColors, mode: 'light' }));
+let mockBalanceVisible = true;
 
 jest.mock('@/src/auth/AuthProvider', () => ({
   useAuth: () => ({ user: { currency: 'IDR' } }),
@@ -30,7 +31,7 @@ jest.mock('@/src/hooks/use-report-period', () => ({
 }));
 
 jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({
-  useBalancePrivacy: () => ({ isBalanceVisible: true, isPrivacyReady: true }),
+  useBalancePrivacy: () => ({ isBalanceVisible: mockBalanceVisible, isPrivacyReady: true }),
 }));
 
 jest.mock('@/src/theme/ThemeProvider', () => ({
@@ -83,9 +84,23 @@ const summary = {
 
 describe('Reports screen', () => {
   beforeEach(() => {
+    mockBalanceVisible = true;
     mockGetSummary.mockReset();
     mockTransactions.mockReset();
     mockGetSummary.mockResolvedValue(summary);
+  });
+
+  it('masks category amounts only when balance privacy is hidden', async () => {
+    mockBalanceVisible = false;
+    mockGetSummary.mockResolvedValue(summary);
+    const Reports = require('@/app/reports').default;
+    const { getAllByText, getByText } = render(<Reports />);
+
+    await waitFor(() => expect(getByText('Food')).toBeTruthy());
+    expect(getByText('Travel')).toBeTruthy();
+    expect(getAllByText('Rp•••••••')).toHaveLength(2);
+    expect(getByText('Rp300,0K')).toBeTruthy();
+    expect(getByText('Rp200.000')).toBeTruthy();
   });
 
   it('loads and renders the server summary without a raw transaction request', async () => {

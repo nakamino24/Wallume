@@ -77,7 +77,7 @@ export default function Portfolio() {
               </View>
               <View>
                 <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Return</Label>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}><MoneyValue value={totalPl} currency={cur} privacy="financial" style={{ color: totalPl >= 0 ? colors.success : colors.error, fontFamily: font.displayBold, fontSize: 16 }} /><Body style={{ color: totalPl >= 0 ? colors.success : colors.error, fontFamily: font.displayBold, fontSize: 16 }}> ({returnPct >= 0 ? '+' : ''}{returnPct.toFixed(1)}%)</Body></View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}><MoneyValue value={totalPl} currency={cur} privacy="financial" style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 16 }} /><Body style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 16 }}> ({returnPct >= 0 ? '+' : ''}{returnPct.toFixed(1)}%)</Body></View>
               </View>
             </View>
           </Card>

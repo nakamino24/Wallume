@@ -130,9 +130,9 @@ export default function WalletDetail() {
                   </Body>
                 </View>
               </View>
-              <MoneyValue value={wallet.converted_balance ?? (wallet.balance || 0)} currency={walletCur} privacy="financial" style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 32, marginTop: 4 }} />
+              <MoneyValue value={wallet.converted_balance ?? (wallet.balance || 0)} currency={walletCur} privacy="balance" style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 32, marginTop: 4 }} />
               {wallet.currency && wallet.currency !== walletCur && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}><MoneyValue value={wallet.balance || 0} currency={wallet.currency} privacy="financial" style={{ color: colors.onInverse, opacity: 0.7, fontSize: 12 }} /><Caption style={{ color: colors.onInverse, opacity: 0.7 }}> · {wallet.currency}</Caption></View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}><MoneyValue value={wallet.balance || 0} currency={wallet.currency} privacy="balance" style={{ color: colors.onInverse, opacity: 0.7, fontSize: 12 }} /><Caption style={{ color: colors.onInverse, opacity: 0.7 }}> · {wallet.currency}</Caption></View>
               )}
             </Card>
           </View>

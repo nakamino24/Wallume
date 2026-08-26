@@ -8,6 +8,7 @@ jest.mock('react-native-android-widget', () => {
     FlexWidget: ({ children }: any) => React.createElement(View, null, children),
     TextWidget: ({ text }: any) => React.createElement(Text, null, text),
     ImageWidget: () => React.createElement(View),
+    IconWidget: ({ icon, accessibilityLabel }: any) => React.createElement(Text, { accessibilityLabel }, icon),
   };
 });
 
@@ -32,12 +33,19 @@ describe('Wallume widget view', () => {
     expect(getByText('Rp12.450.000')).toBeTruthy();
   });
 
-  it('keeps the health score visible while every money metric is masked', () => {
-    const { getAllByText, getByText, queryByText } = render(<NetWorthWidget data={{ ...data, balance: 'Rp•••••••', income: 'Rp•••••••', expense: 'Rp•••••••', cashFlow: 'Rp•••••••', healthScore: 78, locale: 'en' }} large />);
-    expect(getAllByText('Rp•••••••')).toHaveLength(2);
-    expect(getByText('+Rp•••••••')).toBeTruthy();
-    expect(getByText('-Rp•••••••')).toBeTruthy();
+  it('masks only the primary balance when widget privacy is hidden', () => {
+    const { getByText, queryByText } = render(<NetWorthWidget data={{ ...data, balance: 'Rp•••••••', healthScore: 78, locale: 'en', isBalanceVisible: false }} large />);
+    expect(getByText('Rp•••••••')).toBeTruthy();
+    expect(getByText('+Rp4,5 jt')).toBeTruthy();
+    expect(getByText('-Rp2,1 jt')).toBeTruthy();
+    expect(getByText('Rp2,4 jt')).toBeTruthy();
     expect(getByText('78%')).toBeTruthy();
     expect(queryByText('Rp12.450.000')).toBeNull();
+  });
+
+  it('renders a distinct working widget eye action', () => {
+    const { getByLabelText, getByText } = render(<NetWorthWidget data={{ ...data, locale: 'en', isBalanceVisible: true }} />);
+    expect(getByText('eye-outline')).toBeTruthy();
+    expect(getByLabelText('Show or hide widget balance')).toBeTruthy();
   });
 });

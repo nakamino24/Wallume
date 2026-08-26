@@ -90,7 +90,7 @@ export default function EditWallet() {
       }>
       <Card style={{ marginBottom: spacing.md }}>
         <Label>Current balance</Label>
-        <MoneyValue value={wallet.converted_balance ?? (wallet.balance || 0)} currency={wallet.home_currency || cur} privacy="financial" style={{ fontSize: scale(24), fontFamily: font.displayBold, marginTop: 4 }} />
+        <MoneyValue value={wallet.converted_balance ?? (wallet.balance || 0)} currency={wallet.home_currency || cur} privacy="balance" style={{ fontSize: scale(24), fontFamily: font.displayBold, marginTop: 4 }} />
       </Card>
 
       <Input testID="edit-wallet-name" label="Name" value={name} onChangeText={setName} placeholder="Main Bank" />

@@ -238,7 +238,7 @@ export default function Home() {
               <MoneyValue
                 value={derivedSummary.total_balance}
                 currency={cur}
-                privacy="financial"
+                privacy="balance"
                 testID="home-total-balance"
                 style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 40, letterSpacing: -0.5, marginTop: 6 }}
                 numberOfLines={1}

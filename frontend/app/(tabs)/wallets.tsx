@@ -79,7 +79,7 @@ export default function Wallets() {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <View style={{ flex: 1 }}>
                     <Body style={{ color: colors.onBrandSoft, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8, opacity: 0.72 }}>Total balance</Body>
-                    <MoneyValue value={total} currency={cur} privacy="financial" style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 24, marginTop: 6 }} />
+                    <MoneyValue value={total} currency={cur} privacy="balance" style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 24, marginTop: 6 }} />
                 </View>
                 <View style={[styles.pill, { backgroundColor: colors.brandSoft }]}> 
                   <Body style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 12 }}>{wallets.length} accounts</Body>
@@ -191,12 +191,12 @@ function WalletCard({ wallet, currency, onLongPress, onPress }: any) {
         <MoneyValue
           value={wallet.converted_balance ?? (wallet.balance || 0)}
           currency={wallet.home_currency || currency}
-          privacy="financial"
+          privacy="balance"
           style={{ fontFamily: font.textBold, fontSize: 22, marginTop: 4 }}
         />
         {wallet.currency && wallet.currency !== (wallet.home_currency || currency) && (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-            <MoneyValue value={wallet.balance || 0} currency={wallet.currency} privacy="financial" style={{ color: colors.muted, fontSize: 12 }} />
+            <MoneyValue value={wallet.balance || 0} currency={wallet.currency} privacy="balance" style={{ color: colors.muted, fontSize: 12 }} />
             <Caption muted> · {wallet.currency}</Caption>
           </View>
         )}

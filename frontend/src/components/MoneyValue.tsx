@@ -7,7 +7,9 @@ import { useBalancePrivacy } from '@/src/privacy/BalancePrivacyProvider';
 type Props = {
   value: number;
   currency?: string;
-  privacy?: 'financial' | 'none';
+  // Only balance surfaces opt in. Transaction and informational amounts use the
+  // same formatter without inheriting the app balance-visibility preference.
+  privacy?: 'balance' | 'financial' | 'none';
   compact?: boolean;
   style?: StyleProp<TextStyle>;
   testID?: string;
@@ -23,13 +25,13 @@ function maskForCurrency(currency: string): string {
   return `${sym}${dots}`;
 }
 
-export function MoneyValue({ value, currency = 'USD', privacy = 'financial', compact, style, testID, numberOfLines, adjustsFontSizeToFit, minimumFontScale }: Props) {
+export function MoneyValue({ value, currency = 'USD', privacy = 'none', compact, style, testID, numberOfLines, adjustsFontSizeToFit, minimumFontScale }: Props) {
   const { isBalanceVisible, isPrivacyReady } = useBalancePrivacy();
   const { colors } = useTheme();
 
-  const shouldMask = privacy === 'financial' && isPrivacyReady && !isBalanceVisible;
+  const shouldMask = privacy === 'balance' && isPrivacyReady && !isBalanceVisible;
   // Before readiness, show masked placeholder to avoid flash of sensitive data
-  const notReady = privacy === 'financial' && !isPrivacyReady;
+  const notReady = privacy === 'balance' && !isPrivacyReady;
 
   if (notReady || shouldMask) {
     return (

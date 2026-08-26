@@ -6,6 +6,7 @@ const mockRouterPush = jest.fn();
 const mockUser = { name: 'Alex', currency: 'USD', email: 'alex@wallume.com' };
 const mockUseTransactions = jest.fn();
 const mockUseWallets = jest.fn();
+let mockBalanceVisible = true;
 
 jest.mock('@/src/auth/AuthProvider', () => ({
   useAuth: () => ({ user: mockUser, loading: false }),
@@ -13,7 +14,7 @@ jest.mock('@/src/auth/AuthProvider', () => ({
 
 jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({
   useBalancePrivacy: () => ({
-    isBalanceVisible: true,
+    isBalanceVisible: mockBalanceVisible,
     isPrivacyReady: true,
     showBalance: jest.fn(),
     hideBalance: jest.fn(),
@@ -213,6 +214,25 @@ describe('Home Screen', () => {
     // Net Worth must not be used as hero; wallet_total is authoritative for Total Balance
     expect(queryByText('Rp999.999')).toBeNull();
     expect(queryByText('Net worth')).toBeNull();
+    mockUser.currency = 'USD';
+  });
+
+  it('masks only Total Balance when balance privacy is hidden', async () => {
+    mockBalanceVisible = false;
+    mockUser.currency = 'IDR';
+    const api = require('@/src/api/client').api;
+    api.summary.mockResolvedValueOnce({
+      wallet_total: 42000, month_income: 120000, month_expense: 70000, cash_flow: 50000,
+      health_score: 72, saving_rate: 36, debt_ratio: 15, category_breakdown: [], trend: [], spending_alerts: [], counts: {},
+    });
+    const Home = require('@/app/(tabs)/home').default;
+    const { getByText } = render(<Home />);
+
+    await waitFor(() => expect(getByText('Rp•••••••')).toBeTruthy());
+    expect(getByText('Rp120,0K')).toBeTruthy();
+    expect(getByText('-Rp70,0K')).toBeTruthy();
+    expect(getByText('Rp50,0K')).toBeTruthy();
+    mockBalanceVisible = true;
     mockUser.currency = 'USD';
   });
 

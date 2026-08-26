@@ -137,7 +137,7 @@ export default function Profile() {
                 <Label>{t('privacy.balance')}</Label>
                 <Body style={{ marginTop: 4, fontFamily: font.textBold }}>{t('privacy.showAmounts')}</Body>
                 <Body muted style={{ marginTop: 2, fontSize: 12 }}>
-                  {isBalanceVisible ? 'Amounts visible' : 'Amounts hidden'}
+                  {isBalanceVisible ? 'Balances visible' : 'Balances hidden'}
                 </Body>
               </View>
               <Switch testID="profile-privacy-toggle" value={isBalanceVisible} onValueChange={toggleBalanceVisibility} trackColor={{ true: colors.brandPrimary }} />

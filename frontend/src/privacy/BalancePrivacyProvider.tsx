@@ -1,6 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { storage } from '@/src/utils/storage';
-import { refreshNetWorthWidget } from '@/src/widgets/refresh-widget';
 
 type Ctx = {
   isBalanceVisible: boolean;
@@ -30,7 +29,6 @@ export function BalancePrivacyProvider({ children }: { children: React.ReactNode
   const persist = useCallback((next: boolean) => {
     setVisible(next);
     storage.setItem(KEY, next);
-    refreshNetWorthWidget();
   }, []);
 
   const showBalance = useCallback(() => persist(true), [persist]);

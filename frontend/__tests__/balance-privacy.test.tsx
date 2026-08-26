@@ -40,21 +40,34 @@ describe('Balance Privacy', () => {
     jest.clearAllMocks();
   });
 
-  it('BP1 default hidden shows masked value', () => {
+  it('BP1 default hidden masks an explicitly private balance', () => {
     mockVisible = false;
-    const { getByText } = render(<MoneyValue value={9058754} currency="IDR" privacy="financial" />);
+    const { getByText } = render(<MoneyValue value={9058754} currency="IDR" privacy="balance" />);
     expect(getByText('Rp•••••••')).toBeTruthy();
   });
 
   it('BP2 eye reveal shows actual value', () => {
     mockVisible = true;
-    const { getByText } = render(<MoneyValue value={9058754} currency="IDR" privacy="financial" />);
+    const { getByText } = render(<MoneyValue value={9058754} currency="IDR" privacy="balance" />);
     expect(getByText('Rp9.058.754')).toBeTruthy();
+  });
+
+  it('does not mask non-balance financial amounts', () => {
+    mockVisible = false;
+    const { getByText } = render(<MoneyValue value={35000} currency="IDR" privacy="none" />);
+    expect(getByText('Rp35.000')).toBeTruthy();
+  });
+
+  it('uses the masked value while a balance preference is still hydrating', () => {
+    mockVisible = true;
+    mockReady = false;
+    const { getByText } = render(<MoneyValue value={9058754} currency="IDR" privacy="balance" />);
+    expect(getByText('Rp•••••••')).toBeTruthy();
   });
 
   it('BP3 eye hide masks value', () => {
     mockVisible = false;
-    const { getByText } = render(<MoneyValue value={9058754} currency="IDR" />);
+    const { getByText } = render(<MoneyValue value={9058754} currency="IDR" privacy="balance" />);
     expect(getByText('Rp•••••••')).toBeTruthy();
   });
 
