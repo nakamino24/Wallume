@@ -31,4 +31,13 @@ describe('Wallume widget view', () => {
     expect(getByText('Arus Kas')).toBeTruthy();
     expect(getByText('Rp12.450.000')).toBeTruthy();
   });
+
+  it('keeps the health score visible while every money metric is masked', () => {
+    const { getAllByText, getByText, queryByText } = render(<NetWorthWidget data={{ ...data, balance: 'Rp•••••••', income: 'Rp•••••••', expense: 'Rp•••••••', cashFlow: 'Rp•••••••', healthScore: 78, locale: 'en' }} large />);
+    expect(getAllByText('Rp•••••••')).toHaveLength(2);
+    expect(getByText('+Rp•••••••')).toBeTruthy();
+    expect(getByText('-Rp•••••••')).toBeTruthy();
+    expect(getByText('78%')).toBeTruthy();
+    expect(queryByText('Rp12.450.000')).toBeNull();
+  });
 });

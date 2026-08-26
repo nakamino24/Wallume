@@ -7,9 +7,10 @@ import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney, cv } from '@/src/theme/tokens';
+import { spacing, radius, font, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, Body, Label, Divider } from '@/src/components/ui';
+import { MoneyValue } from '@/src/components/MoneyValue';
 
 const FREQ_LABEL: Record<string, string> = { weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' };
 
@@ -95,9 +96,7 @@ export default function RecurringDetail() {
 
           <Card style={{ marginTop: spacing.lg }}>
             <Label>Amount</Label>
-            <H1 style={{ marginTop: 4, color: item.type === 'income' ? colors.success : colors.onSurface }}>
-              {item.type === 'income' ? '+' : '-'}{formatMoney(cv(item, 'amount'), cur)}
-            </H1>
+            <MoneyValue value={item.type === 'income' ? cv(item, 'amount') : -Math.abs(cv(item, 'amount'))} currency={cur} privacy="financial" style={{ marginTop: 4, color: item.type === 'income' ? colors.success : colors.onSurface, fontFamily: font.displayBold, fontSize: 26 }} />
             <Body style={{ color: dueColor, fontFamily: font.textBold, marginTop: spacing.sm }}>{dueText}</Body>
 
             <Divider />

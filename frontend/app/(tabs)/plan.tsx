@@ -6,7 +6,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney, cv } from '@/src/theme/tokens';
+import { spacing, radius, font, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, ProgressRing, ProgressBar, EmptyState } from '@/src/components/ui';
 import { computeInvestmentMetrics, kindLabel, quantitySummary } from '@/src/lib/investmentKinds';
@@ -14,6 +14,7 @@ import { FinancialHubSwitcher, type FinancialModuleKey } from '@/src/components/
 import { FinancialHubSheet } from '@/src/components/finance/FinancialHubSheet';
 import { PlanCard } from '@/src/components/plans/PlanCard';
 import { PlanTemplateCard } from '@/src/components/plans/PlanTemplateCard';
+import { MoneyValue } from '@/src/components/MoneyValue';
 import { t } from '@/src/lib/i18n';
 
 type Section = FinancialModuleKey;
@@ -126,13 +127,13 @@ function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
                 </ProgressRing>
                 <View style={{ marginLeft: spacing.md, flex: 1 }}>
                   <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{b.category}</Body>
-                  <Body muted style={{ marginTop: 2 }}>
-                    {formatMoney(spent, currency)} of {formatMoney(amount, currency)}
-                  </Body>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                    <MoneyValue value={spent} currency={currency} privacy="financial" style={{ color: colors.muted, fontSize: 15 }} />
+                    <Body muted> of </Body>
+                    <MoneyValue value={amount} currency={currency} privacy="financial" style={{ color: colors.muted, fontSize: 15 }} />
+                  </View>
                 </View>
-                <Body style={{ fontFamily: font.displayBold, color }}>
-                  {formatMoney(amount - spent, currency)}
-                </Body>
+                <MoneyValue value={amount - spent} currency={currency} privacy="financial" style={{ fontFamily: font.displayBold, color }} />
               </View>
             </Card>
           );
@@ -169,9 +170,11 @@ function GoalsSection({ goals, currency, onAdd, onOpen, onReload }: any) {
                 </View>
                 <View style={{ marginLeft: spacing.md, flex: 1 }}>
                   <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{g.name}</Body>
-                  <Body muted style={{ marginTop: 2 }}>
-                    {formatMoney(saved, currency)} / {formatMoney(target, currency)}
-                  </Body>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                    <MoneyValue value={saved} currency={currency} privacy="financial" style={{ color: colors.muted, fontSize: 15 }} />
+                    <Body muted> / </Body>
+                    <MoneyValue value={target} currency={currency} privacy="financial" style={{ color: colors.muted, fontSize: 15 }} />
+                  </View>
                 </View>
                 <Body style={{ fontFamily: font.displayBold, color: colors.brandPrimary }}>{Math.round(p * 100)}%</Body>
               </View>
@@ -282,13 +285,17 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
                 <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{d.name}</Body>
                 <Body muted style={{ marginTop: 2 }}>{d.kind.replace('_', ' ')} · {d.interest_rate}% APR</Body>
               </View>
-              <Body style={{ fontFamily: font.displayBold, color: colors.error }}>{formatMoney(remaining, currency)}</Body>
+              <MoneyValue value={remaining} currency={currency} privacy="financial" style={{ fontFamily: font.displayBold, color: colors.error }} />
             </View>
             <View style={{ marginTop: spacing.md }}>
               <ProgressBar progress={p} color={colors.warning} />
-              <Body muted style={{ marginTop: 6, fontSize: 12 }}>
-                Paid {formatMoney(paid, currency)} of {formatMoney(principal, currency)} ({Math.round(p * 100)}%)
-              </Body>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
+                <Body muted style={{ fontSize: 12 }}>Paid </Body>
+                <MoneyValue value={paid} currency={currency} privacy="financial" style={{ color: colors.muted, fontSize: 12 }} />
+                <Body muted style={{ fontSize: 12 }}> of </Body>
+                <MoneyValue value={principal} currency={currency} privacy="financial" style={{ color: colors.muted, fontSize: 12 }} />
+                <Body muted style={{ fontSize: 12 }}> ({Math.round(p * 100)}%)</Body>
+              </View>
             </View>
           </Card>
         );
@@ -331,10 +338,8 @@ function AssetsSection({ assets, investments, currency, onAddAsset, onAddInv, on
                 <Body muted style={{ marginTop: 2 }}>{kindLabel(iv.kind)} · {quantitySummary(iv)}</Body>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Body style={{ fontFamily: font.displayBold }}>{formatMoney(value, currency)}</Body>
-                <Body style={{ marginTop: 2, color: plColor, fontFamily: font.textMedium }}>
-                  {pl >= 0 ? '+' : ''}{formatMoney(pl, currency)}
-                </Body>
+                <MoneyValue value={value} currency={currency} privacy="financial" style={{ fontFamily: font.displayBold }} />
+                <MoneyValue value={pl} currency={currency} privacy="financial" style={{ marginTop: 2, color: plColor, fontFamily: font.textMedium }} />
               </View>
             </View>
           </Card>
@@ -357,7 +362,7 @@ function AssetsSection({ assets, investments, currency, onAddAsset, onAddInv, on
               <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{a.name}</Body>
               <Body muted style={{ marginTop: 2 }}>{a.kind.replace('_', ' ')}</Body>
             </View>
-            <Body style={{ fontFamily: font.displayBold }}>{formatMoney(cv(a, 'value'), currency)}</Body>
+            <MoneyValue value={cv(a, 'value')} currency={currency} privacy="financial" style={{ fontFamily: font.displayBold }} />
           </View>
         </Card>
       ))}

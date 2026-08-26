@@ -4,7 +4,6 @@ import { FlexWidget, TextWidget, ImageWidget, type HexColor } from 'react-native
 // Theme-aware colors — widget is headless, so we read theme from storage and apply the same
 // graphite/midnight + teal-accent system as the app. No solid green background.
 const DARK_BG = '#11131A';
-const DARK_SURFACE = '#191D28';
 const DARK_MUTED = '#A7AEC0';
 const DARK_WHITE = '#F2F3F8';
 const DARK_TEAL = '#70C8B1';
@@ -12,7 +11,6 @@ const DARK_GREEN = '#83D2AA';
 const DARK_RED = '#F19B9D';
 
 const LIGHT_BG = '#F6F7F3';
-const LIGHT_SURFACE = '#FFFFFF';
 const LIGHT_MUTED = '#70807A';
 const LIGHT_CHARCOAL = '#1C2926';
 const LIGHT_TEAL = '#287565';
@@ -46,7 +44,6 @@ export function NetWorthWidget({ data, large, small }: { data: NetWorthWidgetDat
   const id = data.locale === 'id';
   const isDark = data.theme !== 'light';
   const BG = isDark ? DARK_BG : LIGHT_BG;
-  const SURFACE = isDark ? DARK_SURFACE : LIGHT_SURFACE;
   const MUTED = isDark ? DARK_MUTED : LIGHT_MUTED;
   const WHITE = isDark ? DARK_WHITE : LIGHT_CHARCOAL;
   const TEAL = isDark ? DARK_TEAL : LIGHT_TEAL;

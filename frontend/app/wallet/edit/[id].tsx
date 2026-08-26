@@ -5,13 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, formatMoneyFull } from '@/src/theme/tokens';
+import { spacing, font } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
 import { api } from '@/src/api/client';
 import { Body, Label, Button, Input, Chip, Card } from '@/src/components/ui';
 import { confirmAction } from '@/src/utils/confirm';
 import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
+import { MoneyValue } from '@/src/components/MoneyValue';
 
 const TYPES = [
   { id: 'cash', label: 'Cash' },
@@ -89,9 +90,7 @@ export default function EditWallet() {
       }>
       <Card style={{ marginBottom: spacing.md }}>
         <Label>Current balance</Label>
-        <Body style={{ fontSize: scale(24), fontFamily: 'SpaceGrotesk-Bold', marginTop: 4 }}>
-          {formatMoneyFull(wallet.converted_balance ?? (wallet.balance || 0), wallet.home_currency || cur)}
-        </Body>
+        <MoneyValue value={wallet.converted_balance ?? (wallet.balance || 0)} currency={wallet.home_currency || cur} privacy="financial" style={{ fontSize: scale(24), fontFamily: font.displayBold, marginTop: 4 }} />
       </Card>
 
       <Input testID="edit-wallet-name" label="Name" value={name} onChangeText={setName} placeholder="Main Bank" />

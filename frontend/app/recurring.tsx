@@ -1,15 +1,15 @@
 import React, { useCallback, useState } from 'react';
-import { View, TouchableOpacity, Alert, Text } from 'react-native';
+import { View, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney, cv } from '@/src/theme/tokens';
-import { scale } from '@/src/utils/responsive';
+import { spacing, radius, font, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H2, Body, Label, EmptyState } from '@/src/components/ui';
+import { MoneyValue } from '@/src/components/MoneyValue';
 
 const FREQ_LABEL: Record<string, string> = { weekly: '/week', monthly: '/month', yearly: '/year' };
 
@@ -74,9 +74,7 @@ export default function Recurring() {
         <View style={{ padding: spacing.xl, paddingBottom: 0 }}>
           <Card style={{ backgroundColor: colors.inverse }}>
             <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Recurring spend</Label>
-            <Text style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: scale(26), lineHeight: scale(32), marginTop: 4 }}>
-              {formatMoney(monthlyTotal, cur)}<Text style={{ color: colors.onInverse, opacity: 0.6, fontSize: scale(14), lineHeight: scale(18) }}> /month equiv.</Text>
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 4 }}><MoneyValue value={monthlyTotal} currency={cur} privacy="financial" style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 26 }} /><Body style={{ color: colors.onInverse, opacity: 0.6, fontSize: 14 }}> /month equiv.</Body></View>
           </Card>
         </View>
 
@@ -97,9 +95,7 @@ export default function Recurring() {
                     <Body muted style={{ marginTop: 2, fontSize: 12 }}>{r.category} · {dueText}</Body>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Body style={{ fontFamily: font.displayBold, color: r.type === 'income' ? colors.success : colors.onSurface }}>
-                      {r.type === 'income' ? '+' : '-'}{formatMoney(cv(r, 'amount'), cur)}
-                    </Body>
+                    <MoneyValue value={r.type === 'income' ? cv(r, 'amount') : -Math.abs(cv(r, 'amount'))} currency={cur} privacy="financial" style={{ color: r.type === 'income' ? colors.success : colors.onSurface, fontFamily: font.displayBold }} />
                     <Body muted style={{ fontSize: 11, marginTop: 2 }}>{FREQ_LABEL[r.frequency]}</Body>
                   </View>
                 </View>

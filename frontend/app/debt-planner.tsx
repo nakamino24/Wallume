@@ -6,10 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, formatMoney, currencySymbol } from '@/src/theme/tokens';
+import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, Input, EmptyState } from '@/src/components/ui';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
+import { MoneyValue } from '@/src/components/MoneyValue';
 
 type Strategy = 'avalanche' | 'snowball';
 
@@ -122,7 +123,7 @@ export default function DebtPlanner() {
                       </View>
                       <View style={{ alignItems: 'flex-end' }}>
                         <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Total interest paid</Label>
-                        <H2 style={{ color: colors.onInverse, marginTop: 4 }}>{formatMoney(result.total_interest, cur)}</H2>
+                        <MoneyValue value={result.total_interest} currency={cur} privacy="financial" style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 26, marginTop: 4 }} />
                       </View>
                     </View>
                   </Card>
@@ -130,9 +131,7 @@ export default function DebtPlanner() {
                   {!!plan.interest_saved_with_avalanche && plan.interest_saved_with_avalanche > 0 && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.success + '1A', borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.md }}>
                       <Ionicons name="trending-down" size={18} color={colors.success} />
-                      <Body style={{ flex: 1, fontSize: 13 }}>
-                        Avalanche saves you <Body style={{ fontFamily: font.textBold, fontSize: 13, color: colors.success }}>{formatMoney(plan.interest_saved_with_avalanche, cur)}</Body> in interest vs snowball.
-                      </Body>
+                      <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}><Body style={{ fontSize: 13 }}>Avalanche saves you </Body><MoneyValue value={plan.interest_saved_with_avalanche} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 13, color: colors.success }} /><Body style={{ fontSize: 13 }}> in interest vs snowball.</Body></View>
                     </View>
                   )}
 
@@ -145,9 +144,7 @@ export default function DebtPlanner() {
                         </View>
                         <View style={{ flex: 1 }}>
                           <Body style={{ fontFamily: font.textMedium }}>{d.name}</Body>
-                          <Body muted style={{ fontSize: 12, marginTop: 2 }}>
-                            {d.payoff_month ? `Paid off in month ${d.payoff_month}` : 'Beyond 50-year horizon'} · {formatMoney(d.interest_paid, cur)} interest
-                          </Body>
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 2 }}><Body muted style={{ fontSize: 12 }}>{d.payoff_month ? `Paid off in month ${d.payoff_month}` : 'Beyond 50-year horizon'} · </Body><MoneyValue value={d.interest_paid} currency={cur} privacy="financial" style={{ color: colors.muted, fontSize: 12 }} /><Body muted style={{ fontSize: 12 }}> interest</Body></View>
                         </View>
                       </View>
                     ))}

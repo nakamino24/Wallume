@@ -6,10 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, font, formatMoney, formatMoneyFull, cv } from '@/src/theme/tokens';
+import { spacing, font, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H2, Body, Label, Button, ProgressBar, DisplayNumber } from '@/src/components/ui';
+import { Screen, Card, H2, Body, Label, Button, ProgressBar } from '@/src/components/ui';
 import { MoneyInput } from '@/src/components/MoneyInput';
+import { MoneyValue } from '@/src/components/MoneyValue';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 
 export default function GoalDetail() {
@@ -59,14 +60,14 @@ export default function GoalDetail() {
         <KeyboardAwareContainer contentContainerStyle={{ padding: spacing.xl, gap: spacing.md }}>
           <Card>
             <Label>Saved</Label>
-            <DisplayNumber size={38} style={{ marginTop: 6 }}>{formatMoneyFull(saved, cur)}</DisplayNumber>
-            <Body muted style={{ marginTop: 6 }}>of {formatMoneyFull(target, cur)} target</Body>
+            <MoneyValue value={saved} currency={cur} privacy="financial" style={{ fontFamily: font.displayBold, fontSize: 38, marginTop: 6, letterSpacing: -0.5 }} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}><Body muted>of </Body><MoneyValue value={target} currency={cur} privacy="financial" style={{ color: colors.muted, fontSize: 15 }} /><Body muted> target</Body></View>
             <View style={{ marginTop: spacing.md }}>
               <ProgressBar progress={p} height={10} />
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md }}>
               <Body muted>{Math.round(p * 100)}% complete</Body>
-              <Body style={{ fontFamily: font.textBold }}>{formatMoney(remaining, cur)} to go</Body>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}><MoneyValue value={remaining} currency={cur} privacy="financial" style={{ fontFamily: font.textBold }} /><Body> to go</Body></View>
             </View>
           </Card>
 

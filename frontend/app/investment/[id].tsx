@@ -7,10 +7,11 @@ import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, font, formatMoney, cv } from '@/src/theme/tokens';
+import { spacing, font, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, Body, Label, Divider } from '@/src/components/ui';
 import { computeInvestmentMetrics, kindLabel, quantitySummary, type InvestmentDoc } from '@/src/lib/investmentKinds';
+import { MoneyValue } from '@/src/components/MoneyValue';
 
 export default function InvestmentDetail() {
   const { colors } = useTheme();
@@ -99,12 +100,10 @@ export default function InvestmentDetail() {
 
           <Card style={{ marginTop: spacing.lg }}>
             <Label>Current Value</Label>
-            <H1 style={{ marginTop: 4 }}>{formatMoney(value, cur)}</H1>
+            <MoneyValue value={value} currency={cur} privacy="financial" style={{ fontFamily: font.displayBold, fontSize: 26, marginTop: 4 }} />
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, gap: spacing.sm }}>
               <Ionicons name={pl >= 0 ? 'trending-up' : 'trending-down'} size={16} color={plColor} />
-              <Body style={{ color: plColor, fontFamily: font.textBold }}>
-                {pl >= 0 ? '+' : ''}{formatMoney(pl, cur)} ({returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%)
-              </Body>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}><MoneyValue value={pl} currency={cur} privacy="financial" style={{ color: plColor, fontFamily: font.textBold }} /><Body style={{ color: plColor, fontFamily: font.textBold }}> ({returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%)</Body></View>
             </View>
 
             <Divider />
@@ -115,12 +114,12 @@ export default function InvestmentDetail() {
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
               <Body muted>Total Cost</Body>
-              <Body style={{ fontFamily: font.textMedium }}>{formatMoney(cost, cur)}</Body>
+              <MoneyValue value={cost} currency={cur} privacy="financial" style={{ fontFamily: font.textMedium }} />
             </View>
             {inv.kind === 'bond' && !!inv.face_value && (
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
                 <Body muted>Face Value</Body>
-                <Body style={{ fontFamily: font.textMedium }}>{formatMoney(cv(inv, 'face_value'), cur)}</Body>
+                <MoneyValue value={cv(inv, 'face_value')} currency={cur} privacy="financial" style={{ fontFamily: font.textMedium }} />
               </View>
             )}
             {inv.kind === 'bond' && !!inv.coupon_rate && (

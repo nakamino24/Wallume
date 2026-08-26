@@ -6,10 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, font, formatMoney, formatMoneyFull } from '@/src/theme/tokens';
+import { spacing, font } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { groupActivitiesByDay } from '@/src/lib/activity';
-import { Screen, Card, H2, Body, Label, EmptyState, Caption, DisplayNumber } from '@/src/components/ui';
+import { Screen, Card, H2, Body, Label, EmptyState, Caption } from '@/src/components/ui';
+import { MoneyValue } from '@/src/components/MoneyValue';
 
 const CATEGORY_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
@@ -129,13 +130,9 @@ export default function WalletDetail() {
                   </Body>
                 </View>
               </View>
-              <DisplayNumber size={32} color={colors.onInverse} style={{ marginTop: 4 }}>
-                {formatMoneyFull(wallet.converted_balance ?? (wallet.balance || 0), walletCur)}
-              </DisplayNumber>
+              <MoneyValue value={wallet.converted_balance ?? (wallet.balance || 0)} currency={walletCur} privacy="financial" style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 32, marginTop: 4 }} />
               {wallet.currency && wallet.currency !== walletCur && (
-                <Caption style={{ color: colors.onInverse, opacity: 0.7, marginTop: 4 }}>
-                  {formatMoneyFull(wallet.balance || 0, wallet.currency)} · {wallet.currency}
-                </Caption>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}><MoneyValue value={wallet.balance || 0} currency={wallet.currency} privacy="financial" style={{ color: colors.onInverse, opacity: 0.7, fontSize: 12 }} /><Caption style={{ color: colors.onInverse, opacity: 0.7 }}> · {wallet.currency}</Caption></View>
               )}
             </Card>
           </View>
@@ -240,9 +237,7 @@ function ActivityRow({ tx, walletId, currency, last, onPress, onLongPress }: any
           {!!tx.note && <Caption muted style={{ marginTop: 1 }}>{tx.note.length > 30 ? tx.note.slice(0, 30) + '…' : tx.note}</Caption>}
         </View>
         <View style={{ alignItems: 'flex-end' }}>
-          <Body style={{ fontFamily: font.displayBold, color, fontSize: 14 }}>
-            {direction === 'IN' ? '+' : '-'}{formatMoney(displayAmount, currency)}
-          </Body>
+          <MoneyValue value={direction === 'IN' ? displayAmount : -Math.abs(displayAmount)} currency={currency} privacy="financial" style={{ fontFamily: font.displayBold, color, fontSize: 14 }} />
         </View>
       </View>
     </TouchableOpacity>
