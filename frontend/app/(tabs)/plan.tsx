@@ -84,16 +84,10 @@ export default function PlanScreen() {
             <DebtsSection debts={debts} currency={cur} onAdd={() => router.push('/debt/new')} onReload={load} />
           )}
           {loaded && section === 'assets' && (
-            <AssetsSection assets={assets} investments={[]} currency={cur}
-              onAddAsset={() => router.push('/asset/new')}
-              onAddInv={() => router.push('/investment/new')}
-              onReload={load} />
+            <AssetsSection assets={assets} currency={cur} onAdd={() => router.push('/asset/new')} onReload={load} />
           )}
           {loaded && section === 'investments' && (
-            <AssetsSection assets={[]} investments={investments} currency={cur}
-              onAddAsset={() => router.push('/asset/new')}
-              onAddInv={() => router.push('/investment/new')}
-              onReload={load} />
+            <InvestmentsSection investments={investments} currency={cur} onAdd={() => router.push('/investment/new')} />
           )}
         </ScrollView>
         <FinancialHubSheet visible={hubOpen} current={section} onClose={() => setHubOpen(false)} onSelect={(next) => { setHubOpen(false); if (next === 'bills') router.push('/recurring'); else setSection(next); }} />
@@ -310,8 +304,37 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
   );
 }
 
-/* --------------------- ASSETS + INVESTMENTS --------------------- */
-function AssetsSection({ assets, investments, currency, onAddAsset, onAddInv, onReload }: any) {
+/* --------------------- ASSETS --------------------- */
+export function AssetsSection({ assets, currency, onAdd, onReload }: any) {
+  const { colors } = useTheme();
+  return (
+    <>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
+        <H2 style={{ flex: 1, minWidth: 0 }}>Assets</H2>
+        <TouchableOpacity testID="asset-add-btn" onPress={onAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="add" size={16} color={colors.onBrand} />
+        </TouchableOpacity>
+      </View>
+      {assets.length === 0 ? (
+        <EmptyState testID="assets-empty" title="No assets yet" subtitle="Real estate, vehicles, gadgets…" actionLabel="Add asset" onAction={onAdd} />
+      ) : assets.map((a: any) => (
+        <Card key={a.id} testID={`asset-card-${a.id}`} onPress={() => confirmDialog('Delete asset?', async () => { await api.deleteAsset(a.id); onReload(); })}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1 }}>
+              <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{a.name}</Body>
+              <Body muted style={{ marginTop: 2 }}>{a.kind.replace('_', ' ')}</Body>
+            </View>
+            <MoneyValue value={cv(a, 'value')} currency={currency} style={{ fontFamily: font.displayBold }} />
+          </View>
+        </Card>
+      ))}
+    </>
+  );
+}
+
+/* --------------------- INVESTMENTS --------------------- */
+export function InvestmentsSection({ investments, currency, onAdd }: any) {
   const { colors } = useTheme();
   const router = useRouter();
   return (
@@ -325,14 +348,14 @@ function AssetsSection({ assets, investments, currency, onAddAsset, onAddInv, on
               <Ionicons name="pie-chart" size={15} color={colors.onBrandSoft} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity testID="inv-add-btn" onPress={onAddInv} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          <TouchableOpacity testID="inv-add-btn" onPress={onAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="add" size={16} color={colors.onBrand} />
           </TouchableOpacity>
         </View>
       </View>
       {investments.length === 0 ? (
-        <EmptyState testID="inv-empty" title="No investments" subtitle="Track stocks, crypto, gold and funds." actionLabel="Add investment" onAction={onAddInv} />
+        <EmptyState testID="inv-empty" title="No investments" subtitle="Track stocks, crypto, gold and funds." actionLabel="Add investment" onAction={onAdd} />
       ) : investments.map((iv: any) => {
         const { value, pl } = computeInvestmentMetrics(iv);
         const plColor = pl >= 0 ? colors.success : colors.error;
@@ -351,27 +374,6 @@ function AssetsSection({ assets, investments, currency, onAddAsset, onAddInv, on
           </Card>
         );
       })}
-
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md, marginTop: spacing.lg }}>
-        <H2 style={{ flex: 1, minWidth: 0 }}>Assets</H2>
-        <TouchableOpacity testID="asset-add-btn" onPress={onAddAsset} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="add" size={16} color={colors.onBrand} />
-        </TouchableOpacity>
-      </View>
-      {assets.length === 0 ? (
-        <EmptyState testID="assets-empty" title="No assets yet" subtitle="Real estate, vehicles, gadgets…" actionLabel="Add asset" onAction={onAddAsset} />
-      ) : assets.map((a: any) => (
-        <Card key={a.id} onPress={() => confirmDialog('Delete asset?', async () => { await api.deleteAsset(a.id); onReload(); })}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <View style={{ flex: 1 }}>
-              <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{a.name}</Body>
-              <Body muted style={{ marginTop: 2 }}>{a.kind.replace('_', ' ')}</Body>
-            </View>
-            <MoneyValue value={cv(a, 'value')} currency={currency} style={{ fontFamily: font.displayBold }} />
-          </View>
-        </Card>
-      ))}
     </>
   );
 }
