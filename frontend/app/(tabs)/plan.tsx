@@ -96,13 +96,22 @@ export default function PlanScreen() {
   );
 }
 
+export function budgetCategoryLabel(raw: string): string {
+  if (!raw) return raw;
+  const key = raw.trim().toLowerCase().replace(/\s+/g, '_');
+  const translated = t(`budgets.category.${key}`);
+  if (translated !== `budgets.category.${key}`) return translated;
+  // Fallback: Title Case original
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
 /* --------------------- BUDGETS --------------------- */
-function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
+export function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
   const { colors } = useTheme();
   return (
     <>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
-        <H2 style={{ flex: 1, minWidth: 0 }}>Monthly budgets</H2>
+        <H2 style={{ flex: 1, minWidth: 0 }}>{t('budgets.monthly')}</H2>
         <TouchableOpacity testID="budget-add-btn" onPress={onAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name="add" size={16} color={colors.onBrand} />
@@ -114,26 +123,34 @@ function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
         budgets.map((b: any) => {
           const spent = cv(b, 'spent');
           const amount = cv(b, 'amount');
-          const pct = amount > 0 ? (spent / amount) * 100 : 0;
-          const p = Math.min(1, pct / 100);
+          const usagePercent = amount > 0 ? (spent / amount) * 100 : 0;
+          const ringProgress = Math.min(1, usagePercent / 100);
+          const displayPercent = Math.round(usagePercent);
           const over = spent > amount;
-          const warn = pct >= 80 && !over;
+          const warn = usagePercent >= 80 && !over;
           const color = over ? colors.error : warn ? colors.warning : colors.brandPrimary;
+          const remaining = Math.max(0, amount - spent);
+          const overspent = Math.max(0, spent - amount);
+          const statusLabel = over ? t('budgets.over') : t('budgets.remaining');
+          const statusAmount = over ? overspent : remaining;
           return (
-            <Card key={b.id} onPress={() => confirmDialog('Delete budget?', async () => { await api.deleteBudget(b.id); onReload(); })}>
+            <Card key={b.id} testID={`budget-card-${b.id}`} onPress={() => confirmDialog('Delete budget?', async () => { await api.deleteBudget(b.id); onReload(); })}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <ProgressRing progress={p} color={color} size={54} stroke={7}>
-                  <Body style={{ fontFamily: font.displayBold, fontSize: 11 }}>{Math.round(p * 100)}%</Body>
+                <ProgressRing progress={ringProgress} color={color} size={54} stroke={7}>
+                  <Body testID={`budget-pct-${b.id}`} style={{ fontFamily: font.displayBold, fontSize: 11 }}>{displayPercent}%</Body>
                 </ProgressRing>
                 <View style={{ marginLeft: spacing.md, flex: 1 }}>
-                  <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{b.category}</Body>
+                  <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{budgetCategoryLabel(b.category)}</Body>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                     <MoneyValue value={spent} currency={currency} style={{ color: colors.muted, fontSize: 15 }} />
-                    <Body muted> of </Body>
+                    <Body muted> {t('budgets.of')} </Body>
                     <MoneyValue value={amount} currency={currency} style={{ color: colors.muted, fontSize: 15 }} />
                   </View>
                 </View>
-                <MoneyValue value={amount - spent} currency={currency} style={{ fontFamily: font.displayBold, color }} />
+                <View style={{ alignItems: 'flex-end', marginLeft: spacing.md }}>
+                  <Body style={{ fontFamily: font.textBold, fontSize: 12, color }}>{statusLabel}</Body>
+                  <MoneyValue testID={`budget-status-${b.id}`} value={statusAmount} currency={currency} style={{ fontFamily: font.displayBold, color, fontSize: 13, marginTop: 2 }} />
+                </View>
               </View>
             </Card>
           );
