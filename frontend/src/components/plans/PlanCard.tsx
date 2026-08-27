@@ -10,6 +10,14 @@ import { t } from '@/src/lib/i18n';
 
 const planIcon: Record<string, any> = { wedding: 'heart-outline', house: 'home-outline', car: 'car-sport-outline', vacation: 'airplane-outline' };
 
+export function planKindLabel(kind?: string) {
+  if (!kind) return 'Plan';
+  const key = `plans.template.${kind}`;
+  const translated = t(key);
+  if (translated !== key) return translated;
+  return kind.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export function planProgress(saved: number, target: number) {
   return target > 0 ? Math.min(1, Math.max(0, saved / target)) : 0;
 }
@@ -26,12 +34,12 @@ export function PlanCard({ plan, currency, onPress }: { plan: any; currency: str
           <Ionicons name={planIcon[plan.kind] || 'compass-outline'} size={20} color={colors.onBrandSoft} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Label>{plan.kind || 'Plan'}</Label>
+          <Label>{planKindLabel(plan.kind)}</Label>
           <Body numberOfLines={1} style={{ marginTop: 3, fontFamily: font.textMedium }}>{plan.name}</Body>
         </View>
         <Body style={{ color: colors.brandPrimary, fontFamily: font.textMedium }}>{Math.round(progress * 100)}%</Body>
       </View>
-      <MoneyValue value={saved} currency={currency} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: spacing.md, fontFamily: font.displayBold, fontSize: 18 }} />
+      <MoneyValue value={saved} currency={currency} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.onSurface, marginTop: spacing.md, fontFamily: font.displayBold, fontSize: 18 }} />
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
         <Body muted style={{ fontSize: 12 }}>{t('plans.of')} </Body>
         <MoneyValue value={target} currency={currency} style={{ color: colors.muted, fontSize: 12 }} />

@@ -16,6 +16,7 @@ import { PlanCard } from '@/src/components/plans/PlanCard';
 import { PlanTemplateCard } from '@/src/components/plans/PlanTemplateCard';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { t } from '@/src/lib/i18n';
+import { SkeletonCard } from '@/src/components/Skeleton';
 
 type Section = FinancialModuleKey;
 
@@ -33,6 +34,7 @@ export default function PlanScreen() {
   const [debts, setDebts] = useState<any[]>([]);
   const [assets, setAssets] = useState<any[]>([]);
   const [investments, setInvestments] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -45,7 +47,10 @@ export default function PlanScreen() {
       setDebts(d.debts || []);
       setAssets(a.assets || []);
       setInvestments(i.investments || []);
-    } catch {}
+    } catch {
+    } finally {
+      setLoaded(true);
+    }
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
   const onRefresh = useCallback(async () => { setRefreshing(true); await load(); setRefreshing(false); }, [load]);
@@ -65,25 +70,26 @@ export default function PlanScreen() {
           contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: spacing.xl, gap: spacing.md }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
         >
-          {section === 'budgets' && (
+          {!loaded && <SkeletonCard />}
+          {loaded && section === 'budgets' && (
             <BudgetsSection budgets={budgets} currency={cur} onAdd={() => router.push('/budget/new')} onReload={load} />
           )}
-          {section === 'goals' && (
+          {loaded && section === 'goals' && (
             <GoalsSection goals={goals} currency={cur} onAdd={() => router.push('/goal/new')} onOpen={(id: string) => router.push({ pathname: '/goal/[id]', params: { id } })} onReload={load} />
           )}
-          {section === 'plans' && (
+          {loaded && section === 'plans' && (
             <PlansSection plans={plans} currency={cur} onAdd={(kind: string) => router.push({ pathname: '/plan/new', params: { kind } })} onOpen={(id: string) => router.push({ pathname: '/plan/[id]', params: { id } })} />
           )}
-          {section === 'debts' && (
+          {loaded && section === 'debts' && (
             <DebtsSection debts={debts} currency={cur} onAdd={() => router.push('/debt/new')} onReload={load} />
           )}
-          {section === 'assets' && (
+          {loaded && section === 'assets' && (
             <AssetsSection assets={assets} investments={[]} currency={cur}
               onAddAsset={() => router.push('/asset/new')}
               onAddInv={() => router.push('/investment/new')}
               onReload={load} />
           )}
-          {section === 'investments' && (
+          {loaded && section === 'investments' && (
             <AssetsSection assets={[]} investments={investments} currency={cur}
               onAddAsset={() => router.push('/asset/new')}
               onAddInv={() => router.push('/investment/new')}

@@ -70,4 +70,47 @@ describe('Widget balance privacy', () => {
     expect(data.isBalanceVisible).toBe(false);
     expect(mockStorage.getItem).not.toHaveBeenCalledWith('wallume.privacy.showBalances', expect.anything());
   });
+
+  it('persists widget privacy across refreshes', async () => {
+    mockStorage.getItem.mockImplementation((key: string, fallback: any) => {
+      if (key === 'mf.widget.currency') return Promise.resolve('IDR');
+      if (key === WIDGET_BALANCE_VISIBILITY_KEY) return Promise.resolve(false);
+      return Promise.resolve(fallback);
+    });
+    mockStorage.secureGet.mockResolvedValue('token');
+    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ wallet_total: 3218754, month_income: 6600000, month_expense: 5100000, cash_flow: 1500000, health_score: 80, category_breakdown: [] }), arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)) });
+
+    const first = await fetchWidgetData();
+    const second = await fetchWidgetData();
+
+    expect(first.balance).toBe('Rp•••••••');
+    expect(second.balance).toBe('Rp•••••••');
+    expect(mockStorage.setItem).not.toHaveBeenCalledWith(WIDGET_BALANCE_VISIBILITY_KEY, expect.anything());
+  });
+
+  it('changing app privacy does not change widget visibility', async () => {
+    mockStorage.getItem.mockImplementation((key: string, fallback: any) => {
+      if (key === 'mf.widget.currency') return Promise.resolve('IDR');
+      if (key === WIDGET_BALANCE_VISIBILITY_KEY) return Promise.resolve(true);
+      if (key === 'wallume.privacy.showBalances') return Promise.resolve(false);
+      return Promise.resolve(fallback);
+    });
+    mockStorage.secureGet.mockResolvedValue('token');
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ wallet_total: 3218754, month_income: 6600000, month_expense: 5100000, cash_flow: 1500000, health_score: 80, category_breakdown: [] }) });
+    mockFetch.mockResolvedValueOnce({ ok: false });
+
+    const data = await fetchWidgetData();
+
+    expect(data.balance).toBe('Rp3.218.754');
+    expect(mockStorage.setItem).not.toHaveBeenCalledWith(WIDGET_BALANCE_VISIBILITY_KEY, expect.anything());
+  });
+
+  it('changing widget privacy does not write app visibility', async () => {
+    mockStorage.getItem.mockResolvedValue(false);
+
+    await toggleWidgetBalanceVisibility();
+
+    expect(mockStorage.setItem).toHaveBeenCalledWith(WIDGET_BALANCE_VISIBILITY_KEY, true);
+    expect(mockStorage.setItem).not.toHaveBeenCalledWith('wallume.privacy.showBalances', expect.anything());
+  });
 });

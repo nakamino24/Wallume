@@ -5,14 +5,15 @@ jest.mock('react-native-android-widget', () => {
   const React = require('react');
   const { View, Text } = require('react-native');
   return {
-    FlexWidget: ({ children }: any) => React.createElement(View, null, children),
+    FlexWidget: ({ children, accessibilityLabel, clickAction }: any) =>
+      React.createElement(View, { accessibilityLabel, testID: clickAction }, children),
     TextWidget: ({ text }: any) => React.createElement(Text, null, text),
     ImageWidget: () => React.createElement(View),
-    IconWidget: ({ icon, accessibilityLabel }: any) => React.createElement(Text, { accessibilityLabel }, icon),
+    IconWidget: ({ icon }: any) => React.createElement(Text, null, icon),
   };
 });
 
-import { NetWorthWidget } from '@/src/widgets/NetWorthWidged';
+import { NetWorthWidget, WIDGET_EYE_ICON, WIDGET_EYE_OFF_ICON } from '@/src/widgets/NetWorthWidged';
 
 describe('Wallume widget view', () => {
   const data = { balance: 'Rp12.450.000', income: 'Rp4,5 jt', expense: 'Rp2,1 jt', cashFlow: 'Rp2,4 jt', healthScore: 78, categories: [], updatedAt: '09:41' };
@@ -44,8 +45,16 @@ describe('Wallume widget view', () => {
   });
 
   it('renders a distinct working widget eye action', () => {
-    const { getByLabelText, getByText } = render(<NetWorthWidget data={{ ...data, locale: 'en', isBalanceVisible: true }} />);
-    expect(getByText('eye-outline')).toBeTruthy();
+    const { getByLabelText, getByText, queryByText } = render(<NetWorthWidget data={{ ...data, locale: 'en', isBalanceVisible: true }} />);
+    expect(getByText(WIDGET_EYE_ICON)).toBeTruthy();
     expect(getByLabelText('Show or hide widget balance')).toBeTruthy();
+    expect(queryByText('eye-outline')).toBeNull();
+    expect(queryByText('eye-off-outline')).toBeNull();
+  });
+
+  it('uses the eye-off glyph instead of a literal icon name when hidden', () => {
+    const { getByText, queryByText } = render(<NetWorthWidget data={{ ...data, locale: 'en', isBalanceVisible: false }} />);
+    expect(getByText(WIDGET_EYE_OFF_ICON)).toBeTruthy();
+    expect(queryByText('eye-off-outline')).toBeNull();
   });
 });

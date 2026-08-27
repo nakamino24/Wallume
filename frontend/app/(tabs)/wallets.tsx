@@ -189,10 +189,11 @@ function WalletCard({ wallet, currency, onLongPress, onPress }: any) {
       <View style={{ marginTop: spacing.md }}>
         <Body muted style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7 }}>Balance</Body>
         <MoneyValue
+          testID={`wallet-balance-${wallet.id}`}
           value={wallet.converted_balance ?? (wallet.balance || 0)}
           currency={wallet.home_currency || currency}
           privacy="balance"
-          style={{ fontFamily: font.textBold, fontSize: 22, marginTop: 4 }}
+          style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 22, marginTop: 4 }}
         />
         {wallet.currency && wallet.currency !== (wallet.home_currency || currency) && (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>

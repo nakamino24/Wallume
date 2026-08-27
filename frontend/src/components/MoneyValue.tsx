@@ -28,6 +28,7 @@ function maskForCurrency(currency: string): string {
 export function MoneyValue({ value, currency = 'USD', privacy = 'none', compact, style, testID, numberOfLines, adjustsFontSizeToFit, minimumFontScale }: Props) {
   const { isBalanceVisible, isPrivacyReady } = useBalancePrivacy();
   const { colors } = useTheme();
+  const baseStyle = { color: colors.onSurface, fontVariant: ['tabular-nums'] } as TextStyle;
 
   const shouldMask = privacy === 'balance' && isPrivacyReady && !isBalanceVisible;
   // Before readiness, show masked placeholder to avoid flash of sensitive data
@@ -40,7 +41,7 @@ export function MoneyValue({ value, currency = 'USD', privacy = 'none', compact,
         numberOfLines={numberOfLines}
         adjustsFontSizeToFit={adjustsFontSizeToFit}
         minimumFontScale={minimumFontScale}
-        style={[{ color: colors.onSurface, fontVariant: ['tabular-nums'] } as TextStyle, style]}
+        style={[baseStyle, style]}
       >
         {maskForCurrency(currency)}
       </Text>
@@ -54,7 +55,7 @@ export function MoneyValue({ value, currency = 'USD', privacy = 'none', compact,
       numberOfLines={numberOfLines}
       adjustsFontSizeToFit={adjustsFontSizeToFit}
       minimumFontScale={minimumFontScale}
-      style={[{ fontVariant: ['tabular-nums'] } as TextStyle, style]}
+      style={[baseStyle, style]}
     >
       {formatted}
     </Text>

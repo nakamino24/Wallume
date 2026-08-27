@@ -47,6 +47,26 @@ jest.mock('expo-router', () => ({
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: ({ children }: any) => children }));
+jest.mock('@/src/lib/i18n', () => ({
+  t: (key: string, params?: Record<string, string | number>) => {
+    const text = ({
+      'plans.template.wedding': 'Wedding',
+      'plans.collected': 'Collected',
+      'plans.target': 'Target',
+      'plans.summary': 'Summary',
+      'plans.budget': 'Budget',
+      'plans.allocated': 'Allocated',
+      'plans.fundsCollected': 'Funds collected',
+      'plans.ofBudget': '{pct}% of budget',
+      'plans.checklist': 'Checklist',
+      'plans.addItem': 'Add item',
+      'plans.itemPlaceholder': 'e.g. Wedding cake',
+      'plans.amountOptional': 'Amount (optional)',
+      'plans.addChecklistItem': 'Add checklist item',
+    } as Record<string, string>)[key] || key;
+    return params ? text.replace('{pct}', String(params.pct)) : text;
+  },
+}));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: any) => {
     const React = require('react');
@@ -76,7 +96,19 @@ describe('Plan detail layout', () => {
     const { getByTestId, getByText } = render(<Detail />);
     await waitFor(() => expect(getByText('Bismillah 2029')).toBeTruthy());
     expect(getByTestId('plan-back')).toBeTruthy();
-    expect(getByText('Terkumpul')).toBeTruthy();
+    expect(getByText('Wedding')).toBeTruthy();
+    expect(getByText('Collected')).toBeTruthy();
     expect(getByText('Target')).toBeTruthy();
+    expect(getByText('Summary')).toBeTruthy();
+    expect(getByText('Checklist')).toBeTruthy();
+    expect(getByText('10% of budget')).toBeTruthy();
+    expect(getByText('Allocated')).toBeTruthy();
+    expect(getByText('Add item')).toBeTruthy();
+  });
+
+  it('uses skeleton loading UI instead of raw loading copy', () => {
+    const Detail = require('@/app/plan/[id]').default;
+    const { queryByText } = render(<Detail />);
+    expect(queryByText(/Loading/i)).toBeNull();
   });
 });

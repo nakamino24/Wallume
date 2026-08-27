@@ -12,6 +12,9 @@ import { Screen, Card, H1, H2, Body, Label, Button, Input, ProgressBar } from '@
 import { MoneyInput } from '@/src/components/MoneyInput';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
+import { SkeletonCard } from '@/src/components/Skeleton';
+import { t } from '@/src/lib/i18n';
+import { planKindLabel } from '@/src/components/plans/PlanCard';
 
 const planIcon: Record<string, any> = { wedding: 'heart-outline', house: 'home-outline', car: 'car-sport-outline', vacation: 'airplane-outline' };
 
@@ -39,7 +42,7 @@ export default function PlanDetail() {
     return { paid, allocated };
   }, [plan]);
 
-  if (!plan) return <Screen><SafeAreaView><Body style={{ padding: spacing.xl }}>Loading…</Body></SafeAreaView></Screen>;
+  if (!plan) return <Screen><SafeAreaView style={{ flex: 1, padding: spacing.xl }}><SkeletonCard /></SafeAreaView></Screen>;
 
   const budget = cv(plan, 'total_budget');
   const progress = budget > 0 ? Math.min(1, totals.paid / budget) : 0;
@@ -67,9 +70,9 @@ export default function PlanDetail() {
     await api.updatePlan(plan.id, { items });
   };
   const deletePlan = () => {
-    Alert.alert('Delete plan?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await api.deletePlan(plan.id); router.back(); } },
+    Alert.alert(t('plans.deleteTitle'), t('plans.deleteMessage'), [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('delete'), style: 'destructive', onPress: async () => { await api.deletePlan(plan.id); router.back(); } },
     ]);
   };
 
@@ -91,18 +94,18 @@ export default function PlanDetail() {
                 <Ionicons name={planIcon[plan.kind] || 'compass-outline'} size={22} color={colors.onBrandSoft} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Body muted style={{ textTransform: 'uppercase', letterSpacing: 0.6, fontSize: 11, fontFamily: font.textMedium }}>{plan.kind}</Body>
+                <Body muted style={{ textTransform: 'uppercase', letterSpacing: 0.6, fontSize: 11, fontFamily: font.textMedium }}>{planKindLabel(plan.kind)}</Body>
                 <H1 numberOfLines={2} style={{ marginTop: 2 }}>{plan.name}</H1>
               </View>
             </View>
             <View style={{ marginTop: spacing.lg }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <View>
-                  <Body muted style={{ fontSize: 12 }}>Terkumpul</Body>
+                  <Body muted style={{ fontSize: 12 }}>{t('plans.collected')}</Body>
                   <MoneyValue value={totals.paid} currency={cur} style={{ fontFamily: font.textBold, fontSize: 18 }} />
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Body muted style={{ fontSize: 12 }}>Target</Body>
+                  <Body muted style={{ fontSize: 12 }}>{t('plans.target')}</Body>
                   <MoneyValue value={budget} currency={cur} style={{ fontFamily: font.textBold, fontSize: 16 }} />
                 </View>
               </View>
@@ -120,27 +123,27 @@ export default function PlanDetail() {
 
           <View style={{ padding: spacing.xl, gap: spacing.md }}>
             <Card>
-              <Label>Summary</Label>
+              <Label>{t('plans.summary')}</Label>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: spacing.sm }}>
                 <View>
-                  <Body muted style={{ fontSize: 12 }}>Budget</Body>
+                  <Body muted style={{ fontSize: 12 }}>{t('plans.budget')}</Body>
                   <MoneyValue value={budget} currency={cur} style={{ fontFamily: font.displayBold, fontSize: 18 }} />
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Body muted style={{ fontSize: 12 }}>Allocated</Body>
+                  <Body muted style={{ fontSize: 12 }}>{t('plans.allocated')}</Body>
                   <MoneyValue value={totals.allocated} currency={cur} style={{ fontFamily: font.displayBold, fontSize: 18 }} />
                 </View>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: spacing.lg, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border }}>
                 <View>
-                  <Body muted style={{ fontSize: 12 }}>Funds collected</Body>
+                  <Body muted style={{ fontSize: 12 }}>{t('plans.fundsCollected')}</Body>
                   <MoneyValue value={totals.paid} currency={cur} style={{ fontFamily: font.displayBold, fontSize: 18, color: colors.brandPrimary }} />
                 </View>
-                <Body muted style={{ fontSize: 12 }}>{Math.round(progress * 100)}% of budget</Body>
+                <Body muted style={{ fontSize: 12 }}>{t('plans.ofBudget', { pct: Math.round(progress * 100) })}</Body>
               </View>
             </Card>
 
-            <H2>Checklist</H2>
+            <H2>{t('plans.checklist')}</H2>
             {(plan.items || []).map((it: any) => (
               <Card key={it.id} style={{ padding: spacing.md }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -151,8 +154,8 @@ export default function PlanDetail() {
                   <View style={{ flex: 1 }}>
                     <Body style={{ fontFamily: font.textBold, textDecorationLine: it.done ? 'line-through' : 'none' }}>{it.label}</Body>
                     <View style={{ marginTop: 4 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}><Body muted style={{ fontSize: 12, lineHeight: 16 }}>Budget  </Body><MoneyValue value={cv(it, 'amount')} currency={cur} style={{ fontFamily: font.textBold, fontSize: 12, lineHeight: 16 }} /></View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}><Body muted style={{ fontSize: 12, lineHeight: 16 }}>Funds collected  </Body><MoneyValue value={cv(it, 'paid')} currency={cur} style={{ fontFamily: font.textBold, fontSize: 12, lineHeight: 16, color: colors.brandPrimary }} /></View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}><Body muted style={{ fontSize: 12, lineHeight: 16 }}>{t('plans.budget')}  </Body><MoneyValue value={cv(it, 'amount')} currency={cur} style={{ fontFamily: font.textBold, fontSize: 12, lineHeight: 16 }} /></View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}><Body muted style={{ fontSize: 12, lineHeight: 16 }}>{t('plans.fundsCollected')}  </Body><MoneyValue value={cv(it, 'paid')} currency={cur} style={{ fontFamily: font.textBold, fontSize: 12, lineHeight: 16, color: colors.brandPrimary }} /></View>
                     </View>
                   </View>
                   <TouchableOpacity onPress={() => removeItem(it.id)} style={{ padding: 4 }}>
@@ -160,10 +163,10 @@ export default function PlanDetail() {
                   </TouchableOpacity>
                 </View>
                 <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
-                  <MoneyInput testID={`item-amount-${it.id}`} currency={cur} value={String(it.amount ?? '')} label="Budget"
+                  <MoneyInput testID={`item-amount-${it.id}`} currency={cur} value={String(it.amount ?? '')} label={t('plans.budget')}
                     onChange={(v) => updateItem(it.id, { amount: parseFloat(v) || 0 })}
                     style={{ marginBottom: 0 }} />
-                  <MoneyInput testID={`item-paid-${it.id}`} currency={cur} value={String(it.paid ?? '')} label="Funds collected"
+                  <MoneyInput testID={`item-paid-${it.id}`} currency={cur} value={String(it.paid ?? '')} label={t('plans.fundsCollected')}
                     onChange={(v) => updateItem(it.id, { paid: parseFloat(v) || 0 })}
                     style={{ marginBottom: 0 }} />
                 </View>
@@ -171,10 +174,10 @@ export default function PlanDetail() {
             ))}
 
             <Card>
-              <Label>Add item</Label>
-              <Input testID="new-item-label" placeholder="e.g. Wedding cake" value={newItemLabel} onChangeText={setNewItemLabel} />
-              <Input testID="new-item-amount" placeholder="Amount (optional)" keyboardType="decimal-pad" value={newItemAmount} onChangeText={setNewItemAmount} />
-              <Button testID="add-item-btn" label="Add checklist item" onPress={addItem} />
+              <Label>{t('plans.addItem')}</Label>
+              <Input testID="new-item-label" placeholder={t('plans.itemPlaceholder')} value={newItemLabel} onChangeText={setNewItemLabel} />
+              <Input testID="new-item-amount" placeholder={t('plans.amountOptional')} keyboardType="decimal-pad" value={newItemAmount} onChangeText={setNewItemAmount} />
+              <Button testID="add-item-btn" label={t('plans.addChecklistItem')} onPress={addItem} />
             </Card>
           </View>
         </KeyboardAwareContainer>

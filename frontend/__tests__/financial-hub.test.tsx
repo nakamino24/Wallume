@@ -12,6 +12,20 @@ jest.mock('@/src/lib/i18n', () => ({
 import { FinancialHubSheet } from '@/src/components/finance/FinancialHubSheet';
 import { FinancialHubSwitcher } from '@/src/components/finance/FinancialHubSwitcher';
 
+const mockApi = {
+  budgets: jest.fn(),
+  goals: jest.fn(),
+  plans: jest.fn(),
+  debts: jest.fn(),
+  assets: jest.fn(),
+  investments: jest.fn(),
+};
+jest.mock('@/src/api/client', () => ({ api: mockApi }));
+jest.mock('@/src/auth/AuthProvider', () => ({ useAuth: () => ({ user: { currency: 'IDR' } }) }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }), useFocusEffect: jest.fn((cb) => cb()) }));
+jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }: any) => children }));
+jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({ useBalancePrivacy: () => ({ isBalanceVisible: false, isPrivacyReady: true }) }));
+
 describe('Financial Hub', () => {
   it('renders the compact current-module switcher and the seven module cards', () => {
     const onSelect = jest.fn();
@@ -31,5 +45,17 @@ describe('Financial Hub', () => {
     const resolved = typeof style === 'function' ? style({ pressed: false }) : style;
     expect(resolved.minHeight).toBeLessThanOrEqual(52);
     expect(resolved.gap).toBeDefined();
+  });
+
+  it('does not show the plans empty state before plans finish loading', () => {
+    mockApi.budgets.mockReturnValue(new Promise(() => {}));
+    mockApi.goals.mockReturnValue(new Promise(() => {}));
+    mockApi.plans.mockReturnValue(new Promise(() => {}));
+    mockApi.debts.mockReturnValue(new Promise(() => {}));
+    mockApi.assets.mockReturnValue(new Promise(() => {}));
+    mockApi.investments.mockReturnValue(new Promise(() => {}));
+    const PlanScreen = require('@/app/(tabs)/plan').default;
+    const { queryByTestId } = render(<PlanScreen />);
+    expect(queryByTestId('plans-empty')).toBeNull();
   });
 });
