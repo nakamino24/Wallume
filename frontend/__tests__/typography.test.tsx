@@ -60,7 +60,7 @@ describe('Dark theme token system', () => {
     expect(palette.dark.surface).toBe('#11131A');
     expect(palette.dark.inverse).toBe('#20283A');
     expect(palette.dark.onInverse).toBe('#F7F8FC');
-    expect(palette.dark.brandPrimary).toBe('#70C8B1');
+    expect(palette.dark.brandPrimary).toBe('#4DE2B8');
     expect(palette.dark.onSurface).not.toBe('#101816');
   });
 });

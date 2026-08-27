@@ -6,9 +6,9 @@ import { FlexWidget, TextWidget, IconWidget, type HexColor } from 'react-native-
 const DARK_BG = '#11131A';
 const DARK_MUTED = '#A7AEC0';
 const DARK_WHITE = '#F2F3F8';
-const DARK_TEAL = '#70C8B1';
-const DARK_GREEN = '#83D2AA';
-const DARK_RED = '#F19B9D';
+const DARK_TEAL = '#4DE2B8';
+const DARK_GREEN = '#6EF2A6';
+const DARK_RED = '#FF7E85';
 
 const LIGHT_BG = '#F6F7F3';
 const LIGHT_MUTED = '#70807A';
