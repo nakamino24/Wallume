@@ -13,7 +13,35 @@ jest.mock('@/src/theme/ThemeProvider', () => ({
   }),
 }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
-jest.mock('@/src/lib/i18n', () => ({ t: (k: string) => ({ 'plans.active': 'Active plans', 'plans.subtitle': 'Build toward what matters.', 'plans.empty': 'No active plans yet', 'plans.empty.subtitle': 'Choose a template', 'plans.start': 'Start a new plan', 'plans.of': 'of', 'plans.target': 'Target' }[k] || k) }));
+jest.mock('@/src/lib/i18n', () => ({
+  t: (k: string, p?: any) => {
+    const m: Record<string, string> = {
+      'plans.active': 'Active plans',
+      'plans.subtitle': 'Build toward what matters.',
+      'plans.empty': 'No active plans yet',
+      'plans.empty.subtitle': 'Choose a template',
+      'plans.start': 'Start a new plan',
+      'plans.of': 'of',
+      'plans.target': 'Target',
+      'assets.heading': 'Assets',
+      'assets.empty.title': 'No assets yet',
+      'assets.empty.subtitle': 'Real estate, vehicles, gadgets…',
+      'assets.empty.action': 'Add asset',
+      'assets.delete.title': 'Delete asset?',
+      'investments.heading': 'Investments',
+      'investments.empty.title': 'No investments',
+      'investments.empty.subtitle': 'Track stocks, crypto, gold and funds.',
+      'investments.empty.action': 'Add investment',
+      'budgets.monthly': 'Monthly budgets',
+      'budgets.of': 'of',
+      'budgets.over': 'Over',
+      'budgets.remaining': 'Remaining',
+    };
+    let v = m[k] || k;
+    if (p) for (const [a, b] of Object.entries(p)) v = v.replace(`{${a}}`, String(b));
+    return v;
+  },
+}));
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }), useFocusEffect: (cb: any) => cb() }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }: any) => children }));
 jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({ useBalancePrivacy: () => ({ isBalanceVisible: true, isPrivacyReady: true }) }));

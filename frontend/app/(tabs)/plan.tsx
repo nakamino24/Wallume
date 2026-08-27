@@ -118,7 +118,7 @@ export function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
         </TouchableOpacity>
       </View>
       {budgets.length === 0 ? (
-        <EmptyState testID="budgets-empty" title="No budgets yet" subtitle="Set spending limits per category." actionLabel="Add budget" onAction={onAdd} />
+        <EmptyState testID="budgets-empty" title={t('budgets.empty.title')} subtitle={t('budgets.empty.subtitle')} actionLabel={t('budgets.empty.action')} onAction={onAdd} />
       ) : (
         budgets.map((b: any) => {
           const spent = cv(b, 'spent');
@@ -168,14 +168,14 @@ function GoalsSection({ goals, currency, onAdd, onOpen, onReload }: any) {
   return (
     <>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
-        <H2 style={{ flex: 1, minWidth: 0 }}>Saving goals</H2>
+        <H2 style={{ flex: 1, minWidth: 0 }}>{t('goals.heading')}</H2>
         <TouchableOpacity testID="goal-add-btn" onPress={onAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name="add" size={16} color={colors.onBrand} />
         </TouchableOpacity>
       </View>
       {goals.length === 0 ? (
-        <EmptyState testID="goals-empty" title="No goals yet" subtitle="Save toward an emergency fund, a car, or anything you want." actionLabel="Create goal" onAction={onAdd} />
+        <EmptyState testID="goals-empty" title={t('goals.empty.title')} subtitle={t('goals.empty.subtitle')} actionLabel={t('goals.empty.action')} onAction={onAdd} />
       ) : (
         goals.map((g: any) => {
           const saved = cv(g, 'saved_amount');
@@ -276,7 +276,7 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
   return (
     <>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
-        <H2 style={{ flex: 1, minWidth: 0 }}>Debts</H2>
+        <H2 style={{ flex: 1, minWidth: 0 }}>{t('debts.heading')}</H2>
         <TouchableOpacity testID="debt-add-btn" onPress={onAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name="add" size={16} color={colors.onBrand} />
@@ -291,7 +291,7 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
         </TouchableOpacity>
       )}
       {debts.length === 0 ? (
-        <EmptyState testID="debts-empty" title="No debts tracked" subtitle="Track loans and credit cards to plan payoff." actionLabel="Add debt" onAction={onAdd} />
+        <EmptyState testID="debts-empty" title={t('debts.empty.title')} subtitle={t('debts.empty.subtitle')} actionLabel={t('debts.empty.action')} onAction={onAdd} />
       ) : debts.map((d: any) => {
         const remaining = cv(d, 'remaining');
         const principal = cv(d, 'principal');
@@ -329,16 +329,16 @@ export function AssetsSection({ assets, currency, onAdd, onReload }: any) {
   return (
     <>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
-        <H2 style={{ flex: 1, minWidth: 0 }}>Assets</H2>
+        <H2 style={{ flex: 1, minWidth: 0 }}>{t('assets.heading')}</H2>
         <TouchableOpacity testID="asset-add-btn" onPress={onAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name="add" size={16} color={colors.onBrand} />
         </TouchableOpacity>
       </View>
       {assets.length === 0 ? (
-        <EmptyState testID="assets-empty" title="No assets yet" subtitle="Real estate, vehicles, gadgets…" actionLabel="Add asset" onAction={onAdd} />
+        <EmptyState testID="assets-empty" title={t('assets.empty.title')} subtitle={t('assets.empty.subtitle')} actionLabel={t('assets.empty.action')} onAction={onAdd} />
       ) : assets.map((a: any) => (
-        <Card key={a.id} testID={`asset-card-${a.id}`} onPress={() => confirmDialog('Delete asset?', async () => { await api.deleteAsset(a.id); onReload(); })}>
+        <Card key={a.id} testID={`asset-card-${a.id}`} onPress={() => confirmDialog(t('assets.delete.title'), async () => { await api.deleteAsset(a.id); onReload(); })}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <View style={{ flex: 1 }}>
               <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{a.name}</Body>
@@ -359,7 +359,7 @@ export function InvestmentsSection({ investments, currency, onAdd }: any) {
   return (
     <>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
-        <H2 style={{ flex: 1, minWidth: 0 }}>Investments</H2>
+        <H2 style={{ flex: 1, minWidth: 0 }}>{t('investments.heading')}</H2>
         <View style={{ flexDirection: 'row', gap: spacing.sm, flexShrink: 0 }}>
           {investments.length > 0 && (
             <TouchableOpacity testID="inv-portfolio-btn" onPress={() => router.push('/portfolio' as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -374,7 +374,7 @@ export function InvestmentsSection({ investments, currency, onAdd }: any) {
         </View>
       </View>
       {investments.length === 0 ? (
-        <EmptyState testID="inv-empty" title="No investments" subtitle="Track stocks, crypto, gold and funds." actionLabel="Add investment" onAction={onAdd} />
+        <EmptyState testID="inv-empty" title={t('investments.empty.title')} subtitle={t('investments.empty.subtitle')} actionLabel={t('investments.empty.action')} onAction={onAdd} />
       ) : investments.map((iv: any) => {
         const { value, pl } = computeInvestmentMetrics(iv);
         const plColor = pl >= 0 ? colors.success : colors.error;

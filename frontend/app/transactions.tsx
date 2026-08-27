@@ -10,6 +10,7 @@ import { spacing, font, radius } from '@/src/theme/tokens';
 import { Screen, H2, Body, Chip, EmptyState } from '@/src/components/ui';
 import { useTransactions } from '@/src/hooks/use-transactions';
 import { groupTransactionsByDate, TransactionDayGroup } from '@/src/components/transactions/TransactionDayGroup';
+import { t } from '@/src/lib/i18n';
 
 export default function Transactions() {
   const { colors } = useTheme();
@@ -24,11 +25,11 @@ export default function Transactions() {
   const dayGroups = groupTransactionsByDate(shown);
   const cur = user?.currency || 'USD';
 
-  const remove = (t: any) => {
-    Alert.alert('Delete transaction?', undefined, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-        removeTransaction(t.id);
+  const remove = (tx: any) => {
+    Alert.alert(t('transactions.delete.title'), undefined, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: async () => {
+        removeTransaction(tx.id);
       } },
     ]);
   };
@@ -38,7 +39,7 @@ export default function Transactions() {
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.lg }}>
           <TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
-          <H2 style={{ marginLeft: spacing.md, flex: 1 }}>Transactions</H2>
+          <H2 style={{ marginLeft: spacing.md, flex: 1 }}>{t('transactions.heading')}</H2>
           <TouchableOpacity testID="tx-add-fab" onPress={() => router.push('/transaction/new')}
             style={{ width: 42, height: 42, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="add" size={20} color={colors.onBrand} />
@@ -48,24 +49,24 @@ export default function Transactions() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: spacing.sm, paddingVertical: spacing.md }}>
           {(['all', 'income', 'expense', 'transfer'] as const).map((f) => (
-            <Chip key={f} testID={`tx-filter-${f}`} label={f[0].toUpperCase() + f.slice(1)} active={filter === f} onPress={() => setFilter(f)} />
+            <Chip key={f} testID={`tx-filter-${f}`} label={f === 'all' ? t('common.all') ?? 'All' : t(`transactions.type.${f}`)} active={filter === f} onPress={() => setFilter(f)} />
           ))}
         </ScrollView>
 
         <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: 60, gap: spacing.sm }}>
           {loading ? (
             <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
-              <Body muted>Loading transactions…</Body>
+              <Body muted>{t('common.loading')}</Body>
             </View>
           ) : error ? (
             <View style={{ gap: spacing.md, alignItems: 'center', paddingVertical: spacing.xl }}>
               <Body style={{ color: colors.error, textAlign: 'center' }}>{error}</Body>
               <TouchableOpacity onPress={refresh} style={{ paddingVertical: 10, paddingHorizontal: spacing.lg, backgroundColor: colors.brandPrimary, borderRadius: 8 }}>
-                <Body style={{ color: colors.onBrand, fontFamily: font.textBold }}>Retry</Body>
+                <Body style={{ color: colors.onBrand, fontFamily: font.textBold }}>{t('common.retry')}</Body>
               </TouchableOpacity>
             </View>
           ) : shown.length === 0 ? (
-            <EmptyState testID="tx-empty" title="No transactions" subtitle="Add one to get started." actionLabel="Add transaction" onAction={() => router.push('/transaction/new')} />
+            <EmptyState testID="tx-empty" title={t('transactions.empty.title')} subtitle={t('transactions.empty.subtitle')} actionLabel={t('transactions.empty.action')} onAction={() => router.push('/transaction/new')} />
           ) : dayGroups.map((group) => <TransactionDayGroup key={group.key} group={group} currency={cur} onRemove={remove} onOpen={(t) => router.push({ pathname: '/transaction/[id]', params: { id: t.id, wallet_id: t.wallet_id, to_wallet_id: t.to_wallet_id || '', type: t.type, amount: String(t.amount), category: t.category, note: t.note || '', date: (t.date || '').split('T')[0] } })} />)}
         </ScrollView>
       </SafeAreaView>

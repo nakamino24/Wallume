@@ -12,6 +12,7 @@ import { Screen, H1, Body, EmptyState, Caption } from '@/src/components/ui';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { confirmAction } from '@/src/utils/confirm';
 import { useWallets } from '@/src/hooks/use-wallets';
+import { t } from '@/src/lib/i18n';
 
 const WALLET_META: Record<string, { icon: any; tint: string }> = {
   cash: { icon: 'cash-outline', tint: '#10B981' },
@@ -65,8 +66,8 @@ export default function Wallets() {
         >
           <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View style={{ flex: 1 }}>
-              <H1>Wallets</H1>
-              <Body muted style={{ marginTop: 4 }}>Manage your accounts at a glance</Body>
+              <H1>{t('wallets.heading')}</H1>
+              <Body muted style={{ marginTop: 4 }}>{t('wallets.subtitle')}</Body>
             </View>
             <TouchableOpacity testID="wallets-add-btn" onPress={() => router.push('/wallet/new')}
               style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
@@ -78,7 +79,7 @@ export default function Wallets() {
               <View style={[styles.summary, { backgroundColor: colors.brandSoft, borderColor: 'transparent', borderRadius: radius.lg }]}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <View style={{ flex: 1 }}>
-                    <Body style={{ color: colors.onBrandSoft, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8, opacity: 0.72 }}>Total balance</Body>
+                    <Body style={{ color: colors.onBrandSoft, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.8, opacity: 0.72 }}>{t('wallets.totalBalance')}</Body>
                     <MoneyValue value={total} currency={cur} privacy="balance" style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 24, marginTop: 6 }} />
                 </View>
                 <View style={[styles.pill, { backgroundColor: colors.brandSoft }]}> 
@@ -87,23 +88,23 @@ export default function Wallets() {
               </View>
 
               <View style={{ marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.onBrandSoft + '2E' }}>
-                <Body style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 13 }}>Quick actions</Body>
+                <Body style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 13 }}>{t('wallets.quickActions')}</Body>
                 <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, flexWrap: 'wrap' }}>
                   <TouchableOpacity onPress={() => router.push('/transaction/new')} style={[styles.actionBtn, { backgroundColor: colors.brandSoft }]}> 
                     <Ionicons name="add-circle-outline" size={16} color={colors.onBrandSoft} />
-                    <Body style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 12, marginLeft: 6 }}>Add transaction</Body>
+                    <Body style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 12, marginLeft: 6 }}>{t('add.transaction')}</Body>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => router.push('/goal/new')} style={[styles.actionBtn, { backgroundColor: colors.surface3 }]}> 
                     <Ionicons name="flag-outline" size={16} color={colors.onSurface} />
-                    <Body style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 12, marginLeft: 6 }}>Set savings goal</Body>
+                    <Body style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 12, marginLeft: 6 }}>{t('goals.empty.action')}</Body>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => router.push('/budget/new')} style={[styles.actionBtn, { backgroundColor: colors.surface3 }]}> 
                     <Ionicons name="pie-chart-outline" size={16} color={colors.onSurface} />
-                    <Body style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 12, marginLeft: 6 }}>Set budget</Body>
+                    <Body style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 12, marginLeft: 6 }}>{t('budgets.empty.action')}</Body>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => router.push('/recurring/new')} style={[styles.actionBtn, { backgroundColor: colors.surface3 }]}> 
                     <Ionicons name="repeat-outline" size={16} color={colors.onSurface} />
-                    <Body style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 12, marginLeft: 6 }}>Add recurring</Body>
+                    <Body style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 12, marginLeft: 6 }}>{t('bills')}</Body>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -131,15 +132,15 @@ export default function Wallets() {
               <Body style={{ color: colors.error, textAlign: 'center' }}>{error}</Body>
               <TouchableOpacity onPress={refresh}
                 style={{ alignSelf: 'center', paddingVertical: 10, paddingHorizontal: spacing.lg, backgroundColor: colors.brandPrimary, borderRadius: radius.md }}>
-                <Body style={{ color: colors.onBrand, fontFamily: font.textBold }}>Retry</Body>
+                <Body style={{ color: colors.onBrand, fontFamily: font.textBold }}>{t('common.retry')}</Body>
               </TouchableOpacity>
             </View>
           ) : wallets.length === 0 ? (
             <EmptyState
               testID="wallets-empty"
-              title="No wallets yet"
-              subtitle="Add cash, bank, credit card or e-wallet accounts to track your money."
-              actionLabel="Add your first wallet"
+              title={t('wallets.empty.title')}
+              subtitle={t('wallets.empty.subtitle')}
+              actionLabel={t('wallets.empty.action')}
               onAction={() => router.push('/wallet/new')}
             />
           ) : (
@@ -187,7 +188,7 @@ function WalletCard({ wallet, currency, onLongPress, onPress }: any) {
       </View>
 
       <View style={{ marginTop: spacing.md }}>
-        <Body muted style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7 }}>Balance</Body>
+        <Body muted style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7 }}>{t('wallets.balance')}</Body>
         <MoneyValue
           testID={`wallet-balance-${wallet.id}`}
           value={wallet.converted_balance ?? (wallet.balance || 0)}
@@ -208,10 +209,10 @@ function WalletCard({ wallet, currency, onLongPress, onPress }: any) {
 
 function confirmDelete(w: any, reload: () => void) {
   confirmAction(
-    'Delete wallet',
-    `Delete "${w.name}" and its transactions?`,
+    t('wallets.delete.title'),
+    t('wallets.delete.message', { name: w.name }),
     async () => { await api.deleteWallet(w.id); reload(); },
-    { confirmLabel: 'Delete', destructive: true },
+    { confirmLabel: t('common.delete'), destructive: true },
   );
 }
 
