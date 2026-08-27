@@ -69,15 +69,15 @@ export default function Portfolio() {
           {/* Hero */}
           <Card style={{ backgroundColor: colors.inverse }}>
             <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Total portfolio value</Label>
-            <MoneyValue value={totalValue} currency={cur} privacy="financial" style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 36, letterSpacing: -0.5, marginTop: 6 }} />
+            <MoneyValue value={totalValue} currency={cur} style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 36, letterSpacing: -0.5, marginTop: 6 }} />
             <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.xl }}>
               <View>
                 <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Total invested</Label>
-                <MoneyValue value={totalCost} currency={cur} privacy="financial" style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 16, marginTop: 2 }} />
+                <MoneyValue value={totalCost} currency={cur} style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 16, marginTop: 2 }} />
               </View>
               <View>
                 <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Return</Label>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}><MoneyValue value={totalPl} currency={cur} privacy="financial" style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 16 }} /><Body style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 16 }}> ({returnPct >= 0 ? '+' : ''}{returnPct.toFixed(1)}%)</Body></View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}><MoneyValue value={totalPl} currency={cur} style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 16 }} /><Body style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 16 }}> ({returnPct >= 0 ? '+' : ''}{returnPct.toFixed(1)}%)</Body></View>
               </View>
             </View>
           </Card>
@@ -99,7 +99,7 @@ export default function Portfolio() {
                         <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: TYPE_COLORS[k] || TYPE_COLORS.other, marginRight: 8 }} />
                         <Body style={{ flex: 1, textTransform: 'capitalize' }}>{k.replace('_', ' ')}</Body>
                         <Body style={{ fontFamily: font.textMedium, marginRight: spacing.md }}>{pct.toFixed(1)}%</Body>
-                        <MoneyValue value={v.value} currency={cur} privacy="financial" style={{ fontFamily: font.displayBold }} />
+                        <MoneyValue value={v.value} currency={cur} style={{ fontFamily: font.displayBold }} />
                       </View>
                     );
                   })}
@@ -127,8 +127,8 @@ export default function Portfolio() {
                     </Body>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <MoneyValue value={value} currency={cur} privacy="financial" style={{ fontFamily: font.displayBold }} />
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}><MoneyValue value={pl} currency={cur} privacy="financial" style={{ color: plColor, fontFamily: font.textMedium, fontSize: 12 }} /><Body style={{ color: plColor, fontFamily: font.textMedium, fontSize: 12 }}> ({rp >= 0 ? '+' : ''}{rp.toFixed(1)}%)</Body></View>
+                    <MoneyValue value={value} currency={cur} style={{ fontFamily: font.displayBold }} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}><MoneyValue value={pl} currency={cur} style={{ color: plColor, fontFamily: font.textMedium, fontSize: 12 }} /><Body style={{ color: plColor, fontFamily: font.textMedium, fontSize: 12 }}> ({rp >= 0 ? '+' : ''}{rp.toFixed(1)}%)</Body></View>
                   </View>
                 </View>
               </Card>

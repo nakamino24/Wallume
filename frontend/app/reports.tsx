@@ -96,15 +96,15 @@ export default function Reports() {
               {/* Summary — Net cash flow is NOT Net Worth, privacy-aware */}
               <Card style={{ backgroundColor: colors.inverse, borderColor: 'transparent', borderRadius: radius.lg }}>
                 <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Net cash flow</Label>
-                <MoneyValue value={netFlow} currency={cur} privacy="financial" style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 34, letterSpacing: -0.5, marginTop: 6 }} />
+                <MoneyValue value={netFlow} currency={cur} style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 34, letterSpacing: -0.5, marginTop: 6 }} />
                 <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.sm }}>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>Income</Body>
-                    <MoneyValue value={income} currency={cur} compact privacy="financial" style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} />
+                    <MoneyValue value={income} currency={cur} compact style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>Expense</Body>
-                    <MoneyValue value={expense} currency={cur} compact privacy="financial" style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} />
+                    <MoneyValue value={expense} currency={cur} compact style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>Transactions</Body>

@@ -237,7 +237,7 @@ function ActivityRow({ tx, walletId, currency, last, onPress, onLongPress }: any
           {!!tx.note && <Caption muted style={{ marginTop: 1 }}>{tx.note.length > 30 ? tx.note.slice(0, 30) + '…' : tx.note}</Caption>}
         </View>
         <View style={{ alignItems: 'flex-end' }}>
-          <MoneyValue value={direction === 'IN' ? displayAmount : -Math.abs(displayAmount)} currency={currency} privacy="financial" style={{ fontFamily: font.displayBold, color, fontSize: 14 }} />
+          <MoneyValue value={direction === 'IN' ? displayAmount : -Math.abs(displayAmount)} currency={currency} style={{ fontFamily: font.displayBold, color, fontSize: 14 }} />
         </View>
       </View>
     </TouchableOpacity>

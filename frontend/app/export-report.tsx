@@ -196,19 +196,19 @@ export default function ExportReport() {
               <View style={{ marginTop: spacing.md, gap: 8 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Body style={{ color: colors.muted, fontSize: 12 }}>Net worth</Body>
-                  <MoneyValue value={analyticsSummary?.net_worth ?? 0} currency={cur} privacy="financial" style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 14, fontVariant: ['tabular-nums'] }} />
+                  <MoneyValue value={analyticsSummary?.net_worth ?? 0} currency={cur} style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 14, fontVariant: ['tabular-nums'] }} />
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Body style={{ color: colors.muted, fontSize: 12 }}>Income</Body>
-                  <MoneyValue value={reportSummary.income_total ?? 0} currency={cur} privacy="financial" style={{ color: colors.success, fontFamily: font.textBold, fontSize: 14, fontVariant: ['tabular-nums'] }} />
+                  <MoneyValue value={reportSummary.income_total ?? 0} currency={cur} style={{ color: colors.success, fontFamily: font.textBold, fontSize: 14, fontVariant: ['tabular-nums'] }} />
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Body style={{ color: colors.muted, fontSize: 12 }}>Expense</Body>
-                  <MoneyValue value={-(reportSummary.expense_total ?? 0)} currency={cur} privacy="financial" style={{ color: colors.error, fontFamily: font.textBold, fontSize: 14, fontVariant: ['tabular-nums'] }} />
+                  <MoneyValue value={-(reportSummary.expense_total ?? 0)} currency={cur} style={{ color: colors.error, fontFamily: font.textBold, fontSize: 14, fontVariant: ['tabular-nums'] }} />
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Body style={{ color: colors.muted, fontSize: 12 }}>Net cash flow</Body>
-                  <MoneyValue value={reportSummary.net_total ?? 0} currency={cur} privacy="financial" style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 14, fontVariant: ['tabular-nums'] }} />
+                  <MoneyValue value={reportSummary.net_total ?? 0} currency={cur} style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 14, fontVariant: ['tabular-nums'] }} />
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Body style={{ color: colors.muted, fontSize: 12 }}>Transactions</Body>

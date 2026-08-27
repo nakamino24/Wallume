@@ -31,10 +31,10 @@ export function PlanCard({ plan, currency, onPress }: { plan: any; currency: str
         </View>
         <Body style={{ color: colors.brandPrimary, fontFamily: font.textMedium }}>{Math.round(progress * 100)}%</Body>
       </View>
-      <MoneyValue value={saved} currency={currency} privacy="financial" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: spacing.md, fontFamily: font.displayBold, fontSize: 18 }} />
+      <MoneyValue value={saved} currency={currency} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: spacing.md, fontFamily: font.displayBold, fontSize: 18 }} />
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
         <Body muted style={{ fontSize: 12 }}>{t('plans.of')} </Body>
-        <MoneyValue value={target} currency={currency} privacy="financial" style={{ color: colors.muted, fontSize: 12 }} />
+        <MoneyValue value={target} currency={currency} style={{ color: colors.muted, fontSize: 12 }} />
       </View>
       <View style={{ marginTop: spacing.sm }}><ProgressBar progress={progress} color={colors.brandPrimary} /></View>
       {!!plan.target_date && <Body muted style={{ marginTop: spacing.sm, fontSize: 12 }}>{t('plans.target')} · {plan.target_date}</Body>}

@@ -60,14 +60,14 @@ export default function GoalDetail() {
         <KeyboardAwareContainer contentContainerStyle={{ padding: spacing.xl, gap: spacing.md }}>
           <Card>
             <Label>Saved</Label>
-            <MoneyValue value={saved} currency={cur} privacy="financial" style={{ fontFamily: font.displayBold, fontSize: 38, marginTop: 6, letterSpacing: -0.5 }} />
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}><Body muted>of </Body><MoneyValue value={target} currency={cur} privacy="financial" style={{ color: colors.muted, fontSize: 15 }} /><Body muted> target</Body></View>
+            <MoneyValue value={saved} currency={cur} style={{ fontFamily: font.displayBold, fontSize: 38, marginTop: 6, letterSpacing: -0.5 }} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}><Body muted>of </Body><MoneyValue value={target} currency={cur} style={{ color: colors.muted, fontSize: 15 }} /><Body muted> target</Body></View>
             <View style={{ marginTop: spacing.md }}>
               <ProgressBar progress={p} height={10} />
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md }}>
               <Body muted>{Math.round(p * 100)}% complete</Body>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}><MoneyValue value={remaining} currency={cur} privacy="financial" style={{ fontFamily: font.textBold }} /><Body> to go</Body></View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}><MoneyValue value={remaining} currency={cur} style={{ fontFamily: font.textBold }} /><Body> to go</Body></View>
             </View>
           </Card>
 

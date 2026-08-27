@@ -81,7 +81,6 @@ function TransactionRow({ transaction, currency, isLast, onOpen, onRemove }: { t
         <MoneyValue
           value={positive ? transaction.amount : negative ? -Math.abs(transaction.amount) : transaction.amount}
           currency={currency}
-          privacy="financial"
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.8}

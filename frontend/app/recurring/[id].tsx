@@ -96,7 +96,7 @@ export default function RecurringDetail() {
 
           <Card style={{ marginTop: spacing.lg }}>
             <Label>Amount</Label>
-            <MoneyValue value={item.type === 'income' ? cv(item, 'amount') : -Math.abs(cv(item, 'amount'))} currency={cur} privacy="financial" style={{ marginTop: 4, color: item.type === 'income' ? colors.success : colors.onSurface, fontFamily: font.displayBold, fontSize: 26 }} />
+            <MoneyValue value={item.type === 'income' ? cv(item, 'amount') : -Math.abs(cv(item, 'amount'))} currency={cur} style={{ marginTop: 4, color: item.type === 'income' ? colors.success : colors.onSurface, fontFamily: font.displayBold, fontSize: 26 }} />
             <Body style={{ color: dueColor, fontFamily: font.textBold, marginTop: spacing.sm }}>{dueText}</Body>
 
             <Divider />

@@ -99,20 +99,20 @@ export default function PlanDetail() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <View>
                   <Body muted style={{ fontSize: 12 }}>Terkumpul</Body>
-                  <MoneyValue value={totals.paid} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 18 }} />
+                  <MoneyValue value={totals.paid} currency={cur} style={{ fontFamily: font.textBold, fontSize: 18 }} />
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Body muted style={{ fontSize: 12 }}>Target</Body>
-                  <MoneyValue value={budget} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 16 }} />
+                  <MoneyValue value={budget} currency={cur} style={{ fontFamily: font.textBold, fontSize: 16 }} />
                 </View>
               </View>
               <View style={{ marginTop: spacing.md }}>
                 <ProgressBar progress={progress} color={colors.brandPrimary} height={6} />
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
                   <Body muted style={{ fontSize: 12 }}>{Math.round(progress * 100)}% · </Body>
-                  <MoneyValue value={totals.paid} currency={cur} privacy="financial" style={{ color: colors.muted, fontSize: 12 }} />
+                  <MoneyValue value={totals.paid} currency={cur} style={{ color: colors.muted, fontSize: 12 }} />
                   <Body muted style={{ fontSize: 12 }}> / </Body>
-                  <MoneyValue value={budget} currency={cur} privacy="financial" style={{ color: colors.muted, fontSize: 12 }} />
+                  <MoneyValue value={budget} currency={cur} style={{ color: colors.muted, fontSize: 12 }} />
                 </View>
               </View>
             </View>
@@ -124,17 +124,17 @@ export default function PlanDetail() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: spacing.sm }}>
                 <View>
                   <Body muted style={{ fontSize: 12 }}>Budget</Body>
-                  <MoneyValue value={budget} currency={cur} privacy="financial" style={{ fontFamily: font.displayBold, fontSize: 18 }} />
+                  <MoneyValue value={budget} currency={cur} style={{ fontFamily: font.displayBold, fontSize: 18 }} />
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Body muted style={{ fontSize: 12 }}>Allocated</Body>
-                  <MoneyValue value={totals.allocated} currency={cur} privacy="financial" style={{ fontFamily: font.displayBold, fontSize: 18 }} />
+                  <MoneyValue value={totals.allocated} currency={cur} style={{ fontFamily: font.displayBold, fontSize: 18 }} />
                 </View>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: spacing.lg, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border }}>
                 <View>
                   <Body muted style={{ fontSize: 12 }}>Funds collected</Body>
-                  <MoneyValue value={totals.paid} currency={cur} privacy="financial" style={{ fontFamily: font.displayBold, fontSize: 18, color: colors.brandPrimary }} />
+                  <MoneyValue value={totals.paid} currency={cur} style={{ fontFamily: font.displayBold, fontSize: 18, color: colors.brandPrimary }} />
                 </View>
                 <Body muted style={{ fontSize: 12 }}>{Math.round(progress * 100)}% of budget</Body>
               </View>
@@ -151,8 +151,8 @@ export default function PlanDetail() {
                   <View style={{ flex: 1 }}>
                     <Body style={{ fontFamily: font.textBold, textDecorationLine: it.done ? 'line-through' : 'none' }}>{it.label}</Body>
                     <View style={{ marginTop: 4 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}><Body muted style={{ fontSize: 12, lineHeight: 16 }}>Budget  </Body><MoneyValue value={cv(it, 'amount')} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 12, lineHeight: 16 }} /></View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}><Body muted style={{ fontSize: 12, lineHeight: 16 }}>Funds collected  </Body><MoneyValue value={cv(it, 'paid')} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 12, lineHeight: 16, color: colors.brandPrimary }} /></View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}><Body muted style={{ fontSize: 12, lineHeight: 16 }}>Budget  </Body><MoneyValue value={cv(it, 'amount')} currency={cur} style={{ fontFamily: font.textBold, fontSize: 12, lineHeight: 16 }} /></View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}><Body muted style={{ fontSize: 12, lineHeight: 16 }}>Funds collected  </Body><MoneyValue value={cv(it, 'paid')} currency={cur} style={{ fontFamily: font.textBold, fontSize: 12, lineHeight: 16, color: colors.brandPrimary }} /></View>
                     </View>
                   </View>
                   <TouchableOpacity onPress={() => removeItem(it.id)} style={{ padding: 4 }}>

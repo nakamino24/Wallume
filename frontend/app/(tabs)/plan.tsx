@@ -128,12 +128,12 @@ function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
                 <View style={{ marginLeft: spacing.md, flex: 1 }}>
                   <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{b.category}</Body>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                    <MoneyValue value={spent} currency={currency} privacy="financial" style={{ color: colors.muted, fontSize: 15 }} />
+                    <MoneyValue value={spent} currency={currency} style={{ color: colors.muted, fontSize: 15 }} />
                     <Body muted> of </Body>
-                    <MoneyValue value={amount} currency={currency} privacy="financial" style={{ color: colors.muted, fontSize: 15 }} />
+                    <MoneyValue value={amount} currency={currency} style={{ color: colors.muted, fontSize: 15 }} />
                   </View>
                 </View>
-                <MoneyValue value={amount - spent} currency={currency} privacy="financial" style={{ fontFamily: font.displayBold, color }} />
+                <MoneyValue value={amount - spent} currency={currency} style={{ fontFamily: font.displayBold, color }} />
               </View>
             </Card>
           );
@@ -171,9 +171,9 @@ function GoalsSection({ goals, currency, onAdd, onOpen, onReload }: any) {
                 <View style={{ marginLeft: spacing.md, flex: 1 }}>
                   <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{g.name}</Body>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                    <MoneyValue value={saved} currency={currency} privacy="financial" style={{ color: colors.muted, fontSize: 15 }} />
+                    <MoneyValue value={saved} currency={currency} style={{ color: colors.muted, fontSize: 15 }} />
                     <Body muted> / </Body>
-                    <MoneyValue value={target} currency={currency} privacy="financial" style={{ color: colors.muted, fontSize: 15 }} />
+                    <MoneyValue value={target} currency={currency} style={{ color: colors.muted, fontSize: 15 }} />
                   </View>
                 </View>
                 <Body style={{ fontFamily: font.displayBold, color: colors.brandPrimary }}>{Math.round(p * 100)}%</Body>
@@ -285,15 +285,15 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
                 <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{d.name}</Body>
                 <Body muted style={{ marginTop: 2 }}>{d.kind.replace('_', ' ')} · {d.interest_rate}% APR</Body>
               </View>
-              <MoneyValue value={remaining} currency={currency} privacy="financial" style={{ fontFamily: font.displayBold, color: colors.error }} />
+              <MoneyValue value={remaining} currency={currency} style={{ fontFamily: font.displayBold, color: colors.error }} />
             </View>
             <View style={{ marginTop: spacing.md }}>
               <ProgressBar progress={p} color={colors.warning} />
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
                 <Body muted style={{ fontSize: 12 }}>Paid </Body>
-                <MoneyValue value={paid} currency={currency} privacy="financial" style={{ color: colors.muted, fontSize: 12 }} />
+                <MoneyValue value={paid} currency={currency} style={{ color: colors.muted, fontSize: 12 }} />
                 <Body muted style={{ fontSize: 12 }}> of </Body>
-                <MoneyValue value={principal} currency={currency} privacy="financial" style={{ color: colors.muted, fontSize: 12 }} />
+                <MoneyValue value={principal} currency={currency} style={{ color: colors.muted, fontSize: 12 }} />
                 <Body muted style={{ fontSize: 12 }}> ({Math.round(p * 100)}%)</Body>
               </View>
             </View>
@@ -338,8 +338,8 @@ function AssetsSection({ assets, investments, currency, onAddAsset, onAddInv, on
                 <Body muted style={{ marginTop: 2 }}>{kindLabel(iv.kind)} · {quantitySummary(iv)}</Body>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <MoneyValue value={value} currency={currency} privacy="financial" style={{ fontFamily: font.displayBold }} />
-                <MoneyValue value={pl} currency={currency} privacy="financial" style={{ marginTop: 2, color: plColor, fontFamily: font.textMedium }} />
+                <MoneyValue value={value} currency={currency} style={{ fontFamily: font.displayBold }} />
+                <MoneyValue value={pl} currency={currency} style={{ marginTop: 2, color: plColor, fontFamily: font.textMedium }} />
               </View>
             </View>
           </Card>
@@ -362,7 +362,7 @@ function AssetsSection({ assets, investments, currency, onAddAsset, onAddInv, on
               <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{a.name}</Body>
               <Body muted style={{ marginTop: 2 }}>{a.kind.replace('_', ' ')}</Body>
             </View>
-            <MoneyValue value={cv(a, 'value')} currency={currency} privacy="financial" style={{ fontFamily: font.displayBold }} />
+            <MoneyValue value={cv(a, 'value')} currency={currency} style={{ fontFamily: font.displayBold }} />
           </View>
         </Card>
       ))}

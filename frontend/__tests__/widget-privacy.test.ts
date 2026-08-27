@@ -1,9 +1,12 @@
 jest.mock('@/src/utils/storage', () => ({
-  storage: { getItem: jest.fn(), setItem: jest.fn() },
+  storage: { getItem: jest.fn(), setItem: jest.fn(), secureGet: jest.fn() },
 }));
 
 const { storage: mockStorage } = require('@/src/utils/storage');
-const { WIDGET_BALANCE_VISIBILITY_KEY, toggleWidgetBalanceVisibility } = require('@/src/widgets/widget-task-handler');
+const { WIDGET_BALANCE_VISIBILITY_KEY, fetchWidgetData, toggleWidgetBalanceVisibility } = require('@/src/widgets/widget-task-handler');
+
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
 
 describe('Widget balance privacy', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -26,5 +29,45 @@ describe('Widget balance privacy', () => {
     expect(mockStorage.setItem).toHaveBeenCalledWith(WIDGET_BALANCE_VISIBILITY_KEY, false);
     expect(mockStorage.getItem).not.toHaveBeenCalledWith('wallume.privacy.showBalances', expect.anything());
     expect(mockStorage.setItem).not.toHaveBeenCalledWith('wallume.privacy.showBalances', expect.anything());
+  });
+
+  it('keeps widget balance visible when app privacy is hidden but widget privacy is visible', async () => {
+    mockStorage.getItem.mockImplementation((key: string, fallback: any) => {
+      if (key === 'mf.widget.currency') return Promise.resolve('IDR');
+      if (key === WIDGET_BALANCE_VISIBILITY_KEY) return Promise.resolve(true);
+      if (key === 'wallume.privacy.showBalances') return Promise.resolve(false);
+      return Promise.resolve(fallback);
+    });
+    mockStorage.secureGet.mockResolvedValue('token');
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ wallet_total: 3218754, month_income: 6600000, month_expense: 5100000, cash_flow: 1500000, health_score: 80, category_breakdown: [] }) });
+    mockFetch.mockResolvedValueOnce({ ok: false });
+
+    const data = await fetchWidgetData();
+
+    expect(data.balance).toBe('Rp3.218.754');
+    expect(data.income).toBe('Rp6.600.000');
+    expect(data.isBalanceVisible).toBe(true);
+    expect(mockStorage.getItem).not.toHaveBeenCalledWith('wallume.privacy.showBalances', expect.anything());
+  });
+
+  it('masks widget balance when widget privacy is hidden even if app privacy is visible', async () => {
+    mockStorage.getItem.mockImplementation((key: string, fallback: any) => {
+      if (key === 'mf.widget.currency') return Promise.resolve('IDR');
+      if (key === WIDGET_BALANCE_VISIBILITY_KEY) return Promise.resolve(false);
+      if (key === 'wallume.privacy.showBalances') return Promise.resolve(true);
+      return Promise.resolve(fallback);
+    });
+    mockStorage.secureGet.mockResolvedValue('token');
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ wallet_total: 3218754, month_income: 6600000, month_expense: 5100000, cash_flow: 1500000, health_score: 80, category_breakdown: [] }) });
+    mockFetch.mockResolvedValueOnce({ ok: false });
+
+    const data = await fetchWidgetData();
+
+    expect(data.balance).toBe('Rp•••••••');
+    expect(data.income).toBe('Rp6.600.000');
+    expect(data.expense).toBe('Rp5.100.000');
+    expect(data.cashFlow).toBe('Rp1.500.000');
+    expect(data.isBalanceVisible).toBe(false);
+    expect(mockStorage.getItem).not.toHaveBeenCalledWith('wallume.privacy.showBalances', expect.anything());
   });
 });

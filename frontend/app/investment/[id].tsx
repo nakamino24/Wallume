@@ -100,10 +100,10 @@ export default function InvestmentDetail() {
 
           <Card style={{ marginTop: spacing.lg }}>
             <Label>Current Value</Label>
-            <MoneyValue value={value} currency={cur} privacy="financial" style={{ fontFamily: font.displayBold, fontSize: 26, marginTop: 4 }} />
+            <MoneyValue value={value} currency={cur} style={{ fontFamily: font.displayBold, fontSize: 26, marginTop: 4 }} />
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, gap: spacing.sm }}>
               <Ionicons name={pl >= 0 ? 'trending-up' : 'trending-down'} size={16} color={plColor} />
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}><MoneyValue value={pl} currency={cur} privacy="financial" style={{ color: plColor, fontFamily: font.textBold }} /><Body style={{ color: plColor, fontFamily: font.textBold }}> ({returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%)</Body></View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}><MoneyValue value={pl} currency={cur} style={{ color: plColor, fontFamily: font.textBold }} /><Body style={{ color: plColor, fontFamily: font.textBold }}> ({returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%)</Body></View>
             </View>
 
             <Divider />
@@ -114,12 +114,12 @@ export default function InvestmentDetail() {
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
               <Body muted>Total Cost</Body>
-              <MoneyValue value={cost} currency={cur} privacy="financial" style={{ fontFamily: font.textMedium }} />
+              <MoneyValue value={cost} currency={cur} style={{ fontFamily: font.textMedium }} />
             </View>
             {inv.kind === 'bond' && !!inv.face_value && (
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
                 <Body muted>Face Value</Body>
-                <MoneyValue value={cv(inv, 'face_value')} currency={cur} privacy="financial" style={{ fontFamily: font.textMedium }} />
+                <MoneyValue value={cv(inv, 'face_value')} currency={cur} style={{ fontFamily: font.textMedium }} />
               </View>
             )}
             {inv.kind === 'bond' && !!inv.coupon_rate && (

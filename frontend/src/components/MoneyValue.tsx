@@ -9,7 +9,7 @@ type Props = {
   currency?: string;
   // Only balance surfaces opt in. Transaction and informational amounts use the
   // same formatter without inheriting the app balance-visibility preference.
-  privacy?: 'balance' | 'financial' | 'none';
+  privacy?: 'balance' | 'none';
   compact?: boolean;
   style?: StyleProp<TextStyle>;
   testID?: string;

@@ -123,7 +123,7 @@ export default function DebtPlanner() {
                       </View>
                       <View style={{ alignItems: 'flex-end' }}>
                         <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Total interest paid</Label>
-                        <MoneyValue value={result.total_interest} currency={cur} privacy="financial" style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 26, marginTop: 4 }} />
+                        <MoneyValue value={result.total_interest} currency={cur} style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 26, marginTop: 4 }} />
                       </View>
                     </View>
                   </Card>
@@ -131,7 +131,7 @@ export default function DebtPlanner() {
                   {!!plan.interest_saved_with_avalanche && plan.interest_saved_with_avalanche > 0 && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.success + '1A', borderRadius: radius.lg, padding: spacing.md, marginTop: spacing.md }}>
                       <Ionicons name="trending-down" size={18} color={colors.success} />
-                      <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}><Body style={{ fontSize: 13 }}>Avalanche saves you </Body><MoneyValue value={plan.interest_saved_with_avalanche} currency={cur} privacy="financial" style={{ fontFamily: font.textBold, fontSize: 13, color: colors.success }} /><Body style={{ fontSize: 13 }}> in interest vs snowball.</Body></View>
+                      <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}><Body style={{ fontSize: 13 }}>Avalanche saves you </Body><MoneyValue value={plan.interest_saved_with_avalanche} currency={cur} style={{ fontFamily: font.textBold, fontSize: 13, color: colors.success }} /><Body style={{ fontSize: 13 }}> in interest vs snowball.</Body></View>
                     </View>
                   )}
 
@@ -144,7 +144,7 @@ export default function DebtPlanner() {
                         </View>
                         <View style={{ flex: 1 }}>
                           <Body style={{ fontFamily: font.textMedium }}>{d.name}</Body>
-                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 2 }}><Body muted style={{ fontSize: 12 }}>{d.payoff_month ? `Paid off in month ${d.payoff_month}` : 'Beyond 50-year horizon'} · </Body><MoneyValue value={d.interest_paid} currency={cur} privacy="financial" style={{ color: colors.muted, fontSize: 12 }} /><Body muted style={{ fontSize: 12 }}> interest</Body></View>
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 2 }}><Body muted style={{ fontSize: 12 }}>{d.payoff_month ? `Paid off in month ${d.payoff_month}` : 'Beyond 50-year horizon'} · </Body><MoneyValue value={d.interest_paid} currency={cur} style={{ color: colors.muted, fontSize: 12 }} /><Body muted style={{ fontSize: 12 }}> interest</Body></View>
                         </View>
                       </View>
                     ))}

@@ -74,7 +74,7 @@ export default function Recurring() {
         <View style={{ padding: spacing.xl, paddingBottom: 0 }}>
           <Card style={{ backgroundColor: colors.inverse }}>
             <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Recurring spend</Label>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 4 }}><MoneyValue value={monthlyTotal} currency={cur} privacy="financial" style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 26 }} /><Body style={{ color: colors.onInverse, opacity: 0.6, fontSize: 14 }}> /month equiv.</Body></View>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 4 }}><MoneyValue value={monthlyTotal} currency={cur} style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 26 }} /><Body style={{ color: colors.onInverse, opacity: 0.6, fontSize: 14 }}> /month equiv.</Body></View>
           </Card>
         </View>
 
@@ -95,7 +95,7 @@ export default function Recurring() {
                     <Body muted style={{ marginTop: 2, fontSize: 12 }}>{r.category} · {dueText}</Body>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <MoneyValue value={r.type === 'income' ? cv(r, 'amount') : -Math.abs(cv(r, 'amount'))} currency={cur} privacy="financial" style={{ color: r.type === 'income' ? colors.success : colors.onSurface, fontFamily: font.displayBold }} />
+                    <MoneyValue value={r.type === 'income' ? cv(r, 'amount') : -Math.abs(cv(r, 'amount'))} currency={cur} style={{ color: r.type === 'income' ? colors.success : colors.onSurface, fontFamily: font.displayBold }} />
                     <Body muted style={{ fontSize: 11, marginTop: 2 }}>{FREQ_LABEL[r.frequency]}</Body>
                   </View>
                 </View>

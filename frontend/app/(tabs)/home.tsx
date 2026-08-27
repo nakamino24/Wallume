@@ -252,7 +252,6 @@ export default function Home() {
                     value={derivedSummary.month_income}
                     currency={cur}
                     compact
-                    privacy="financial"
                     testID="net-worth-income"
                     style={{ color: colors.success, fontFamily: font.textBold, fontSize: font.sizes.base, marginTop: 2 }}
                     numberOfLines={1}
@@ -266,7 +265,6 @@ export default function Home() {
                     value={-derivedSummary.month_expense}
                     currency={cur}
                     compact
-                    privacy="financial"
                     testID="net-worth-expense"
                     style={{ color: colors.error, fontFamily: font.textBold, fontSize: font.sizes.base, marginTop: 2 }}
                     numberOfLines={1}
@@ -280,7 +278,6 @@ export default function Home() {
                     value={derivedSummary.cash_flow}
                     currency={cur}
                     compact
-                    privacy="financial"
                     testID="net-worth-cash-flow"
                     style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: font.sizes.base, marginTop: 2 }}
                     numberOfLines={1}
@@ -322,7 +319,7 @@ export default function Home() {
                     {insights.largestExpense ? (
                       <>
                         <Body muted>{insights.largestExpense.category}: </Body>
-                        <MoneyValue value={insights.largestExpense.amount} currency={cur} privacy="financial" style={{ color: colors.muted, fontFamily: font.textBold }} />
+                        <MoneyValue value={insights.largestExpense.amount} currency={cur} style={{ color: colors.muted, fontFamily: font.textBold }} />
                       </>
                     ) : (
                       <Body muted>No major expense yet.</Body>
@@ -377,7 +374,7 @@ export default function Home() {
                         <Body style={{ fontFamily: font.textMedium }}>{r.name}</Body>
                         <Body style={{ fontSize: 12, marginTop: 2, color: dueColor }}>{dueText}</Body>
                       </View>
-                      <MoneyValue value={cv(r, 'amount')} currency={cur} privacy="financial" style={{ fontFamily: font.displayBold }} />
+                      <MoneyValue value={cv(r, 'amount')} currency={cur} style={{ fontFamily: font.displayBold }} />
                     </TouchableOpacity>
                   );
                 })}
@@ -439,7 +436,7 @@ export default function Home() {
                   <View style={{ padding: spacing.xl }}>
                     <Body style={{ fontFamily: font.textMedium }}>Wallet balance available</Body>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
-                      <MoneyValue value={walletBalance} currency={cur} privacy="financial" style={{ color: colors.muted, fontFamily: font.textBold }} />
+                      <MoneyValue value={walletBalance} currency={cur} style={{ color: colors.muted, fontFamily: font.textBold }} />
                       <Body muted> is ready to view from your wallets.</Body>
                     </View>
                   </View>
@@ -524,7 +521,6 @@ function TxRow({ tx, last, currency, onPress, onLongPress }: any) {
         <MoneyValue
           value={amount}
           currency={currency}
-          privacy="financial"
           style={{ fontFamily: font.textBold, color: positive ? colors.success : negative ? colors.error : colors.onSurface }}
         />
       </View>
