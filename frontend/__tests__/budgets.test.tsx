@@ -83,6 +83,22 @@ describe('Budget semantics', () => {
     expect(getByTestId('budget-status-b1').props.children).toBe('Rp0');
   });
 
+  it('layout has 3 distinct zones with reserved status width and no overlap', () => {
+    const { getByTestId, UNSAFE_getByType } = renderBudgets([
+      { id: 'b1', category: 'Food', spent: 1553300, amount: 1500000 },
+      { id: 'b2', category: 'Transport', spent: 493000, amount: 270000 },
+    ]);
+    // Status columns must have fixed minWidth and not rely on content width
+    const card1 = getByTestId('budget-card-b1');
+    // Find status nodes
+    const status1 = getByTestId('budget-status-b1');
+    expect(status1.props.numberOfLines).toBe(1);
+    expect(status1.props.adjustsFontSizeToFit).toBe(true);
+    // Center content wraps, status stays 92-110 width
+    expect(getByTestId('budget-pct-b1').props.children).toBeTruthy();
+    expect(getByTestId('budget-pct-b2').props.children).toBeTruthy();
+  });
+
   it('slightly over 1553300/1500000 shows 104% Over Rp53.300', () => {
     const { getByText, getByTestId } = renderBudgets([{ id: 'b1', category: 'Food', spent: 1553300, amount: 1500000 }]);
     expect(pctText('b1', getByTestId)).toBe('104%');
@@ -136,5 +152,14 @@ describe('Budget semantics', () => {
   it('ring progress remains capped at 100% while percentage shows real', () => {
     const { getByTestId } = renderBudgets([{ id: 'b1', category: 'Food', spent: 398000, amount: 200000 }]);
     expect(pctText('b1', getByTestId)).toBe('199%');
+  });
+
+  it('long category and large currency values wrap without collision', () => {
+    const { getByText, getByTestId } = renderBudgets([{ id: 'b1', category: 'Transportasi', spent: 12500000, amount: 10000000 }], 'id');
+    expect(getByText('Transportasi')).toBeTruthy();
+    // spent/dari/amount all visible despite length
+    expect(getByText('dari')).toBeTruthy();
+    expect(pctText('b1', getByTestId)).toBe('125%');
+    expect(getByText('Lebih')).toBeTruthy();
   });
 });

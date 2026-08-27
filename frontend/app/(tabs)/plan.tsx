@@ -135,21 +135,23 @@ export function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
           const statusAmount = over ? overspent : remaining;
           return (
             <Card key={b.id} testID={`budget-card-${b.id}`} onPress={() => confirmDialog('Delete budget?', async () => { await api.deleteBudget(b.id); onReload(); })}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <ProgressRing progress={ringProgress} color={color} size={54} stroke={7}>
-                  <Body testID={`budget-pct-${b.id}`} style={{ fontFamily: font.displayBold, fontSize: 11 }}>{displayPercent}%</Body>
-                </ProgressRing>
-                <View style={{ marginLeft: spacing.md, flex: 1 }}>
-                  <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{budgetCategoryLabel(b.category)}</Body>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                    <MoneyValue value={spent} currency={currency} style={{ color: colors.muted, fontSize: 15 }} />
-                    <Body muted> {t('budgets.of')} </Body>
-                    <MoneyValue value={amount} currency={currency} style={{ color: colors.muted, fontSize: 15 }} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <View style={{ flexShrink: 0 }}>
+                  <ProgressRing progress={ringProgress} color={color} size={54} stroke={7}>
+                    <Body testID={`budget-pct-${b.id}`} style={{ fontFamily: font.displayBold, fontSize: 11 }}>{displayPercent}%</Body>
+                  </ProgressRing>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Body numberOfLines={1} style={{ fontFamily: font.textBold, fontSize: 15 }}>{budgetCategoryLabel(b.category)}</Body>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 2, gap: 4 }}>
+                    <MoneyValue value={spent} currency={currency} style={{ color: colors.muted, fontSize: 14, lineHeight: 18 }} />
+                    <Body muted style={{ fontSize: 14, lineHeight: 18 }}> {t('budgets.of')} </Body>
+                    <MoneyValue value={amount} currency={currency} style={{ color: colors.muted, fontSize: 14, lineHeight: 18 }} />
                   </View>
                 </View>
-                <View style={{ alignItems: 'flex-end', marginLeft: spacing.md }}>
-                  <Body style={{ fontFamily: font.textBold, fontSize: 12, color }}>{statusLabel}</Body>
-                  <MoneyValue testID={`budget-status-${b.id}`} value={statusAmount} currency={currency} style={{ fontFamily: font.displayBold, color, fontSize: 13, marginTop: 2 }} />
+                <View style={{ minWidth: 92, maxWidth: 110, alignItems: 'flex-end', flexShrink: 0 }}>
+                  <Body numberOfLines={1} style={{ fontFamily: font.textBold, fontSize: 12, color, textAlign: 'right' }}>{statusLabel}</Body>
+                  <MoneyValue testID={`budget-status-${b.id}`} value={statusAmount} currency={currency} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontFamily: font.displayBold, color, fontSize: 13, marginTop: 2, textAlign: 'right' }} />
                 </View>
               </View>
             </Card>
