@@ -40,7 +40,6 @@ describe('Widget balance privacy', () => {
     });
     mockStorage.secureGet.mockResolvedValue('token');
     mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ wallet_total: 3218754, month_income: 6600000, month_expense: 5100000, cash_flow: 1500000, health_score: 80, category_breakdown: [] }) });
-    mockFetch.mockResolvedValueOnce({ ok: false });
 
     const data = await fetchWidgetData();
 
@@ -59,7 +58,6 @@ describe('Widget balance privacy', () => {
     });
     mockStorage.secureGet.mockResolvedValue('token');
     mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ wallet_total: 3218754, month_income: 6600000, month_expense: 5100000, cash_flow: 1500000, health_score: 80, category_breakdown: [] }) });
-    mockFetch.mockResolvedValueOnce({ ok: false });
 
     const data = await fetchWidgetData();
 
@@ -97,7 +95,6 @@ describe('Widget balance privacy', () => {
     });
     mockStorage.secureGet.mockResolvedValue('token');
     mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ wallet_total: 3218754, month_income: 6600000, month_expense: 5100000, cash_flow: 1500000, health_score: 80, category_breakdown: [] }) });
-    mockFetch.mockResolvedValueOnce({ ok: false });
 
     const data = await fetchWidgetData();
 
@@ -112,5 +109,37 @@ describe('Widget balance privacy', () => {
 
     expect(mockStorage.setItem).toHaveBeenCalledWith(WIDGET_BALANCE_VISIBILITY_KEY, true);
     expect(mockStorage.setItem).not.toHaveBeenCalledWith('wallume.privacy.showBalances', expect.anything());
+  });
+
+  it('does not fetch spending-chart for widget', async () => {
+    mockStorage.getItem.mockImplementation((key: string, fallback: any) => {
+      if (key === 'mf.widget.currency') return Promise.resolve('IDR');
+      if (key === WIDGET_BALANCE_VISIBILITY_KEY) return Promise.resolve(true);
+      return Promise.resolve(fallback);
+    });
+    mockStorage.secureGet.mockResolvedValue('token');
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ wallet_total: 1000, month_income: 2000, month_expense: 1000, cash_flow: 1000, health_score: 70, category_breakdown: [] }) });
+
+    await fetchWidgetData();
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/api/analytics/summary'), expect.anything());
+    expect(mockFetch).not.toHaveBeenCalledWith(expect.stringContaining('spending-chart'), expect.anything());
+  });
+
+  it('widget data no longer requires chartUri or categories', async () => {
+    mockStorage.getItem.mockImplementation((key: string, fallback: any) => {
+      if (key === 'mf.widget.currency') return Promise.resolve('IDR');
+      if (key === WIDGET_BALANCE_VISIBILITY_KEY) return Promise.resolve(true);
+      return Promise.resolve(fallback);
+    });
+    mockStorage.secureGet.mockResolvedValue('token');
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ wallet_total: 1000, month_income: 2000, month_expense: 1000, cash_flow: 1000, health_score: 70 }) });
+
+    const data = await fetchWidgetData();
+
+    expect((data as any).chartUri).toBeUndefined();
+    expect((data as any).categories).toBeUndefined();
+    expect(data.healthScore).toBe(70);
   });
 });
