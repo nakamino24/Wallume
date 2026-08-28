@@ -2,6 +2,7 @@ import React, { Component, type ReactNode, type ErrorInfo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { font, spacing, radius } from '@/src/theme/tokens';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };
@@ -26,17 +27,18 @@ export class AppErrorBoundary extends Component<Props, State> {
 }
 
 function ErrorFallback({ onRetry }: { onRetry: () => void }) {
+  const { t } = useI18n();
   return (
     <View style={styles.container}>
       <View style={styles.iconWrap}>
         <Ionicons name="warning" size={40} color="#10B981" />
       </View>
-      <Text style={styles.title}>Something went wrong</Text>
+      <Text style={styles.title}>{t('error.boundary.title')}</Text>
       <Text style={styles.subtitle}>
-        Wallume ran into an unexpected issue. Please try again.
+        {t('error.boundary.subtitle')}
       </Text>
       <TouchableOpacity style={styles.button} onPress={onRetry} activeOpacity={0.85}>
-        <Text style={styles.buttonText}>Try again</Text>
+        <Text style={styles.buttonText}>{t('error.boundary.retry')}</Text>
       </TouchableOpacity>
     </View>
   );

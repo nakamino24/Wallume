@@ -1,6 +1,6 @@
 # Wallume — Personal Finance Platform
 
-Wallume is a production-grade personal finance app: wallets, transactions, budgets, goals, plans, recurring bills, and financial health — with a calm, professional design system and reliable money handling.
+Wallume is a personal finance app for wallets, transactions, budgets, goals, plans, recurring bills, investments, and financial health. The current release line is being hardened for an internal preview.
 
 ## Stack
 
@@ -11,6 +11,7 @@ Wallume is a production-grade personal finance app: wallets, transactions, budge
 | Auth | JWT + bcrypt + blacklist + rate limiting |
 | Widget | `react-native-android-widget` (NetWorth) |
 | Testing | Jest 29 + jest-expo (frontend), pytest (backend) |
+| CI | GitHub Actions validation on pull requests and pushes to `main` |
 
 ## Project Structure
 
@@ -36,6 +37,8 @@ Wallume/
 cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload
+pytest                    # deterministic unit suite
+pytest --run-integration  # requires live API + transaction-capable MongoDB
 ```
 
 **Frontend**
@@ -49,28 +52,12 @@ npx expo-doctor
 npx tsc --noEmit
 ```
 
-## Hotfix — UI Refinement (2026-08-25)
+## Release Status
 
-Latest main (`465b4d7`) refines the existing design direction frontend-only:
-
-- **Transactions:** Full-screen chronological grouping via `TransactionDayGroup` + `groupTransactionsByDate()` (authority: `transaction.date`). Date header sits above each day's surface; row no longer repeats the full date (shows time/category/note/wallet + amount). Home Recent Transactions unchanged.
-- **Plans / Financial Hub:** Compact switcher + sheet, reduced card heights, 36dp add buttons, progress-centric Plan cards, icon-only templates. No stock photos, no new backend fields.
-- **Reports:** `transaction_count` now binds correctly to `summary.transaction_count` for every period (Last 7/30/90 days, This/Last month, custom) with explicit semantic colors (light + dark visible, no stale count, 0 handled as empty state).
-- **Typography:** `Fraunces` (hero: Home balance, Reports net cash flow, restrained plan value) + `Inter` (UI, transaction amounts with `tabular-nums`). Loaded via `@expo-google-fonts/fraunces` + `inter` (strict — app halts on font load failure).
-- **Dark theme:** Replaced green-dominant surfaces with a restrained graphite → midnight navy → indigo/plum gradient (`AppBackground` via `expo-linear-gradient`). Surfaces are solid charcoal/navy; teal/mint is accent-only. Bottom nav follows the gradient system.
-
-Backend change: **NO** — Railway not redeployed (frontend-only).
-
-## Preview Build
-
-- EAS profile: `preview` (Android INTERNAL APK)
-- Latest: `47f948d1-9355-424f-97ab-d6f223e02d0f` → https://expo.dev/artifacts/eas/ohwrMJLTqevRpQO9xDdBuKZTi20dKZqXqHIofDTnKSY.apk
-- Previous: `8ad413f6-0689-4b8c-a917-a528551fce31` / `oLva3xOHUEqazILS7qV0IG9jhrEDULKxM-HJHwu_yJE.apk`
-
-```bash
-cd frontend
-eas build --platform android --profile preview
-```
+- Frontend `1.0.6c` and backend `1.0.5c` are the current version sources of truth.
+- `v1.0.7` remains held and has not been created.
+- Historical preview APKs are not advertised as current builds. Create and distribute a new internal preview only after the validation gate passes.
+- CI performs validation only; it does not deploy to EAS or Railway.
 
 ## Documentation
 
@@ -80,4 +67,4 @@ eas build --platform android --profile preview
 
 ## License
 
-Private — all rights reserved.
+No open-source license is granted. All rights reserved.

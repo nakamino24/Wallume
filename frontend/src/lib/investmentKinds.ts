@@ -1,6 +1,7 @@
 // Central place that defines how each investment/asset category behaves in the UI:
 // what to call its fields (Shares vs Units vs Weight...), and how to compute
 // value / cost / profit-loss / return% so the user never has to do that math.
+import { t } from '@/src/lib/i18n';
 
 export type InvKind = 'stock' | 'etf' | 'mutual_fund' | 'bond' | 'crypto' | 'gold' | 'cash' | 'other';
 
@@ -82,14 +83,22 @@ export function computeInvestmentMetrics(iv: InvestmentDoc): InvMetrics {
 
 // Short line for list rows, e.g. "10 shares", "5.2 g", "Bond", "Cash".
 export function quantitySummary(iv: InvestmentDoc): string {
-  if (iv.kind === 'bond') return 'Bond';
-  if (iv.kind === 'cash') return 'Cash';
+  if (iv.kind === 'bond' || iv.kind === 'cash') return kindLabel(iv.kind);
   const f = QTY_KIND_FIELDS[iv.kind];
   if (!f) return '';
   const qty = iv.quantity || 0;
-  return `${qty} ${f.quantityUnit}`;
+  const unitKey = iv.kind === 'stock' || iv.kind === 'etf'
+    ? 'investment.quantity.shares'
+    : iv.kind === 'mutual_fund'
+      ? 'investment.quantity.units'
+      : iv.kind === 'crypto'
+        ? 'investment.quantity.coins'
+        : 'investment.quantity.grams';
+  return t(unitKey, { value: qty });
 }
 
 export function kindLabel(kind: InvKind): string {
-  return INVESTMENT_KINDS.find((k) => k.id === kind)?.label || kind;
+  const key = `investment.kind.${kind}`;
+  const localized = t(key);
+  return localized === key ? (INVESTMENT_KINDS.find((k) => k.id === kind)?.label || kind) : localized;
 }

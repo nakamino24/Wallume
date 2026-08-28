@@ -3,6 +3,32 @@ import time
 import pytest
 import requests
 
+LIVE_SERVICE_TEST_FILES = {
+    "test_backend_api.py",
+    "test_mongo_runtime_transactions.py",
+    "test_reports_explain.py",
+    "test_wallet_patch.py",
+}
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--run-integration",
+        action="store_true",
+        default=False,
+        help="run tests that require a live Wallume API and/or transaction-capable MongoDB",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--run-integration"):
+        return
+    reason = "requires live API/MongoDB; run explicitly with --run-integration"
+    skip_live = pytest.mark.skip(reason=reason)
+    for item in items:
+        if item.path.name in LIVE_SERVICE_TEST_FILES:
+            item.add_marker(skip_live)
+
 BASE_URL = "http://localhost:8001"
 
 

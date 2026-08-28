@@ -10,12 +10,14 @@ import { DateField } from '@/src/components/DateField';
 import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
 import { INVESTMENT_KINDS, isQtyKind, QTY_KIND_FIELDS, InvKind } from '@/src/lib/investmentKinds';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 // Handles both "add new investment" and "edit investment". When editing, the
 // detail screen passes the existing fields in as route params (id is present).
 export default function InvestmentForm() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { t } = useI18n();
   const params = useLocalSearchParams<Record<string, string>>();
   const isEdit = !!params.id;
 
@@ -46,10 +48,17 @@ export default function InvestmentForm() {
   const [err, setErr] = useState('');
 
   const qtyFields = QTY_KIND_FIELDS[kind];
+  const localizedQtyFields = kind === 'mutual_fund'
+    ? { quantity: t('investment.quantity.units', { value: '' }).trim(), avgCost: t('investment.averageNav'), price: t('investment.currentNav') }
+    : kind === 'gold'
+      ? { quantity: t('investment.weightGram'), avgCost: t('investment.avgPriceGram'), price: t('investment.currentPriceGram') }
+      : kind === 'crypto'
+        ? { quantity: t('investment.amount'), avgCost: t('investment.avgCost'), price: t('investment.currentPrice') }
+        : { quantity: t('investment.quantity.shares', { value: '' }).trim(), avgCost: t('investment.avgCost'), price: t('investment.currentPrice') };
 
   const submit = async () => {
     setErr('');
-    if (!name.trim()) { setErr('Enter a name'); return; }
+    if (!name.trim()) { setErr(t('investment.validation.name')); return; }
 
     let body: any = {
       name: name.trim(),
@@ -65,7 +74,7 @@ export default function InvestmentForm() {
       const cr = parseFloat(couponRate) || 0;
       const pp = parseFloat(purchasePrice) || 0;
       const cv = parseFloat(currentValue) || pp;
-      if (!pp) { setErr('Enter a purchase price'); return; }
+      if (!pp) { setErr(t('investment.validation.purchasePrice')); return; }
       body = {
         ...body,
         face_value: fv, coupon_rate: cr, purchase_price: pp, current_value: cv,
@@ -74,11 +83,11 @@ export default function InvestmentForm() {
       };
     } else if (kind === 'cash') {
       const amt = parseFloat(cashAmount) || 0;
-      if (!amt) { setErr('Enter an amount'); return; }
+      if (!amt) { setErr(t('investment.validation.amount')); return; }
       body = { ...body, quantity: 1, avg_cost: amt, current_price: amt };
     } else {
       const q = parseFloat(qty) || 0;
-      if (!q) { setErr(`Enter ${qtyFields?.quantityLabel.toLowerCase() || 'a quantity'}`); return; }
+      if (!q) { setErr(t('investment.validation.quantity', { quantity: localizedQtyFields.quantity.toLowerCase() })); return; }
       body = {
         ...body,
         quantity: q,
@@ -92,53 +101,53 @@ export default function InvestmentForm() {
       if (isEdit) await api.updateInvestment(params.id, body);
       else await api.createInvestment(body);
       router.back();
-    } catch (e: any) { setErr(e.message); }
+    } catch { setErr(t('common.error')); }
     finally { setLoading(false); }
   };
 
   return (
-    <FormLayout title={isEdit ? 'Edit investment' : 'New investment'} onBack={() => router.back()}>
-      <Input testID="inv-name" label="Name" value={name} onChangeText={setName} placeholder="Apple Inc." />
+    <FormLayout title={t(isEdit ? 'investment.edit' : 'investment.new.title')} onBack={() => router.back()}>
+      <Input testID="inv-name" label={t('common.name')} value={name} onChangeText={setName} placeholder={t('investment.namePlaceholder')} />
       {kind !== 'bond' && kind !== 'cash' && (
-        <Input testID="inv-ticker" label="Ticker (optional)" value={ticker} onChangeText={setTicker} placeholder="AAPL" autoCapitalize="characters" />
+        <Input testID="inv-ticker" label={t('investment.tickerOptional')} value={ticker} onChangeText={setTicker} placeholder="AAPL" autoCapitalize="characters" />
       )}
 
-      <Label>Category</Label>
+      <Label>{t('investment.category')}</Label>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
         {INVESTMENT_KINDS.map((k) => (
-          <Chip key={k.id} testID={`inv-kind-${k.id}`} label={k.label} active={kind === k.id} onPress={() => setKind(k.id)} />
+          <Chip key={k.id} testID={`inv-kind-${k.id}`} label={t(`investment.kind.${k.id}`)} active={kind === k.id} onPress={() => setKind(k.id)} />
         ))}
       </ScrollView>
 
       {/* --- Dynamic fields based on category --- */}
       {kind === 'bond' && (
         <>
-          <MoneyInput testID="inv-face-value" label="Face Value" value={faceValue} onChange={setFaceValue} placeholder="10000000" />
-          <Input testID="inv-coupon-rate" label="Coupon Rate (%)" keyboardType="decimal-pad" value={couponRate} onChangeText={setCouponRate} placeholder="6.5" />
-          <MoneyInput testID="inv-purchase-price" label="Purchase Price" value={purchasePrice} onChange={setPurchasePrice} placeholder="9800000" />
-          <MoneyInput testID="inv-current-value" label="Current Value" value={currentValue} onChange={setCurrentValue} placeholder="10100000" />
+          <MoneyInput testID="inv-face-value" label={t('investment.faceValue')} value={faceValue} onChange={setFaceValue} placeholder="10000000" />
+          <Input testID="inv-coupon-rate" label={t('investment.couponRate')} keyboardType="decimal-pad" value={couponRate} onChangeText={setCouponRate} placeholder="6.5" />
+          <MoneyInput testID="inv-purchase-price" label={t('investment.purchasePrice')} value={purchasePrice} onChange={setPurchasePrice} placeholder="9800000" />
+          <MoneyInput testID="inv-current-value" label={t('investment.currentValue')} value={currentValue} onChange={setCurrentValue} placeholder="10100000" />
         </>
       )}
 
       {kind === 'cash' && (
-        <MoneyInput testID="inv-cash-amount" label="Amount" value={cashAmount} onChange={setCashAmount} placeholder="5000000" />
+        <MoneyInput testID="inv-cash-amount" label={t('investment.amount')} value={cashAmount} onChange={setCashAmount} placeholder="5000000" />
       )}
 
       {isQtyKind(kind) && qtyFields && (
         <>
-          <Input testID="inv-qty" label={qtyFields.quantityLabel} keyboardType="decimal-pad" value={qty} onChangeText={setQty} placeholder={qtyFields.quantityPlaceholder} />
-          <MoneyInput testID="inv-avg-cost" label={qtyFields.avgCostLabel} value={avgCost} onChange={setAvgCost} placeholder="150" />
-          <MoneyInput testID="inv-price" label={qtyFields.priceLabel} value={price} onChange={setPrice} placeholder="180" />
+          <Input testID="inv-qty" label={localizedQtyFields.quantity} keyboardType="decimal-pad" value={qty} onChangeText={setQty} placeholder={qtyFields.quantityPlaceholder} />
+          <MoneyInput testID="inv-avg-cost" label={localizedQtyFields.avgCost} value={avgCost} onChange={setAvgCost} placeholder="150" />
+          <MoneyInput testID="inv-price" label={localizedQtyFields.price} value={price} onChange={setPrice} placeholder="180" />
         </>
       )}
 
       {/* --- Supporting info, all kinds --- */}
-      <Input testID="inv-broker" label="Broker / Platform (optional)" value={broker} onChangeText={setBroker} placeholder="Bibit, Ajaib, Stockbit…" />
-      <DateField testID="inv-purchase-date" label="Purchase date (optional)" value={purchaseDate} onChange={setPurchaseDate} />
-      <Input testID="inv-notes" label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="Why you bought this…" />
+      <Input testID="inv-broker" label={t('investment.brokerOptional')} value={broker} onChangeText={setBroker} placeholder="Bibit, Ajaib, Stockbit…" />
+      <DateField testID="inv-purchase-date" label={t('investment.purchaseDateOptional')} value={purchaseDate} onChange={setPurchaseDate} />
+      <Input testID="inv-notes" label={t('investment.notesOptional')} value={notes} onChangeText={setNotes} placeholder={t('investment.notesPlaceholder')} />
 
       {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
-      <Button testID="inv-save" label={isEdit ? 'Save changes' : 'Add investment'} onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
+      <Button testID="inv-save" label={t(isEdit ? 'transaction.saveChanges' : 'investment.add')} onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
     </FormLayout>
   );
 }

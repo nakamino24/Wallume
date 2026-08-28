@@ -12,30 +12,31 @@ import { useOnboarding } from '@/src/hooks/use-onboarding';
 import { font, spacing, radius } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
 import { Button, Body, Chip } from '@/src/components/ui';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 const { width } = Dimensions.get('window');
 
 const STEPS = [
   {
     icon: 'wallet' as const,
-    title: 'Track Everything',
-    subtitle: 'Wallets, transactions, budgets, and goals — all in one place.',
+    titleKey: 'onboarding.track.title',
+    subtitleKey: 'onboarding.track.subtitle',
   },
   {
     icon: 'sparkles' as const,
-    title: 'AI Coach',
-    subtitle: 'Your personal finance assistant. Ask anything about your money and get instant, personalized advice.',
+    titleKey: 'onboarding.coach.title',
+    subtitleKey: 'onboarding.coach.subtitle',
     highlight: true,
   },
   {
     icon: 'trending-down' as const,
-    title: 'Debt Payoff Planner',
-    subtitle: 'Compare avalanche vs snowball strategies. See exactly when you will be debt-free.',
+    titleKey: 'onboarding.debt.title',
+    subtitleKey: 'onboarding.debt.subtitle',
   },
   {
     icon: 'stats-chart' as const,
-    title: 'Smart Insights',
-    subtitle: 'Spending alerts, financial health score, and category breakdowns that keep you on track.',
+    titleKey: 'onboarding.insights.title',
+    subtitleKey: 'onboarding.insights.subtitle',
   },
 ];
 
@@ -43,6 +44,7 @@ export default function Onboarding() {
   const { colors } = useTheme();
   const { markDone } = useOnboarding();
   const { user, updateProfile } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [paydayDay, setPaydayDay] = useState<number>(user?.payday_day || 25);
@@ -77,7 +79,7 @@ export default function Onboarding() {
         {/* Skip */}
         <View style={{ alignItems: 'flex-end', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
           {!isPaydayStep && (
-            <Button testID="onboarding-skip" variant="ghost" label="Skip" onPress={skip} />
+            <Button testID="onboarding-skip" variant="ghost" label={t('onboarding.skip')} onPress={skip} />
           )}
         </View>
 
@@ -91,16 +93,16 @@ export default function Onboarding() {
                 </View>
               </LinearGradient>
               <Text style={[styles.title, { color: colors.onSurface, fontFamily: font.displayBold }]}>
-                When is payday?
+                {t('onboarding.payday.title')}
               </Text>
               <Text style={[styles.subtitle, { color: colors.muted, fontFamily: font.text }]}>
-                Pick the day you get paid each month. Wallume counts down to it and shifts it to the previous working day when it falls on a weekend or holiday.
+                {t('onboarding.payday.subtitle')}
               </Text>
 
               <TouchableOpacity testID="onboarding-payday-picker" onPress={() => setShowPicker(true)}
                 style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingVertical: 16, marginTop: spacing.xl }}>
                 <Ionicons name="calendar-outline" size={20} color={colors.brandPrimary} />
-                <Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>Every {paydayDay}th</Body>
+                <Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>{t('every.nth', { day: paydayDay })}</Body>
               </TouchableOpacity>
               {showPicker && (
                 <DateTimePicker
@@ -116,14 +118,14 @@ export default function Onboarding() {
               )}
 
               <Text style={[styles.title, { color: colors.onSurface, fontFamily: font.displayBold, fontSize: 22, marginTop: spacing.xxl }]}>
-                Your work schedule
+                {t('onboarding.work.title')}
               </Text>
               <Text style={[styles.subtitle, { color: colors.muted, fontFamily: font.text }]}>
-                Do you work a 5-day, 6-day, or 7-day work week? This decides which days count as non-working for payday.
+                {t('onboarding.work.subtitle')}
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center', marginTop: spacing.lg }}>
                 {([5, 6, 7] as const).map((w) => (
-                  <Chip key={w} testID={`onboarding-workweek-${w}`} label={`${w}-day week`}
+                  <Chip key={w} testID={`onboarding-workweek-${w}`} label={t('onboarding.work.week', { days: w })}
                     active={workWeek === w} onPress={() => setWorkWeek(w)} />
                 ))}
               </View>
@@ -143,10 +145,10 @@ export default function Onboarding() {
               </View>
             </LinearGradient>
             <Text style={[styles.title, { color: colors.onSurface, fontFamily: font.displayBold }]}>
-              {STEPS[step].title}
+              {t(STEPS[step].titleKey)}
             </Text>
             <Text style={[styles.subtitle, { color: colors.muted, fontFamily: font.text }]}>
-              {STEPS[step].subtitle}
+              {t(STEPS[step].subtitleKey)}
             </Text>
           </View>
         )}
@@ -169,7 +171,7 @@ export default function Onboarding() {
 
           <Button
             testID="onboarding-next"
-            label={isLast ? 'Start using Wallume' : 'Continue'}
+            label={isLast ? t('onboarding.start') : t('onboarding.continue')}
             onPress={next}
           />
         </View>

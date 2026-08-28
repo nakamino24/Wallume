@@ -9,46 +9,60 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H1, Body, Label, Divider } from '@/src/components/ui';
+import { Screen, Card, H1, Body, Label, Divider, Button } from '@/src/components/ui';
 import { MoneyValue } from '@/src/components/MoneyValue';
-
-const FREQ_LABEL: Record<string, string> = { weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' };
+import { useI18n } from '@/src/lib/I18nProvider';
 
 export default function RecurringDetail() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useI18n();
   const [item, setItem] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [marking, setMarking] = useState(false);
   const sheetRef = useRef<BottomSheetModal>(null);
   const cur = user?.currency || 'USD';
 
   const load = useCallback(async () => {
-    const r = await api.recurring();
-    const list = Array.isArray(r?.recurring)
-      ? r.recurring
-      : Array.isArray(r?.items)
-        ? r.items
-        : Array.isArray(r)
-          ? r
-          : [];
-    setItem(list.find((x: any) => x.id === id) || null);
-  }, [id]);
+    setError(null);
+    try {
+      const r = await api.recurring();
+      const list = Array.isArray(r?.recurring)
+        ? r.recurring
+        : Array.isArray(r?.items)
+          ? r.items
+          : Array.isArray(r)
+            ? r
+            : [];
+      setItem(list.find((x: any) => x.id === id) || null);
+    } catch (cause) {
+      console.error('[RecurringDetail] failed to load', cause);
+      setError(t('recurring.detail.loadError'));
+    } finally {
+      setLoading(false);
+    }
+  }, [id, t]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  if (!item) {
+  if (loading) {
     return (
       <Screen><SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-          <TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
+          <Body>{t('common.loading')}</Body>
         </View>
       </SafeAreaView></Screen>
     );
   }
 
+  if (error || !item) {
+    return <Screen><SafeAreaView style={{ flex: 1 }} edges={['top']}><View style={{ padding: spacing.xl, gap: spacing.md }}><Body style={{ color: colors.error }}>{error || t('recurring.detail.loadError')}</Body><Button label={t('common.retry')} onPress={load} /></View></SafeAreaView></Screen>;
+  }
+
   const overdue = item.days_until !== null && item.days_until < 0;
-  const dueText = overdue ? `${Math.abs(item.days_until)} days overdue` : item.days_until === 0 ? 'Due today' : `Due in ${item.days_until} days`;
+  const dueText = overdue ? t('recurring.overdue', { days: Math.abs(item.days_until) }) : item.days_until === 0 ? t('recurring.dueToday') : t('recurring.dueIn', { days: item.days_until });
   const dueColor = overdue ? colors.error : item.days_until <= 3 ? colors.warning : colors.onSurface2;
 
   const editParams = {
@@ -61,9 +75,9 @@ export default function RecurringDetail() {
     // call, so re-entry would double-charge the wallet.
     if (marking) return;
     sheetRef.current?.dismiss();
-    Alert.alert('Mark as paid?', `This logs a transaction for ${item.name} and moves it to the next due date.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Mark paid', onPress: async () => {
+    Alert.alert(t('recurring.markPaidTitle'), t('recurring.markPaidMessage', { name: item.name }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('recurring.markPaidConfirm'), onPress: async () => {
         setMarking(true);
         try { await api.markRecurringPaid(item.id); await load(); }
         finally { setMarking(false); }
@@ -73,9 +87,9 @@ export default function RecurringDetail() {
   const onEdit = () => { sheetRef.current?.dismiss(); router.push({ pathname: '/recurring/new', params: editParams }); };
   const onDelete = () => {
     sheetRef.current?.dismiss();
-    Alert.alert('Delete recurring?', `Remove ${item.name} from your recurring list.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await api.deleteRecurring(item.id); router.back(); } },
+    Alert.alert(t('recurring.detail.deleteTitle'), t('recurring.detail.deleteMessage', { name: item.name }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: async () => { await api.deleteRecurring(item.id); router.back(); } },
     ]);
   };
 
@@ -83,44 +97,44 @@ export default function RecurringDetail() {
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-          <TouchableOpacity testID="recurring-detail-back" onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
-          <TouchableOpacity testID="recurring-detail-actions" onPress={() => sheetRef.current?.present()}
+          <TouchableOpacity testID="recurring-detail-back" accessibilityRole="button" accessibilityLabel={t('navigation.back')} hitSlop={10} onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
+          <TouchableOpacity testID="recurring-detail-actions" accessibilityRole="button" accessibilityLabel={t('recurring.detail.actions')} onPress={() => sheetRef.current?.present()}
             style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="ellipsis-horizontal" size={18} color={colors.onSurface} />
           </TouchableOpacity>
         </View>
 
         <View style={{ padding: spacing.xl }}>
-          <Label>{item.category} · {FREQ_LABEL[item.frequency]}</Label>
+          <Label>{localizedCategory(item.category, t)} · {t(`recurring.frequency.${item.frequency}`)}</Label>
           <H1 style={{ marginTop: 4 }}>{item.name}</H1>
 
           <Card style={{ marginTop: spacing.lg }}>
-            <Label>Amount</Label>
+            <Label>{t('transaction.amount')}</Label>
             <MoneyValue value={item.type === 'income' ? cv(item, 'amount') : -Math.abs(cv(item, 'amount'))} currency={cur} style={{ marginTop: 4, color: item.type === 'income' ? colors.success : colors.onSurface, fontFamily: font.displayBold, fontSize: 26 }} />
             <Body style={{ color: dueColor, fontFamily: font.textBold, marginTop: spacing.sm }}>{dueText}</Body>
 
             <Divider />
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
-              <Body muted>Next due date</Body>
+              <Body muted>{t('recurring.detail.nextDate')}</Body>
               <Body style={{ fontFamily: font.textMedium }}>{item.next_date?.slice(0, 10)}</Body>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Body muted>Status</Body>
-              <Body style={{ fontFamily: font.textMedium }}>{item.active ? 'Active' : 'Paused'}</Body>
+              <Body muted>{t('recurring.detail.status')}</Body>
+              <Body style={{ fontFamily: font.textMedium }}>{item.active ? t('recurring.detail.active') : t('recurring.detail.paused')}</Body>
             </View>
           </Card>
 
           {!!item.note && (
             <Card style={{ marginTop: spacing.md }}>
-              <Label style={{ marginBottom: 4 }}>Note</Label>
+              <Label style={{ marginBottom: 4 }}>{t('recurring.detail.note')}</Label>
               <Body>{item.note}</Body>
             </Card>
           )}
 
           <TouchableOpacity testID="recurring-detail-mark-paid" onPress={onMarkPaid}
             style={{ marginTop: spacing.xl, paddingVertical: spacing.md, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.brandPrimary }}>
-            <Body style={{ fontFamily: font.textBold, color: colors.onBrand }}>Mark as paid</Body>
+            <Body style={{ fontFamily: font.textBold, color: colors.onBrand }}>{t('recurring.markPaid')}</Body>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -130,18 +144,24 @@ export default function RecurringDetail() {
         <BottomSheetView style={{ padding: spacing.xl, paddingBottom: spacing.xxxl, gap: spacing.sm }}>
           <TouchableOpacity testID="recurring-sheet-mark-paid" onPress={onMarkPaid} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md }}>
             <Ionicons name="checkmark-circle-outline" size={20} color={colors.success} />
-            <Body style={{ fontFamily: font.textMedium }}>Mark as paid</Body>
+            <Body style={{ fontFamily: font.textMedium }}>{t('recurring.markPaid')}</Body>
           </TouchableOpacity>
           <TouchableOpacity testID="recurring-sheet-edit" onPress={onEdit} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md }}>
             <Ionicons name="create-outline" size={20} color={colors.onSurface} />
-            <Body style={{ fontFamily: font.textMedium }}>Edit</Body>
+            <Body style={{ fontFamily: font.textMedium }}>{t('edit')}</Body>
           </TouchableOpacity>
           <TouchableOpacity testID="recurring-sheet-delete" onPress={onDelete} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md }}>
             <Ionicons name="trash-outline" size={20} color={colors.error} />
-            <Body style={{ color: colors.error, fontFamily: font.textMedium }}>Delete</Body>
+            <Body style={{ color: colors.error, fontFamily: font.textMedium }}>{t('delete')}</Body>
           </TouchableOpacity>
         </BottomSheetView>
       </BottomSheetModal>
     </Screen>
   );
+}
+
+function localizedCategory(raw: string, translate: (key: string) => string) {
+  const key = `budgets.category.${raw.trim().toLowerCase().replace(/\s+/g, '_')}`;
+  const localized = translate(key);
+  return localized === key ? raw : localized;
 }

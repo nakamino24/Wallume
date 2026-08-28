@@ -12,6 +12,7 @@ import { api } from '@/src/api/client';
 import { Body, Button, Input, Chip, Label } from '@/src/components/ui';
 import { useToast } from '@/src/components/Toast';
 import type { UserCategory } from '@/src/lib/categories';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 /**
  * Full category management modal (replaces the old create-only quick-add).
@@ -36,6 +37,7 @@ export function QuickAddCategoryModal({
   onChanged?: () => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const toast = useToast();
 
   const [categories, setCategories] = useState<UserCategory[]>([]);
@@ -101,17 +103,17 @@ export function QuickAddCategoryModal({
   const create = async () => {
     if (saving) return;
     const trimmed = label.trim();
-    if (!trimmed) { toast.show('Enter a category name', 'error'); return; }
+    if (!trimmed) { toast.show(t('category.validation.name'), 'error'); return; }
     setSaving(true);
     try {
       const r = await api.createCategory({ label: trimmed, type });
-      toast.show('Category added');
+      toast.show(t('category.added'));
       setLabel('');
       await load();
       onCreated(r.category);
       notifyChanged();
     } catch (e: any) {
-      toast.show(e.message || 'Could not add category', 'error');
+      toast.show(t('category.addError'), 'error');
     } finally {
       setSaving(false);
     }
@@ -125,19 +127,19 @@ export function QuickAddCategoryModal({
   const saveEdit = async () => {
     if (!editingId || editSaving) return;
     const trimmed = editLabel.trim();
-    if (!trimmed) { toast.show('Enter a category name', 'error'); return; }
+    if (!trimmed) { toast.show(t('category.validation.name'), 'error'); return; }
     const target = categories.find((c) => c.id === editingId);
     if (!target) return;
     if (trimmed === target.label) { setEditingId(null); return; }
     setEditSaving(true);
     try {
       await api.updateCategory(editingId, { label: trimmed });
-      toast.show('Category updated');
+      toast.show(t('category.updated'));
       setEditingId(null);
       await load();
       notifyChanged();
     } catch (e: any) {
-      toast.show(e.message || 'Could not update category', 'error');
+      toast.show(t('category.updateError'), 'error');
     } finally {
       setEditSaving(false);
     }
@@ -157,7 +159,7 @@ export function QuickAddCategoryModal({
       setDeleteBusy(true);
       try {
         await api.deleteCategory(deleteCat.id);
-        toast.show('Category deleted');
+        toast.show(t('category.deleted'));
         setDeleteCat(null);
         await load();
         notifyChanged();
@@ -168,7 +170,7 @@ export function QuickAddCategoryModal({
           setNeedsReassign(true);
           return;
         }
-        toast.show(e.message || 'Could not delete category', 'error');
+        toast.show(t('category.deleteError'), 'error');
       } finally {
         setDeleteBusy(false);
       }
@@ -177,19 +179,19 @@ export function QuickAddCategoryModal({
 
     // Reassign mode: require a target, then reassign + delete.
     if (!reassignTo) {
-      toast.show('Choose a category to move transactions to', 'error');
+      toast.show(t('category.reassignRequired'), 'error');
       return;
     }
     setDeleteBusy(true);
     try {
       await api.deleteCategoryReassign(deleteCat.id, reassignTo);
-      toast.show('Category deleted');
+      toast.show(t('category.deleted'));
       setDeleteCat(null);
       setNeedsReassign(false);
       await load();
       notifyChanged();
     } catch (e: any) {
-      toast.show(e.message || 'Could not delete category', 'error');
+      toast.show(t('category.deleteError'), 'error');
     } finally {
       setDeleteBusy(false);
     }
@@ -207,36 +209,36 @@ export function QuickAddCategoryModal({
             >
               <View style={{ padding: spacing.xl }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
-                  <Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>Manage categories</Body>
-                  <TouchableOpacity testID="quick-add-category-close" onPress={onClose} style={{ padding: 4 }}>
+                  <Body style={{ fontFamily: font.displayBold, fontSize: 18 }}>{t('category.manageTitle')}</Body>
+                  <TouchableOpacity testID="quick-add-category-close" accessibilityRole="button" accessibilityLabel={t('navigation.close')} hitSlop={10} onPress={onClose} style={{ padding: 4 }}>
                     <Ionicons name="close" size={22} color={colors.muted} />
                   </TouchableOpacity>
                 </View>
 
-                <Label>New category</Label>
+                <Label>{t('category.new')}</Label>
                 <Input testID="quick-add-category-input" value={label} onChangeText={setLabel}
-                  placeholder={type === 'expense' ? 'e.g. Kos / Kost' : 'e.g. Bonus'}
+                  placeholder={t(type === 'expense' ? 'category.placeholder.expense' : 'category.placeholder.income')}
                   returnKeyType="done"
                   onSubmitEditing={create} />
 
-                <Label style={{ marginTop: spacing.sm }}>Type</Label>
+                <Label style={{ marginTop: spacing.sm }}>{t('common.type')}</Label>
                 <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
-                  {(['expense', 'income'] as const).map((t) => (
-                    <Chip key={t} testID={`quick-add-category-type-${t}`} label={t}
-                      active={type === t} onPress={() => setType(t)} />
+                  {(['expense', 'income'] as const).map((categoryType) => (
+                    <Chip key={categoryType} testID={`quick-add-category-type-${categoryType}`} label={t(categoryType === 'expense' ? 'transaction.type.expense' : 'transaction.type.income')}
+                      active={type === categoryType} onPress={() => setType(categoryType)} />
                   ))}
                 </View>
 
-                <Button testID="quick-add-category-save" label="Add category" onPress={create} loading={saving} style={{ marginTop: spacing.lg }} />
+                <Button testID="quick-add-category-save" label={t('category.add')} onPress={create} loading={saving} style={{ marginTop: spacing.lg }} />
 
-                <Label style={{ marginTop: spacing.xl }}>Your {type} categories</Label>
+                <Label style={{ marginTop: spacing.xl }}>{t('category.yours', { type: t(type === 'expense' ? 'transaction.type.expense' : 'transaction.type.income').toLowerCase() })}</Label>
                 <Body muted style={{ fontSize: 12, marginTop: 2, marginBottom: spacing.sm }}>
-                  Tap to rename · hold to delete.
+                  {t('category.help')}
                 </Body>
 
                 {custom.length === 0 && (
                   <Body muted style={{ paddingVertical: spacing.md, fontSize: 13 }}>
-                    No custom {type} categories yet. Add one above.
+                    {t('category.empty', { type: t(type === 'expense' ? 'transaction.type.expense' : 'transaction.type.income').toLowerCase() })}
                   </Body>
                 )}
 
@@ -246,12 +248,12 @@ export function QuickAddCategoryModal({
                     return (
                       <View key={c.id} style={{ flexDirection: 'row', alignItems: 'flex-end', marginBottom: spacing.md, gap: spacing.sm }}>
                         <Input testID={`cat-edit-input-${c.id}`} autoFocus value={editLabel}
-                          onChangeText={setEditLabel} placeholder="Category name" style={{ flex: 1, marginBottom: 0 }}
+                          onChangeText={setEditLabel} placeholder={t('category.namePlaceholder')} style={{ flex: 1, marginBottom: 0 }}
                           returnKeyType="done" onSubmitEditing={saveEdit} />
-                        <TouchableOpacity testID={`cat-edit-save-${c.id}`} onPress={saveEdit} disabled={editSaving} style={{ paddingVertical: 8 }}>
+                        <TouchableOpacity testID={`cat-edit-save-${c.id}`} accessibilityRole="button" accessibilityLabel={t('category.saveName')} accessibilityState={{ disabled: editSaving }} hitSlop={8} onPress={saveEdit} disabled={editSaving} style={{ paddingVertical: 8 }}>
                           <Ionicons name="checkmark-circle" size={24} color={colors.brandPrimary} />
                         </TouchableOpacity>
-                        <TouchableOpacity testID={`cat-edit-cancel-${c.id}`} onPress={() => setEditingId(null)} style={{ paddingVertical: 8 }}>
+                        <TouchableOpacity testID={`cat-edit-cancel-${c.id}`} accessibilityRole="button" accessibilityLabel={t('category.cancelEdit')} hitSlop={8} onPress={() => setEditingId(null)} style={{ paddingVertical: 8 }}>
                           <Ionicons name="close-circle" size={24} color={colors.muted} />
                         </TouchableOpacity>
                       </View>
@@ -286,14 +288,14 @@ export function QuickAddCategoryModal({
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: spacing.xl }}>
             <SafeAreaView style={{ backgroundColor: colors.surface2, borderRadius: radius.lg, padding: spacing.xl }}>
               <Body style={{ fontFamily: font.displayBold, fontSize: 16, marginBottom: spacing.sm }}>
-                Delete “{deleteCat.label}”?
+                {t('category.deleteTitle', { name: deleteCat.label })}
               </Body>
 
               {needsReassign ? (
                 candidates.length > 0 ? (
                   <>
                     <Body muted style={{ marginBottom: spacing.md }}>
-                      This category is still referenced by transactions. Choose where to move them, then confirm.
+                      {t('category.reassignMessage')}
                     </Body>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg }}>
                       {candidates.map((c) => (
@@ -302,8 +304,8 @@ export function QuickAddCategoryModal({
                       ))}
                     </View>
                     <View style={{ flexDirection: 'row', gap: spacing.md }}>
-                      <Button variant="secondary" label="Cancel" onPress={() => setDeleteCat(null)} style={{ flex: 1 }} />
-                      <Button label="Reassign & delete" loading={deleteBusy}
+                      <Button variant="secondary" label={t('common.cancel')} onPress={() => setDeleteCat(null)} style={{ flex: 1 }} />
+                      <Button label={t('category.reassignDelete')} loading={deleteBusy}
                         disabled={!reassignTo}
                         onPress={() => doDelete()} style={{ flex: 1 }} />
                     </View>
@@ -311,15 +313,15 @@ export function QuickAddCategoryModal({
                 ) : (
                   <>
                     <Body muted style={{ marginBottom: spacing.md }}>
-                      Some transactions still use this category, but there are no other categories to move them to. Add another category first, then retry.
+                      {t('category.noReassignTarget')}
                     </Body>
-                    <Button label="OK" onPress={() => setDeleteCat(null)} />
+                    <Button label={t('common.ok')} onPress={() => setDeleteCat(null)} />
                   </>
                 )
               ) : (
                 <View style={{ flexDirection: 'row', gap: spacing.md }}>
-                  <Button variant="secondary" label="Cancel" onPress={() => setDeleteCat(null)} style={{ flex: 1 }} />
-                  <Button label="Delete" loading={deleteBusy} onPress={() => doDelete()} style={{ flex: 1 }} />
+                  <Button variant="secondary" label={t('common.cancel')} onPress={() => setDeleteCat(null)} style={{ flex: 1 }} />
+                  <Button label={t('common.delete')} loading={deleteBusy} onPress={() => doDelete()} style={{ flex: 1 }} />
                 </View>
               )}
             </SafeAreaView>

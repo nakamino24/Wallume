@@ -8,7 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H1, H2, Body, Label, ProgressRing, ProgressBar, EmptyState } from '@/src/components/ui';
+import { Screen, Card, H1, H2, Body, Label, ProgressRing, ProgressBar, EmptyState, Button } from '@/src/components/ui';
 import { computeInvestmentMetrics, kindLabel, quantitySummary } from '@/src/lib/investmentKinds';
 import { FinancialHubSwitcher, type FinancialModuleKey } from '@/src/components/finance/FinancialHubSwitcher';
 import { FinancialHubSheet } from '@/src/components/finance/FinancialHubSheet';
@@ -17,6 +17,7 @@ import { PlanTemplateCard } from '@/src/components/plans/PlanTemplateCard';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { t } from '@/src/lib/i18n';
 import { SkeletonCard } from '@/src/components/Skeleton';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 type Section = FinancialModuleKey;
 
@@ -24,6 +25,7 @@ export default function PlanScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const { t: translate } = useI18n();
   const [section, setSection] = useState<Section>('plans');
   const [hubOpen, setHubOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -35,8 +37,10 @@ export default function PlanScreen() {
   const [assets, setAssets] = useState<any[]>([]);
   const [investments, setInvestments] = useState<any[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setLoadError(null);
     try {
       const [b, g, p, d, a, i] = await Promise.all([
         api.budgets(), api.goals(), api.plans(), api.debts(), api.assets(), api.investments(),
@@ -47,11 +51,13 @@ export default function PlanScreen() {
       setDebts(d.debts || []);
       setAssets(a.assets || []);
       setInvestments(i.investments || []);
-    } catch {
+    } catch (cause) {
+      console.error('[Plan] failed to load financial modules', cause);
+      setLoadError(translate('data.loadError'));
     } finally {
       setLoaded(true);
     }
-  }, []);
+  }, [translate]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
   const onRefresh = useCallback(async () => { setRefreshing(true); await load(); setRefreshing(false); }, [load]);
 
@@ -61,8 +67,8 @@ export default function PlanScreen() {
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.md }}>
-          <H1>{t('plans')}</H1>
-          <Body muted style={{ marginTop: 4 }}>{t('hub.subtitle')}</Body>
+          <H1>{translate('plans')}</H1>
+          <Body muted style={{ marginTop: 4 }}>{translate('hub.subtitle')}</Body>
           <View style={{ marginTop: spacing.md }}><FinancialHubSwitcher current={section} onPress={() => setHubOpen(true)} /></View>
         </View>
 
@@ -71,22 +77,28 @@ export default function PlanScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
         >
           {!loaded && <SkeletonCard />}
-          {loaded && section === 'budgets' && (
+          {loaded && loadError && (
+            <Card testID="plan-error">
+              <Body style={{ color: colors.error }}>{loadError}</Body>
+              <Button testID="plan-retry" label={translate('common.retry')} onPress={load} style={{ marginTop: spacing.md, alignSelf: 'flex-start' }} />
+            </Card>
+          )}
+          {loaded && !loadError && section === 'budgets' && (
             <BudgetsSection budgets={budgets} currency={cur} onAdd={() => router.push('/budget/new')} onReload={load} />
           )}
-          {loaded && section === 'goals' && (
+          {loaded && !loadError && section === 'goals' && (
             <GoalsSection goals={goals} currency={cur} onAdd={() => router.push('/goal/new')} onOpen={(id: string) => router.push({ pathname: '/goal/[id]', params: { id } })} onReload={load} />
           )}
-          {loaded && section === 'plans' && (
+          {loaded && !loadError && section === 'plans' && (
             <PlansSection plans={plans} currency={cur} onAdd={(kind: string) => router.push({ pathname: '/plan/new', params: { kind } })} onOpen={(id: string) => router.push({ pathname: '/plan/[id]', params: { id } })} />
           )}
-          {loaded && section === 'debts' && (
+          {loaded && !loadError && section === 'debts' && (
             <DebtsSection debts={debts} currency={cur} onAdd={() => router.push('/debt/new')} onReload={load} />
           )}
-          {loaded && section === 'assets' && (
+          {loaded && !loadError && section === 'assets' && (
             <AssetsSection assets={assets} currency={cur} onAdd={() => router.push('/asset/new')} onReload={load} />
           )}
-          {loaded && section === 'investments' && (
+          {loaded && !loadError && section === 'investments' && (
             <InvestmentsSection investments={investments} currency={cur} onAdd={() => router.push('/investment/new')} />
           )}
         </ScrollView>
@@ -134,7 +146,7 @@ export function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
           const statusLabel = over ? t('budgets.over') : t('budgets.remaining');
           const statusAmount = over ? overspent : remaining;
           return (
-            <Card key={b.id} testID={`budget-card-${b.id}`} onPress={() => confirmDialog('Delete budget?', async () => { await api.deleteBudget(b.id); onReload(); })}>
+            <Card key={b.id} testID={`budget-card-${b.id}`} onPress={() => confirmDialog(t('budget.delete.title'), async () => { await api.deleteBudget(b.id); onReload(); })}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
                 <View style={{ flexShrink: 0 }}>
                   <ProgressRing progress={ringProgress} color={color} size={54} stroke={7}>
@@ -249,9 +261,9 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
 
   const onDebtAction = (d: any) => {
     Alert.alert(d.name, undefined, [
-      { text: 'Cancel', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: d.remaining > 0 ? 'Mark as paid' : 'Delete',
+        text: d.remaining > 0 ? t('debts.action.paid') : t('debts.action.delete'),
         style: d.remaining > 0 ? 'default' : 'destructive',
         onPress: async () => {
           try {
@@ -259,8 +271,8 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
               const r = await api.updateDebt(d.id, { remaining: 0 });
               if (r.celebrate) {
                 Alert.alert(
-                  '🎉 Debt paid off!',
-                  `Congratulations! ${d.name} is fully paid off. You're one step closer to financial freedom.`,
+                  t('debts.paidTitle'),
+                  t('debts.paidMessage', { name: d.name }),
                 );
               }
             } else {
@@ -270,7 +282,7 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
           } catch {}
         },
       },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await api.deleteDebt(d.id); onReload(); } },
+      { text: t('common.delete'), style: 'destructive', onPress: async () => { await api.deleteDebt(d.id); onReload(); } },
     ]);
   };
   return (
@@ -286,7 +298,7 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
         <TouchableOpacity testID="debt-planner-link" onPress={() => router.push('/debt-planner')}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.brandSoft, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.md }}>
           <Ionicons name="trending-down" size={18} color={colors.onBrandSoft} />
-          <Body style={{ flex: 1, fontFamily: font.textMedium, color: colors.onBrandSoft }}>See your payoff plan</Body>
+          <Body style={{ flex: 1, fontFamily: font.textMedium, color: colors.onBrandSoft }}>{t('debts.payoffLink')}</Body>
           <Ionicons name="chevron-forward" size={16} color={colors.onBrandSoft} />
         </TouchableOpacity>
       )}
@@ -302,16 +314,16 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <View style={{ flex: 1 }}>
                 <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{d.name}</Body>
-                <Body muted style={{ marginTop: 2 }}>{d.kind.replace('_', ' ')} · {d.interest_rate}% APR</Body>
+                <Body muted style={{ marginTop: 2 }}>{t(`debt.kind.${d.kind}`)} · {d.interest_rate}% {t('debt.aprLabel')}</Body>
               </View>
               <MoneyValue value={remaining} currency={currency} style={{ fontFamily: font.displayBold, color: colors.error }} />
             </View>
             <View style={{ marginTop: spacing.md }}>
               <ProgressBar progress={p} color={colors.warning} />
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
-                <Body muted style={{ fontSize: 12 }}>Paid </Body>
+                <Body muted style={{ fontSize: 12 }}>{t('debts.paid')} </Body>
                 <MoneyValue value={paid} currency={currency} style={{ color: colors.muted, fontSize: 12 }} />
-                <Body muted style={{ fontSize: 12 }}> of </Body>
+                <Body muted style={{ fontSize: 12 }}> {t('debts.of')} </Body>
                 <MoneyValue value={principal} currency={currency} style={{ color: colors.muted, fontSize: 12 }} />
                 <Body muted style={{ fontSize: 12 }}> ({Math.round(p * 100)}%)</Body>
               </View>
@@ -342,7 +354,7 @@ export function AssetsSection({ assets, currency, onAdd, onReload }: any) {
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <View style={{ flex: 1 }}>
               <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{a.name}</Body>
-              <Body muted style={{ marginTop: 2 }}>{a.kind.replace('_', ' ')}</Body>
+              <Body muted style={{ marginTop: 2 }}>{t(`asset.kind.${a.kind}`)}</Body>
             </View>
             <MoneyValue value={cv(a, 'value')} currency={currency} style={{ fontFamily: font.displayBold }} />
           </View>
@@ -399,7 +411,7 @@ export function InvestmentsSection({ investments, currency, onAdd }: any) {
 
 function confirmDialog(msg: string, onOk: () => Promise<void>) {
   Alert.alert(msg, undefined, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Delete', style: 'destructive', onPress: () => { onOk(); } },
+    { text: t('common.cancel'), style: 'cancel' },
+    { text: t('common.delete'), style: 'destructive', onPress: () => { onOk(); } },
   ]);
 }

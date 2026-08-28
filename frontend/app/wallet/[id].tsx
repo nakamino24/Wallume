@@ -9,19 +9,15 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { groupActivitiesByDay } from '@/src/lib/activity';
-import { Screen, Card, H2, Body, Label, EmptyState, Caption } from '@/src/components/ui';
+import { Screen, Card, H2, Body, Label, EmptyState, Caption, Button } from '@/src/components/ui';
 import { MoneyValue } from '@/src/components/MoneyValue';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 const CATEGORY_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
   Entertainment: 'film', Bills: 'receipt', Health: 'medkit',
   Rent: 'home', Salary: 'cash', Groceries: 'basket', Other: 'ellipsis-horizontal',
   Freelance: 'laptop', Investment: 'trending-up', Business: 'briefcase', Gift: 'gift',
-};
-
-const TYPE_LABEL: Record<string, string> = {
-  cash: 'Cash', bank: 'Bank', credit_card: 'Credit Card',
-  e_wallet: 'E-Wallet', savings: 'Savings', investment: 'Investment',
 };
 
 const TYPE_ICON: Record<string, any> = {
@@ -39,22 +35,31 @@ export default function WalletDetail() {
   const { user } = useAuth();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useI18n();
 
   const [wallet, setWallet] = useState<any>(null);
   const [txs, setTxs] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setError(null);
     try {
       const [walletRes, txRes] = await Promise.all([
         api.wallets(),
         api.transactions(undefined, 50, id),
       ]);
       const w = (walletRes.wallets || []).find((x: any) => x.id === id);
-      if (w) setWallet(w);
+      setWallet(w || null);
       setTxs(txRes.transactions || []);
-    } catch {}
-  }, [id]);
+    } catch (cause) {
+      console.error('[WalletDetail] failed to load', cause);
+      setError(t('wallet.detail.loadError'));
+    } finally {
+      setLoading(false);
+    }
+  }, [id, t]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -64,21 +69,21 @@ export default function WalletDetail() {
     setRefreshing(false);
   }, [load]);
 
-  const removeTx = useCallback((t: any) => {
-    Alert.alert('Delete transaction?', undefined, [
-      { text: 'Cancel', style: 'cancel' },
+  const removeTx = useCallback((transaction: any) => {
+    Alert.alert(t('transactions.delete.title'), undefined, [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
-            await api.deleteTransaction(t.id);
-            setTxs((prev) => prev.filter((x) => x.id !== t.id));
+            await api.deleteTransaction(transaction.id);
+            setTxs((prev) => prev.filter((x) => x.id !== transaction.id));
           } catch {}
         },
       },
     ]);
-  }, []);
+  }, [t]);
 
   const cur = user?.currency || 'USD';
   const meta = wallet ? (TYPE_TINT[wallet.type] || '#6B7280') : '#6B7280';
@@ -86,12 +91,25 @@ export default function WalletDetail() {
 
   const grouped = useMemo(() => groupActivitiesByDay(txs), [txs]);
 
-  if (!wallet) {
+  if (loading && !wallet) {
     return (
       <Screen>
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-            <Body>Loading…</Body>
+            <Body>{t('common.loading')}</Body>
+          </View>
+        </SafeAreaView>
+      </Screen>
+    );
+  }
+
+  if (error || !wallet) {
+    return (
+      <Screen>
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={{ padding: spacing.xl, gap: spacing.md }}>
+            <Body style={{ color: error ? colors.error : colors.onSurface }}>{error || t('wallet.detail.notFound')}</Body>
+            <Button label={t('common.retry')} onPress={load} />
           </View>
         </SafeAreaView>
       </Screen>
@@ -108,11 +126,11 @@ export default function WalletDetail() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
         >
           <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <TouchableOpacity onPress={() => router.back()}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('navigation.back')} hitSlop={10} onPress={() => router.back()}>
               <Ionicons name="chevron-back" size={24} color={colors.onSurface} />
             </TouchableOpacity>
             <H2 style={{ flex: 1, marginLeft: spacing.md }}>{wallet.name}</H2>
-            <TouchableOpacity testID="wallet-edit-btn" onPress={() => router.push({ pathname: '/wallet/edit/[id]', params: { id: wallet.id } })}>
+            <TouchableOpacity testID="wallet-edit-btn" accessibilityRole="button" accessibilityLabel={t('wallet.detail.edit')} hitSlop={10} onPress={() => router.push({ pathname: '/wallet/edit/[id]', params: { id: wallet.id } })}>
               <Ionicons name="create-outline" size={22} color={colors.brandPrimary} />
             </TouchableOpacity>
           </View>
@@ -124,9 +142,9 @@ export default function WalletDetail() {
                   <Ionicons name={icon} size={20} color={meta} />
                 </View>
                 <View style={{ marginLeft: spacing.md }}>
-                  <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Balance</Label>
+                  <Label style={{ color: colors.onInverse, opacity: 0.6 }}>{t('wallets.balance')}</Label>
                   <Body style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 13, marginTop: 2 }}>
-                    {TYPE_LABEL[wallet.type] || wallet.type}
+                    {localizedWalletType(wallet.type, t)}
                   </Body>
                 </View>
               </View>
@@ -138,9 +156,9 @@ export default function WalletDetail() {
           </View>
 
           <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <H2>Recent Activity</H2>
+            <H2>{t('wallet.detail.activity')}</H2>
             <TouchableOpacity onPress={() => router.push('/transactions')}>
-              <Body style={{ color: colors.brandPrimary, fontFamily: font.textBold }}>See all</Body>
+              <Body style={{ color: colors.brandPrimary, fontFamily: font.textBold }}>{t('wallet.detail.seeAll')}</Body>
             </TouchableOpacity>
           </View>
 
@@ -148,9 +166,9 @@ export default function WalletDetail() {
             <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.md }}>
               <EmptyState
                 testID="wallet-activity-empty"
-                title="No activity yet"
-                subtitle="Transactions for this wallet will appear here."
-                actionLabel="Add transaction"
+                title={t('wallet.detail.empty')}
+                subtitle={t('wallet.detail.emptySubtitle')}
+                actionLabel={t('add.transaction')}
                 onAction={() => router.push({ pathname: '/transaction/new', params: { wallet_id: wallet.id } })}
               />
             </View>
@@ -192,6 +210,12 @@ export default function WalletDetail() {
       </SafeAreaView>
     </Screen>
   );
+}
+
+function localizedWalletType(raw: string, translate: (key: string) => string) {
+  const key = `wallet.type.${raw}`;
+  const localized = translate(key);
+  return localized === key ? raw : localized;
 }
 
 function ActivityRow({ tx, walletId, currency, last, onPress, onLongPress }: any) {

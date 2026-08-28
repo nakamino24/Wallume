@@ -8,20 +8,24 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H2, Body, Label, EmptyState } from '@/src/components/ui';
+import { Screen, Card, H2, Body, Label, EmptyState, Button } from '@/src/components/ui';
 import { MoneyValue } from '@/src/components/MoneyValue';
-
-const FREQ_LABEL: Record<string, string> = { weekly: '/week', monthly: '/month', yearly: '/year' };
+import { useI18n } from '@/src/lib/I18nProvider';
 
 export default function Recurring() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const { t } = useI18n();
   const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
   const cur = user?.currency || 'USD';
 
   const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
       const r = await api.recurring();
       const nextItems = Array.isArray(r?.recurring)
@@ -32,8 +36,13 @@ export default function Recurring() {
             ? r
             : [];
       setItems(nextItems);
-    } catch {}
-  }, []);
+    } catch (cause) {
+      console.error('[Recurring] failed to load', cause);
+      setError(t('recurring.loadError'));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const monthlyTotal = items
@@ -47,9 +56,9 @@ export default function Recurring() {
     // One in-flight payment at a time: the backend logs a transaction per
     // call, so a double-tap would double-charge the wallet.
     if (markingId) return;
-    Alert.alert('Mark as paid?', `This logs a transaction for ${name} and moves it to the next due date.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Mark paid', onPress: async () => {
+    Alert.alert(t('recurring.markPaidTitle'), t('recurring.markPaidMessage', { name }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('recurring.markPaidConfirm'), onPress: async () => {
         setMarkingId(id);
         try { await api.markRecurringPaid(id); await load(); }
         finally { setMarkingId(null); }
@@ -62,10 +71,10 @@ export default function Recurring() {
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity testID="recurring-back" onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
-            <H2 style={{ marginLeft: spacing.md }}>Bills & Subscriptions</H2>
+            <TouchableOpacity testID="recurring-back" accessibilityRole="button" accessibilityLabel={t('navigation.back')} hitSlop={10} onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
+            <H2 style={{ marginLeft: spacing.md }}>{t('recurring.title')}</H2>
           </View>
-          <TouchableOpacity testID="recurring-add-btn" onPress={() => router.push('/recurring/new')}
+          <TouchableOpacity testID="recurring-add-btn" accessibilityRole="button" accessibilityLabel={t('recurring.empty.action')} onPress={() => router.push('/recurring/new')}
             style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="add" size={18} color={colors.onBrand} />
           </TouchableOpacity>
@@ -73,36 +82,43 @@ export default function Recurring() {
 
         <View style={{ padding: spacing.xl, paddingBottom: 0 }}>
           <Card style={{ backgroundColor: colors.inverse }}>
-            <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Recurring spend</Label>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 4 }}><MoneyValue value={monthlyTotal} currency={cur} style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 26 }} /><Body style={{ color: colors.onInverse, opacity: 0.6, fontSize: 14 }}> /month equiv.</Body></View>
+            <Label style={{ color: colors.onInverse, opacity: 0.6 }}>{t('recurring.spend')}</Label>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 4 }}><MoneyValue value={monthlyTotal} currency={cur} style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 26 }} /><Body style={{ color: colors.onInverse, opacity: 0.6, fontSize: 14 }}> {t('recurring.monthEquivalent')}</Body></View>
           </Card>
         </View>
 
         <View style={{ flex: 1, padding: spacing.xl, gap: spacing.sm }}>
-          {items.length === 0 ? (
-            <EmptyState testID="recurring-empty" title="No recurring bills yet" subtitle="Add subscriptions and bills so you never miss a due date."
-              actionLabel="Add recurring" onAction={() => router.push('/recurring/new')} />
+          {loading ? (
+            <Card testID="recurring-loading"><Body>{t('common.loading')}</Body></Card>
+          ) : error ? (
+            <Card testID="recurring-error">
+              <Body style={{ color: colors.error }}>{error}</Body>
+              <Button testID="recurring-retry" label={t('common.retry')} onPress={load} style={{ marginTop: spacing.md, alignSelf: 'flex-start' }} />
+            </Card>
+          ) : items.length === 0 ? (
+            <EmptyState testID="recurring-empty" title={t('recurring.empty.title')} subtitle={t('recurring.empty.subtitle')}
+              actionLabel={t('recurring.empty.action')} onAction={() => router.push('/recurring/new')} />
           ) : items.map((r) => {
             const overdue = r.days_until !== null && r.days_until < 0;
             const dueSoon = r.days_until !== null && r.days_until >= 0 && r.days_until <= 3;
             const dueColor = overdue ? colors.error : dueSoon ? colors.warning : colors.onSurface2;
-            const dueText = overdue ? `${Math.abs(r.days_until)}d overdue` : r.days_until === 0 ? 'Due today' : `in ${r.days_until}d`;
+            const dueText = overdue ? t('recurring.overdue', { days: Math.abs(r.days_until) }) : r.days_until === 0 ? t('recurring.dueToday') : t('recurring.dueIn', { days: r.days_until });
             return (
               <Card key={r.id} testID={`recurring-card-${r.id}`} onPress={() => router.push(`/recurring/${r.id}`)}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <View style={{ flex: 1 }}>
                     <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{r.name}</Body>
-                    <Body muted style={{ marginTop: 2, fontSize: 12 }}>{r.category} · {dueText}</Body>
+                    <Body muted style={{ marginTop: 2, fontSize: 12 }}>{systemCategoryLabel(r.category, t)} · {dueText}</Body>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <MoneyValue value={r.type === 'income' ? cv(r, 'amount') : -Math.abs(cv(r, 'amount'))} currency={cur} style={{ color: r.type === 'income' ? colors.success : colors.onSurface, fontFamily: font.displayBold }} />
-                    <Body muted style={{ fontSize: 11, marginTop: 2 }}>{FREQ_LABEL[r.frequency]}</Body>
+                    <Body muted style={{ fontSize: 11, marginTop: 2 }}>{t(`recurring.${r.frequency}`)}</Body>
                   </View>
                 </View>
                 <TouchableOpacity testID={`recurring-mark-paid-${r.id}`} onPress={() => markPaid(r.id, r.name)}
                   disabled={markingId === r.id}
                   style={{ marginTop: spacing.md, paddingVertical: 8, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.surface2, opacity: markingId === r.id ? 0.5 : 1 }}>
-                  <Body style={{ fontFamily: font.textMedium, fontSize: 13, color: dueColor }}>Mark as paid</Body>
+                  <Body style={{ fontFamily: font.textMedium, fontSize: 13, color: dueColor }}>{t('recurring.markPaid')}</Body>
                 </TouchableOpacity>
               </Card>
             );
@@ -111,4 +127,12 @@ export default function Recurring() {
       </SafeAreaView>
     </Screen>
   );
+}
+
+function systemCategoryLabel(raw: string, translate: (key: string) => string) {
+  if (!raw) return raw;
+  const key = raw.trim().toLowerCase().replace(/\s+/g, '_');
+  const translationKey = `budgets.category.${key}`;
+  const translated = translate(translationKey);
+  return translated === translationKey ? raw : translated;
 }

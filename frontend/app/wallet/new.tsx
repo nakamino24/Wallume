@@ -9,19 +9,14 @@ import { api } from '@/src/api/client';
 import { Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
+import { useI18n } from '@/src/lib/I18nProvider';
 
-const TYPES = [
-  { id: 'cash', label: 'Cash' },
-  { id: 'bank', label: 'Bank' },
-  { id: 'credit_card', label: 'Credit Card' },
-  { id: 'e_wallet', label: 'E-Wallet' },
-  { id: 'savings', label: 'Savings' },
-  { id: 'investment', label: 'Investment' },
-];
+const TYPES = ['cash', 'bank', 'credit_card', 'e_wallet', 'savings', 'investment'] as const;
 
 export default function NewWallet() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const [name, setName] = useState('');
   const [type, setType] = useState('bank');
@@ -31,7 +26,7 @@ export default function NewWallet() {
 
   const submit = async () => {
     setErr('');
-    if (!name.trim()) { setErr('Enter a wallet name'); return; }
+    if (!name.trim()) { setErr(t('wallet.form.validation.name')); return; }
     setLoading(true);
     try {
       await api.createWallet({
@@ -40,22 +35,22 @@ export default function NewWallet() {
         currency: user?.currency || 'USD',
       });
       router.back();
-    } catch (e: any) { setErr(e.message); }
+    } catch { setErr(t('common.error')); }
     finally { setLoading(false); }
   };
 
   return (
-    <FormLayout title="New wallet" onBack={() => router.back()}>
-      <Input testID="wallet-name" label="Name" value={name} onChangeText={setName} placeholder="Main Bank, Cash, Visa…" />
-      <Label>Type</Label>
+    <FormLayout title={t('wallet.new.title')} onBack={() => router.back()}>
+      <Input testID="wallet-name" label={t('wallet.name.label')} value={name} onChangeText={setName} placeholder={t('wallet.form.namePlaceholder')} />
+      <Label>{t('common.type')}</Label>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-        {TYPES.map((t) => (
-          <Chip key={t.id} testID={`wtype-${t.id}`} label={t.label} active={type === t.id} onPress={() => setType(t.id)} />
+        {TYPES.map((walletType) => (
+          <Chip key={walletType} testID={`wtype-${walletType}`} label={t(`wallet.type.${walletType}`)} active={type === walletType} onPress={() => setType(walletType)} />
         ))}
       </ScrollView>
-      <MoneyInput testID="wallet-balance" label="Starting balance" value={balance} onChange={setBalance} placeholder="0" />
+      <MoneyInput testID="wallet-balance" label={t('wallet.form.startingBalance')} value={balance} onChange={setBalance} placeholder="0" />
       {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
-      <Button testID="wallet-save" label="Add wallet" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
+      <Button testID="wallet-save" label={t('wallet.form.add')} onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
     </FormLayout>
   );
 }

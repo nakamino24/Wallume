@@ -8,6 +8,7 @@ import { spacing } from '@/src/theme/tokens';
 import { Body, H2, Button } from '@/src/components/ui';
 import { storage } from '@/src/utils/storage';
 import { useAuth } from '@/src/auth/AuthProvider';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 export const BIOMETRIC_LOCK_KEY = 'mf.biometricLockEnabled';
 
@@ -29,6 +30,7 @@ export async function isBiometricAvailable(): Promise<boolean> {
 export function AppLockGate({ children }: { children: ReactNode }) {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { t } = useI18n();
   const [lockEnabled, setLockEnabled] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -39,15 +41,15 @@ export function AppLockGate({ children }: { children: ReactNode }) {
     setAuthenticating(true);
     try {
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Unlock Wallume',
-        fallbackLabel: 'Use passcode',
+        promptMessage: t('applock.prompt'),
+        fallbackLabel: t('applock.passcode'),
         disableDeviceFallback: false,
       });
       if (result.success) setUnlocked(true);
     } finally {
       setAuthenticating(false);
     }
-  }, []);
+  }, [t]);
 
   // Initial check on mount / when the signed-in user changes.
   useEffect(() => {
@@ -89,11 +91,11 @@ export function AppLockGate({ children }: { children: ReactNode }) {
       <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg }}>
         <Ionicons name="lock-closed" size={30} color={colors.onBrandSoft} />
       </View>
-      <H2>Wallume is locked</H2>
+      <H2>{t('applock.title')}</H2>
       <Body muted style={{ marginTop: 6, marginBottom: spacing.xl, textAlign: 'center' }}>
-        Verify it&apos;s you to see your finances.
+        {t('applock.subtitle')}
       </Body>
-      <Button testID="applock-unlock-btn" label={authenticating ? 'Waiting…' : 'Unlock'} onPress={attemptUnlock} loading={authenticating} />
+      <Button testID="applock-unlock-btn" label={authenticating ? t('applock.waiting') : t('applock.unlock')} onPress={attemptUnlock} loading={authenticating} />
     </View>
   );
 }

@@ -13,19 +13,14 @@ import { confirmAction } from '@/src/utils/confirm';
 import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
 import { MoneyValue } from '@/src/components/MoneyValue';
+import { useI18n } from '@/src/lib/I18nProvider';
 
-const TYPES = [
-  { id: 'cash', label: 'Cash' },
-  { id: 'bank', label: 'Bank' },
-  { id: 'credit_card', label: 'Credit Card' },
-  { id: 'e_wallet', label: 'E-Wallet' },
-  { id: 'savings', label: 'Savings' },
-  { id: 'investment', label: 'Investment' },
-];
+const TYPES = ['cash', 'bank', 'credit_card', 'e_wallet', 'savings', 'investment'] as const;
 
 export default function EditWallet() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -50,10 +45,10 @@ export default function EditWallet() {
 
   const submit = async () => {
     setErr('');
-    if (!name.trim()) { setErr('Enter a wallet name'); return; }
-    if (balance.trim() === '') { setErr('Enter a balance (use 0 for empty)'); return; }
+    if (!name.trim()) { setErr(t('wallet.form.validation.name')); return; }
+    if (balance.trim() === '') { setErr(t('wallet.form.validation.balance')); return; }
     const parsed = parseFloat(balance);
-    if (Number.isNaN(parsed)) { setErr('Balance must be a number'); return; }
+    if (Number.isNaN(parsed)) { setErr(t('wallet.form.validation.number')); return; }
     setLoading(true);
     try {
       await api.updateWallet(id!, {
@@ -62,54 +57,54 @@ export default function EditWallet() {
         balance: parsed,
       });
       router.back();
-    } catch (e: any) { setErr(e.message); }
+    } catch { setErr(t('common.error')); }
     finally { setLoading(false); }
   };
 
   const remove = () => {
     confirmAction(
-      'Delete wallet?',
-      'This also deletes all transactions in this wallet.',
+      t('wallets.delete.title'),
+      t('wallets.delete.message'),
       async () => { await api.deleteWallet(id!); router.back(); },
-      { confirmLabel: 'Delete', destructive: true },
+      { confirmLabel: t('common.delete'), destructive: true },
     );
   };
 
   if (!wallet) {
-    return <FormLayout title="Edit wallet"><Body style={{ padding: spacing.xl }}>Loading…</Body></FormLayout>;
+    return <FormLayout title={t('wallet.edit.title')}><Body style={{ padding: spacing.xl }}>{t('common.loading')}</Body></FormLayout>;
   }
 
   const cur = user?.currency || 'USD';
 
   return (
-    <FormLayout title="Edit wallet" onBack={() => router.back()}
+    <FormLayout title={t('wallet.edit.title')} onBack={() => router.back()}
       headerRight={
         <TouchableOpacity testID="edit-wallet-delete" onPress={remove} style={{ padding: 8 }}>
           <Ionicons name="trash" size={20} color={colors.error} />
         </TouchableOpacity>
       }>
       <Card style={{ marginBottom: spacing.md }}>
-        <Label>Current balance</Label>
+        <Label>{t('wallet.form.currentBalance')}</Label>
         <MoneyValue value={wallet.converted_balance ?? (wallet.balance || 0)} currency={wallet.home_currency || cur} privacy="balance" style={{ fontSize: scale(24), fontFamily: font.displayBold, marginTop: 4 }} />
       </Card>
 
-      <Input testID="edit-wallet-name" label="Name" value={name} onChangeText={setName} placeholder="Main Bank" />
+      <Input testID="edit-wallet-name" label={t('wallet.name.label')} value={name} onChangeText={setName} placeholder={t('wallet.form.namePlaceholder')} />
 
-      <Label>Type</Label>
+      <Label>{t('common.type')}</Label>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-        {TYPES.map((t) => (
-          <Chip key={t.id} testID={`edit-wtype-${t.id}`} label={t.label} active={type === t.id} onPress={() => setType(t.id)} />
+        {TYPES.map((walletType) => (
+          <Chip key={walletType} testID={`edit-wtype-${walletType}`} label={t(`wallet.type.${walletType}`)} active={type === walletType} onPress={() => setType(walletType)} />
         ))}
       </ScrollView>
 
-      <MoneyInput testID="edit-wallet-balance" label="Balance" value={balance} onChange={setBalance} placeholder="0" />
+      <MoneyInput testID="edit-wallet-balance" label={t('wallet.balance.edit.label')} value={balance} onChange={setBalance} placeholder="0" />
       <Body muted style={{ fontSize: 12, marginTop: -spacing.sm, marginBottom: spacing.md }}>
-        Manually set the balance. This does not create a transaction.
+        {t('wallet.form.balanceHelp')}
       </Body>
 
       {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
 
-      <Button testID="edit-wallet-save" label="Save changes" onPress={submit} loading={loading} />
+      <Button testID="edit-wallet-save" label={t('transaction.saveChanges')} onPress={submit} loading={loading} />
     </FormLayout>
   );
 }

@@ -8,19 +8,11 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font } from '@/src/theme/tokens';
 import { api, getToken, BASE_URL } from '@/src/api/client';
-import { Screen, H1, H2, Body } from '@/src/components/ui';
+import { Screen, H1, H2, Body, Button } from '@/src/components/ui';
 import { CoachMarkdown } from '@/src/components/CoachMarkdown';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 type Msg = { id: string; role: 'user' | 'assistant'; text: string; pending?: boolean };
-
-const SUGGESTIONS = [
-  'How can I save more this month?',
-  'Am I overspending on food?',
-  'Should I pay off debt or invest?',
-  'Build me a 3-month plan',
-];
-
-const QUICK_SUMMARY = 'Give me a quick financial summary';
 
 const SESSION_ID = 'default';
 
@@ -49,17 +41,23 @@ function extractDeltasFromSSE(raw: string): { text: string; error?: string } {
 export default function Coach() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { t } = useI18n();
   const [messages, setMessages] = useState<Msg[]>([]);
+  const [historyError, setHistoryError] = useState('');
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   const loadHistory = useCallback(async () => {
+    setHistoryError('');
     try {
       const r = await api.coachHistory(SESSION_ID);
       setMessages((r.messages || []).map((m: any) => ({ id: m.id, role: m.role, text: m.text })));
-    } catch {}
-  }, []);
+    } catch (cause) {
+      console.error('[Coach] failed to load history', cause);
+      setHistoryError(t('coach.historyError'));
+    }
+  }, [t]);
   useFocusEffect(useCallback(() => { loadHistory(); }, [loadHistory]));
 
   useEffect(() => {
@@ -120,7 +118,7 @@ export default function Coach() {
         }
         if (!acc && streamErr) throw new Error(streamErr);
         if (!acc) {
-          setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: 'The AI service returned an empty response. Please try again.', pending: false } : mm));
+          setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: t('coach.emptyResponse'), pending: false } : mm));
         }
         return;
       }
@@ -132,10 +130,10 @@ export default function Coach() {
       if (text) {
         setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text, pending: false } : mm));
       } else {
-        throw new Error(error || 'The AI service returned an empty response.');
+        throw new Error(error || t('coach.emptyResponse'));
       }
-    } catch (e: any) {
-      setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: `Sorry, I couldn't respond: ${e.message}`, pending: false } : mm));
+    } catch {
+      setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: t('coach.error'), pending: false } : mm));
     } finally {
       setSending(false);
     }
@@ -156,12 +154,12 @@ export default function Coach() {
                   <Ionicons name="sparkles" size={20} color={colors.onBrand} />
                 </View>
                 <View>
-                  <H2>AI Coach</H2>
-                  <Body muted style={{ fontSize: 12 }}>Personal finance guidance</Body>
+                  <H2>{t('ai.coach')}</H2>
+                  <Body muted style={{ fontSize: 12 }}>{t('coach.subtitle')}</Body>
                 </View>
               </View>
               {messages.length > 0 && (
-                <TouchableOpacity testID="coach-clear" onPress={() => setMessages([])}
+                <TouchableOpacity testID="coach-clear" accessibilityRole="button" accessibilityLabel={t('coach.clear')} onPress={() => setMessages([])}
                   style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center' }}>
                   <Ionicons name="trash-outline" size={16} color={colors.muted} />
                 </TouchableOpacity>
@@ -175,27 +173,31 @@ export default function Coach() {
             contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xxxl }}
             keyboardShouldPersistTaps="handled"
           >
-            {messages.length === 0 && (
+            {!!historyError && <View style={{ gap: spacing.md }}><Body style={{ color: colors.error }}>{historyError}</Body><Button label={t('common.retry')} onPress={loadHistory} /></View>}
+            {!historyError && messages.length === 0 && (
               <View style={{ paddingVertical: spacing.xl }}>
-                <H1 style={{ marginBottom: spacing.md }}>Hi, {user?.name?.split(' ')[0] || 'there'}.</H1>
+                <H1 style={{ marginBottom: spacing.md }}>{t('coach.greeting', { name: user?.name?.split(' ')[0] || t('coach.greetingFallback') })}</H1>
                 <Body muted style={{ marginBottom: spacing.lg }}>
-                  I&apos;m your personal finance coach. Ask me anything about budgeting, saving, or investing.
+                  {t('coach.intro')}
                 </Body>
-                <TouchableOpacity testID="coach-quick-summary" onPress={() => send(QUICK_SUMMARY)}
+                <TouchableOpacity testID="coach-quick-summary" onPress={() => send(t('coach.quickPrompt'))}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.brandPrimary + '1A', borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.brandPrimary + '44' }}>
                   <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="stats-chart" size={16} color={colors.onBrand} />
                   </View>
-                  <Body style={{ flex: 1, fontFamily: font.textBold, color: colors.brandPrimary }}>Quick financial summary</Body>
+                  <Body style={{ flex: 1, fontFamily: font.textBold, color: colors.brandPrimary }}>{t('ai.quick.summary')}</Body>
                   <Ionicons name="chevron-forward" size={16} color={colors.brandPrimary} />
                 </TouchableOpacity>
                 <View style={{ gap: spacing.sm }}>
-                  {SUGGESTIONS.map((s) => (
+                  {['coach.suggestion.save', 'coach.suggestion.food', 'coach.suggestion.debt', 'coach.suggestion.plan'].map((key) => {
+                    const s = t(key);
+                    return (
                     <TouchableOpacity key={s} testID={`coach-suggest-${s.slice(0, 10)}`} onPress={() => send(s)}
                       style={{ padding: spacing.md, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface2 }}>
                       <Body>{s}</Body>
                     </TouchableOpacity>
-                  ))}
+                    );
+                  })}
                 </View>
               </View>
             )}
@@ -229,7 +231,7 @@ export default function Coach() {
               testID="coach-input"
               value={input}
               onChangeText={setInput}
-              placeholder="Ask about your money…"
+              placeholder={t('coach.placeholder')}
               placeholderTextColor={colors.muted}
               editable={!sending}
               style={{ flex: 1, color: colors.onSurface, fontFamily: font.text, fontSize: 15, paddingVertical: 8 }}
@@ -238,6 +240,8 @@ export default function Coach() {
             />
             <TouchableOpacity
               testID="coach-send"
+              accessibilityRole="button"
+              accessibilityLabel={t('coach.send')}
               onPress={() => send()}
               disabled={!input.trim() || sending}
               style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: input.trim() ? colors.brandPrimary : colors.surface3, alignItems: 'center', justifyContent: 'center' }}

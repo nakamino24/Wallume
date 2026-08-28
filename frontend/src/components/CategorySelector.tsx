@@ -7,6 +7,7 @@ import { spacing } from '@/src/theme/tokens';
 import { Chip, Label } from '@/src/components/ui';
 import { QuickAddCategoryModal } from '@/src/components/QuickAddCategoryModal';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 export function CategorySelector({
   type, value, onChange, testID,
@@ -17,6 +18,7 @@ export function CategorySelector({
   testID?: string;
 }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const { getOptions, reload, add } = useUserCategories();
   const [modalVisible, setModalVisible] = useState(false);
   const options = type === 'transfer' ? ['Transfer'] : getOptions(type);
@@ -25,11 +27,11 @@ export function CategorySelector({
   return (
     <>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Label>Category</Label>
+        <Label>{t('category.title')}</Label>
         <TouchableOpacity testID={`${testID || 'category'}-quick-add`} onPress={() => setModalVisible(true)}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 }}>
           <Ionicons name="pricetags" size={16} color={colors.brandPrimary} />
-          <Label style={{ color: colors.brandPrimary }}>Manage</Label>
+          <Label style={{ color: colors.brandPrimary }}>{t('common.manage')}</Label>
         </TouchableOpacity>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>

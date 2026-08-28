@@ -12,7 +12,8 @@ import { Screen, H1, Body, EmptyState, Caption } from '@/src/components/ui';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { confirmAction } from '@/src/utils/confirm';
 import { useWallets } from '@/src/hooks/use-wallets';
-import { t } from '@/src/lib/i18n';
+import { t as translate } from '@/src/lib/i18n';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 const WALLET_META: Record<string, { icon: any; tint: string }> = {
   cash: { icon: 'cash-outline', tint: '#10B981' },
@@ -23,24 +24,11 @@ const WALLET_META: Record<string, { icon: any; tint: string }> = {
   investment: { icon: 'trending-up-outline', tint: '#22C55E' },
 };
 
-const TYPE_LABEL: Record<string, string> = {
-  cash: 'Cash', bank: 'Bank', credit_card: 'Credit Card',
-  e_wallet: 'E-Wallet', savings: 'Savings', investment: 'Investment',
-};
-
-const POCKET_HINTS: Record<string, string> = {
-  bank: 'Pocket',
-  savings: 'Pocket',
-  e_wallet: 'Service',
-  cash: 'Vault',
-  credit_card: 'Card',
-  investment: 'Bucket',
-};
-
 export default function Wallets() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const { t } = useI18n();
   const { wallets, loading, error, refresh } = useWallets();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -69,7 +57,7 @@ export default function Wallets() {
               <H1>{t('wallets.heading')}</H1>
               <Body muted style={{ marginTop: 4 }}>{t('wallets.subtitle')}</Body>
             </View>
-            <TouchableOpacity testID="wallets-add-btn" onPress={() => router.push('/wallet/new')}
+            <TouchableOpacity testID="wallets-add-btn" accessibilityRole="button" accessibilityLabel={t('wallets.empty.action')} onPress={() => router.push('/wallet/new')}
               style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="add" size={22} color={colors.onBrand} />
             </TouchableOpacity>
@@ -83,7 +71,7 @@ export default function Wallets() {
                     <MoneyValue value={total} currency={cur} privacy="balance" style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 24, marginTop: 6 }} />
                 </View>
                 <View style={[styles.pill, { backgroundColor: colors.brandSoft }]}> 
-                  <Body style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 12 }}>{wallets.length} accounts</Body>
+                  <Body style={{ color: colors.onBrandSoft, fontFamily: font.textBold, fontSize: 12 }}>{t('wallets.accountCount', { count: wallets.length })}</Body>
                 </View>
               </View>
 
@@ -163,7 +151,10 @@ function WalletCard({ wallet, currency, onLongPress, onPress }: any) {
   const meta = WALLET_META[wallet.type] || WALLET_META.cash;
   const { colors } = useTheme();
 
-  const pocketLabel = POCKET_HINTS[wallet.type] || 'Account';
+  const pocketKey = `wallets.pocket.${wallet.type}`;
+  const pocketLabel = translate(pocketKey) === pocketKey ? translate('wallets.pocket.account') : translate(pocketKey);
+  const typeKey = `wallet.type.${wallet.type}`;
+  const typeLabel = translate(typeKey) === typeKey ? wallet.type : translate(typeKey);
   return (
     <TouchableOpacity
       testID={`wallet-card-${wallet.id}`}
@@ -179,7 +170,7 @@ function WalletCard({ wallet, currency, onLongPress, onPress }: any) {
           </View>
           <View style={{ marginLeft: spacing.md, flex: 1 }}>
             <Body style={{ fontFamily: font.textBold }}>{wallet.name}</Body>
-            <Body muted style={{ marginTop: 2, fontSize: 12 }}>{TYPE_LABEL[wallet.type] || wallet.type}</Body>
+            <Body muted style={{ marginTop: 2, fontSize: 12 }}>{typeLabel}</Body>
           </View>
         </View>
         <View style={[styles.pill, { backgroundColor: meta.tint + '14' }]}> 
@@ -188,7 +179,7 @@ function WalletCard({ wallet, currency, onLongPress, onPress }: any) {
       </View>
 
       <View style={{ marginTop: spacing.md }}>
-        <Body muted style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7 }}>{t('wallets.balance')}</Body>
+        <Body muted style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7 }}>{translate('wallets.balance')}</Body>
         <MoneyValue
           testID={`wallet-balance-${wallet.id}`}
           value={wallet.converted_balance ?? (wallet.balance || 0)}
@@ -209,10 +200,10 @@ function WalletCard({ wallet, currency, onLongPress, onPress }: any) {
 
 function confirmDelete(w: any, reload: () => void) {
   confirmAction(
-    t('wallets.delete.title'),
-    t('wallets.delete.message', { name: w.name }),
+    translate('wallets.delete.title'),
+    translate('wallets.delete.message', { name: w.name }),
     async () => { await api.deleteWallet(w.id); reload(); },
-    { confirmLabel: t('common.delete'), destructive: true },
+    { confirmLabel: translate('common.delete'), destructive: true },
   );
 }
 

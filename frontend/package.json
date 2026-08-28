@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "main": "index.js",
-  "version": "1.0.5a",
+  "version": "1.0.6c",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",

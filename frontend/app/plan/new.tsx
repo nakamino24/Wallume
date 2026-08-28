@@ -9,12 +9,14 @@ import { Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { DateField } from '@/src/components/DateField';
 import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 const KINDS = ['wedding', 'house', 'car', 'vacation'] as const;
 
 export default function NewPlan() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { t } = useI18n();
   const params = useLocalSearchParams<{ kind?: string }>();
   const initialKind = (params.kind as (typeof KINDS)[number] | undefined);
   const isPreselected = !!initialKind && (KINDS as readonly string[]).includes(initialKind);
@@ -28,14 +30,14 @@ export default function NewPlan() {
 
   const submit = async () => {
     setErr('');
-    if (!name.trim()) { setErr('Enter a name'); return; }
+    if (!name.trim()) { setErr(t('plan.form.validation.name')); return; }
     const b = parseFloat(budget);
-    if (!b || b <= 0) { setErr('Enter a budget'); return; }
+    if (!b || b <= 0) { setErr(t('plan.form.validation.budget')); return; }
     setLoading(true);
     try {
       const r = await api.createPlan({ kind, name: name.trim(), total_budget: b, target_date: date || undefined });
       router.replace({ pathname: '/plan/[id]', params: { id: r.plan.id } });
-    } catch (e: any) { setErr(e.message); }
+    } catch { setErr(t('common.error')); }
     finally { setLoading(false); }
   };
 
@@ -45,16 +47,16 @@ export default function NewPlan() {
   };
 
   const title = step === 2 && isPreselected
-    ? `New ${kind[0].toUpperCase() + kind.slice(1)} Plan`
-    : step === 2 ? 'New plan' : 'Choose plan type';
+    ? t('plan.form.kindTitle', { kind: t(`plans.template.${kind}`) })
+    : step === 2 ? t('plan.form.newTitle') : t('plan.form.chooseType');
 
   if (step === 1 && !isPreselected) {
     return (
       <FormLayout title={title} onBack={handleBack}>
-        <Label>Choose a template</Label>
+        <Label>{t('plan.form.chooseTemplate')}</Label>
         <View style={{ gap: spacing.md, marginTop: spacing.md }}>
           {KINDS.map((k) => (
-            <Chip key={k} testID={`plan-kind-${k}`} label={k[0].toUpperCase() + k.slice(1)} active={false} onPress={() => { setKind(k); setStep(2); }} />
+            <Chip key={k} testID={`plan-kind-${k}`} label={t(`plans.template.${k}`)} active={false} onPress={() => { setKind(k); setStep(2); }} />
           ))}
         </View>
       </FormLayout>
@@ -65,19 +67,19 @@ export default function NewPlan() {
     <FormLayout title={title} onBack={handleBack}>
       {isPreselected && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md, padding: spacing.md, backgroundColor: colors.surface3, borderRadius: 10 }}>
-          <Body style={{ fontFamily: 'Inter-Medium' }}>{kind[0].toUpperCase() + kind.slice(1)}</Body>
+          <Body style={{ fontFamily: 'Inter-Medium' }}>{t(`plans.template.${kind}`)}</Body>
         </View>
       )}
       {!isPreselected && step === 2 && (
         <TouchableOpacity onPress={() => setStep(1)} style={{ marginBottom: spacing.md }}>
-          <Body style={{ color: colors.brandPrimary, fontFamily: 'Inter-Medium' }}>← Change type</Body>
+          <Body style={{ color: colors.brandPrimary, fontFamily: 'Inter-Medium' }}>{t('plan.form.changeType')}</Body>
         </TouchableOpacity>
       )}
-      <Input testID="plan-name" label="Name" value={name} onChangeText={setName} placeholder="Our wedding 2026" />
-      <MoneyInput testID="plan-budget" label="Total budget" value={budget} onChange={setBudget} placeholder="25000" />
-      <DateField testID="plan-date" label="Target date (optional)" value={date} onChange={setDate} />
+      <Input testID="plan-name" label={t('common.name')} value={name} onChangeText={setName} placeholder={t('plan.form.namePlaceholder')} />
+      <MoneyInput testID="plan-budget" label={t('plan.form.totalBudget')} value={budget} onChange={setBudget} placeholder="25000" />
+      <DateField testID="plan-date" label={t('plan.form.targetDate')} value={date} onChange={setDate} />
       {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
-      <Button testID="plan-save" label="Create plan" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
+      <Button testID="plan-save" label={t('plan.form.create')} onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
     </FormLayout>
   );
 }

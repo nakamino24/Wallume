@@ -14,10 +14,12 @@ import { CategorySelector } from '@/src/components/CategorySelector';
 import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
 import { todayLocalISO } from '@/src/utils/dates';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 export default function NewTransaction() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const { getOptions } = useUserCategories();
   const params = useLocalSearchParams<{ type?: string }>();
@@ -49,9 +51,9 @@ export default function NewTransaction() {
     setErr('');
     const errors: Record<string, string> = {};
     const amt = parseFloat(amount);
-    if (!amt || amt <= 0) errors.amount = 'Enter a valid amount';
-    if (!walletId) errors.wallet = 'Select a wallet';
-    if (type === 'transfer' && (!toWalletId || toWalletId === walletId)) errors.toWallet = 'Select a different wallet';
+    if (!amt || amt <= 0) errors.amount = t('transaction.validation.amount');
+    if (!walletId) errors.wallet = t('transaction.validation.wallet');
+    if (type === 'transfer' && (!toWalletId || toWalletId === walletId)) errors.toWallet = t('transaction.validation.toWallet');
     if (Object.keys(errors).length > 0) {
       setErr(Object.values(errors)[0]);
       return;
@@ -69,30 +71,30 @@ export default function NewTransaction() {
   const cur = user?.currency || 'USD';
 
   return (
-    <FormLayout title="New transaction" onBack={() => router.back()}>
+    <FormLayout title={t('transaction.new.title')} onBack={() => router.back()}>
 
       {/* Type selector */}
       <View style={{ flexDirection: 'row', backgroundColor: colors.surface3, borderRadius: radius.md, padding: 4, marginBottom: spacing.xl }}>
-              {(['expense', 'income', 'transfer'] as const).map((t) => (
+              {(['expense', 'income', 'transfer'] as const).map((txType) => (
                 <TouchableOpacity
-                  key={t}
-                  testID={`type-${t}`}
-                  onPress={() => setType(t)}
+                  key={txType}
+                  testID={`type-${txType}`}
+                  onPress={() => setType(txType)}
                   style={{
                     flex: 1,
                     paddingVertical: 10,
                     borderRadius: radius.sm,
                     alignItems: 'center',
-                    backgroundColor: type === t
-                      ? (t === 'income' ? colors.success : t === 'expense' ? colors.error : colors.brandPrimary)
+                    backgroundColor: type === txType
+                      ? (txType === 'income' ? colors.success : txType === 'expense' ? colors.error : colors.brandPrimary)
                       : 'transparent',
                   }}
                 >
                   <Body style={{
-                    color: type === t ? '#fff' : colors.onSurface2,
+                    color: type === txType ? '#fff' : colors.onSurface2,
                     fontFamily: font.textBold,
                     textTransform: 'capitalize',
-                  }}>{t}</Body>
+                  }}>{t(`transaction.type.${txType}`)}</Body>
                 </TouchableOpacity>
               ))}
             </View>
@@ -101,7 +103,7 @@ export default function NewTransaction() {
             <View style={{ alignSelf: 'stretch', marginBottom: spacing.xl }}>
               <MoneyInput
                 testID="tx-amount"
-                label="Amount"
+                label={t('transaction.amount')}
                 variant="hero"
                 symbol={currencySymbol(cur)}
                 value={amount}
@@ -111,25 +113,25 @@ export default function NewTransaction() {
             </View>
 
             {/* Date */}
-            <DateField testID="tx-date" label="Date" value={date} onChange={setDate} />
+            <DateField testID="tx-date" label={t('transaction.date')} value={date} onChange={setDate} />
 
             {/* Category */}
             <CategorySelector type={type} value={category} onChange={setCategory} testID="tx" />
 
             {/* Wallet */}
-            <Label style={{ marginTop: spacing.md }}>{type === 'transfer' ? 'From' : 'Wallet'}</Label>
+            <Label style={{ marginTop: spacing.md }}>{t(type === 'transfer' ? 'transaction.wallet.from' : 'transaction.wallet')}</Label>
             {walletsLoading ? (
               <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
-                <Body muted>Loading wallets…</Body>
+                <Body muted>{t('transaction.loadingWallets')}</Body>
               </View>
             ) : walletsError ? (
               <View style={{ paddingVertical: spacing.md, gap: spacing.sm }}>
                 <Body style={{ color: colors.error }}>{walletsError}</Body>
-                <Button label="Retry" onPress={refreshWallets} />
+                <Button label={t('common.retry')} onPress={refreshWallets} />
               </View>
             ) : wallets.length === 0 ? (
               <View style={{ paddingVertical: spacing.md }}>
-                <Body muted>No wallets found. Add one first.</Body>
+                <Body muted>{t('transaction.noWalletsFirst')}</Body>
               </View>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
@@ -141,19 +143,19 @@ export default function NewTransaction() {
 
             {type === 'transfer' && (
               <>
-                <Label style={{ marginTop: spacing.md }}>To</Label>
+                <Label style={{ marginTop: spacing.md }}>{t('transaction.wallet.to')}</Label>
                 {walletsLoading ? (
                   <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
-                    <Body muted>Loading wallets…</Body>
+                    <Body muted>{t('transaction.loadingWallets')}</Body>
                   </View>
                 ) : walletsError ? (
                   <View style={{ paddingVertical: spacing.md, gap: spacing.sm }}>
                     <Body style={{ color: colors.error }}>{walletsError}</Body>
-                    <Button label="Retry" onPress={refreshWallets} />
+                    <Button label={t('common.retry')} onPress={refreshWallets} />
                   </View>
                 ) : wallets.length === 0 ? (
                   <View style={{ paddingVertical: spacing.md }}>
-                    <Body muted>No wallets found.</Body>
+                    <Body muted>{t('transaction.noWallets')}</Body>
                   </View>
                 ) : (
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
@@ -165,11 +167,11 @@ export default function NewTransaction() {
               </>
             )}
 
-            <Input testID="tx-note" label="Note (optional)" value={note} onChangeText={setNote} placeholder="Coffee, groceries…" />
+            <Input testID="tx-note" label={t('transaction.note.label')} value={note} onChangeText={setNote} placeholder={t('transaction.note.placeholder')} />
 
             {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
 
-            <Button testID="tx-save" label="Save transaction" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
+            <Button testID="tx-save" label={t('transaction.save')} onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
     </FormLayout>
   );
 }
