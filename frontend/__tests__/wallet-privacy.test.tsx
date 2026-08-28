@@ -24,7 +24,7 @@ jest.mock('@/src/auth/AuthProvider', () => ({ useAuth: () => ({ user: { currency
 jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({ useBalancePrivacy: () => ({ isBalanceVisible: mockBalanceVisible, isPrivacyReady: true }) }));
 jest.mock('@/src/hooks/use-wallets', () => ({ useWallets: () => ({ wallets: mockWallets, loading: false, error: '', refresh: jest.fn() }) }));
 jest.mock('@/src/api/client', () => ({ api: { wallets: jest.fn(() => Promise.resolve({ wallets: mockWallets })), transactions: jest.fn(() => Promise.resolve({ transactions: mockTransactions })), deleteTransaction: jest.fn() } }));
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), back: jest.fn() }), useFocusEffect: jest.fn((cb) => cb()), useLocalSearchParams: () => ({ id: 'w1' }) }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), back: jest.fn() }), useFocusEffect: (cb: any) => require('react').useEffect(cb, [cb]), useLocalSearchParams: () => ({ id: 'w1' }) }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }: any) => children }));
 

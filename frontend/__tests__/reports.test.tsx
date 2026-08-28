@@ -151,7 +151,7 @@ describe('Reports screen', () => {
     const Reports = require('@/app/reports').default;
     const { getByText, queryByText } = render(<Reports />);
 
-    expect(getByText('Updating report...')).toBeTruthy();
+    expect(getByText('Updating report…')).toBeTruthy();
     rejectSummary(new Error('offline'));
     await waitFor(() => expect(getByText('Unable to load this period. Try again.')).toBeTruthy());
     expect(queryByText('No transactions in this period.')).toBeNull();

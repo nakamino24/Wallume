@@ -51,7 +51,7 @@ describe('Localization audit', () => {
     ['Profile', 'app/profile.tsx', "t('profile.dataAbout')"],
     ['Reports', 'app/reports.tsx', "t('reports.netCashFlow')"],
     ['Recurring', 'app/recurring.tsx', "t('recurring.empty.title')"],
-    ['Privacy', 'app/privacy.tsx', "t('privacy.storage.body')"],
+    ['Privacy', 'app/privacy.tsx', 'privacy.storage.body'],
   ])('%s critical copy uses localization', (_name, relativePath, expected) => {
     const src = require('fs').readFileSync(require('path').join(__dirname, '..', relativePath), 'utf8');
     expect(src).toContain(expected);

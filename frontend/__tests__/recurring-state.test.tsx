@@ -3,6 +3,11 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockRecurring = jest.fn();
 
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: jest.fn(), back: jest.fn() }),
+  useFocusEffect: (cb: any) => require('react').useEffect(cb, [cb]),
+}));
+
 jest.mock('@/src/api/client', () => ({
   api: {
     recurring: mockRecurring,
@@ -12,6 +17,10 @@ jest.mock('@/src/api/client', () => ({
 
 jest.mock('@/src/auth/AuthProvider', () => ({
   useAuth: () => ({ user: { currency: 'IDR' } }),
+}));
+
+jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({
+  useBalancePrivacy: () => ({ isBalanceVisible: true, isPrivacyReady: true }),
 }));
 
 jest.mock('@/src/theme/ThemeProvider', () => ({
@@ -58,4 +67,3 @@ describe('Recurring data states', () => {
     errorSpy.mockRestore();
   });
 });
-

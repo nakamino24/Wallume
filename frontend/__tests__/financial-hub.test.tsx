@@ -22,7 +22,7 @@ const mockApi = {
 };
 jest.mock('@/src/api/client', () => ({ api: mockApi }));
 jest.mock('@/src/auth/AuthProvider', () => ({ useAuth: () => ({ user: { currency: 'IDR' } }) }));
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }), useFocusEffect: jest.fn((cb) => cb()) }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }), useFocusEffect: (cb: any) => require('react').useEffect(cb, [cb]) }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }: any) => children }));
 jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({ useBalancePrivacy: () => ({ isBalanceVisible: false, isPrivacyReady: true }) }));
 
