@@ -14,6 +14,7 @@ import { MoneyInput } from '@/src/components/MoneyInput';
 import { CategorySelector } from '@/src/components/CategorySelector';
 import { todayLocalISO } from '@/src/utils/dates';
 import { useTransactions } from '@/src/hooks/use-transactions';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 // Edit an existing transaction. The list screen (transactions.tsx) passes the
 // transaction's fields in as route params, so we don't need a dedicated
@@ -21,6 +22,7 @@ import { useTransactions } from '@/src/hooks/use-transactions';
 export default function EditTransaction() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const { getOptions, isKnown } = useUserCategories();
   const params = useLocalSearchParams<{
@@ -49,9 +51,9 @@ export default function EditTransaction() {
   const submit = async () => {
     setErr('');
     const amt = parseFloat(amount);
-    if (!amt || amt <= 0) { setErr('Enter a valid amount'); return; }
-    if (!walletId) { setErr('Select a wallet'); return; }
-    if (type === 'transfer' && (!toWalletId || toWalletId === walletId)) { setErr('Select a different destination wallet'); return; }
+    if (!amt || amt <= 0) { setErr(t('transaction.validation.amount')); return; }
+    if (!walletId) { setErr(t('transaction.validation.wallet')); return; }
+    if (type === 'transfer' && (!toWalletId || toWalletId === walletId)) { setErr(t('transaction.validation.toWallet')); return; }
     edit(params.id, {
         wallet_id: walletId,
         to_wallet_id: type === 'transfer' ? toWalletId : undefined,
@@ -63,32 +65,32 @@ export default function EditTransaction() {
   const cur = user?.currency || 'USD';
 
   return (
-    <FormLayout title="Edit transaction" onBack={() => router.back()}>
+    <FormLayout title={t('transaction.edit.title')} onBack={() => router.back()}>
       {/* Type selector */}
             <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.md, padding: 4, marginBottom: spacing.xl }}>
-              {(['expense', 'income', 'transfer'] as const).map((t) => (
+              {(['expense', 'income', 'transfer'] as const).map((txType) => (
                 <TouchableOpacity
-                  key={t}
-                  testID={`edit-type-${t}`}
+                  key={txType}
+                  testID={`edit-type-${txType}`}
                   onPress={() => {
-                    setType(t);
-                    if (t !== 'transfer' && !isKnown(t, category)) setCategory(getOptions(t)[0]);
+                    setType(txType);
+                    if (txType !== 'transfer' && !isKnown(txType, category)) setCategory(getOptions(txType)[0]);
                   }}
                   style={{
                     flex: 1,
                     paddingVertical: 10,
                     borderRadius: radius.md,
                     alignItems: 'center',
-                    backgroundColor: type === t
-                      ? (t === 'income' ? colors.success : t === 'expense' ? colors.error : colors.brandPrimary)
+                    backgroundColor: type === txType
+                      ? (txType === 'income' ? colors.success : txType === 'expense' ? colors.error : colors.brandPrimary)
                       : 'transparent',
                   }}
                 >
                   <Body style={{
-                    color: type === t ? '#fff' : colors.onSurface2,
+                    color: type === txType ? '#fff' : colors.onSurface2,
                     fontFamily: font.textBold,
                     textTransform: 'capitalize',
-                  }}>{t}</Body>
+                  }}>{t(`transaction.type.${txType}`)}</Body>
                 </TouchableOpacity>
               ))}
             </View>
@@ -97,7 +99,7 @@ export default function EditTransaction() {
             <View style={{ alignSelf: 'stretch', marginBottom: spacing.xl }}>
               <MoneyInput
                 testID="edit-tx-amount"
-                label="Amount"
+                label={t('transaction.amount')}
                 variant="hero"
                 symbol={currencySymbol(cur)}
                 value={amount}
@@ -107,25 +109,25 @@ export default function EditTransaction() {
             </View>
 
             {/* Date */}
-            <DateField testID="edit-tx-date" label="Date" value={date} onChange={setDate} />
+            <DateField testID="edit-tx-date" label={t('transaction.date')} value={date} onChange={setDate} />
 
             {/* Category */}
             <CategorySelector type={type} value={category} onChange={setCategory} testID="edit-tx" />
 
             {/* Wallet */}
-            <Label style={{ marginTop: spacing.md }}>{type === 'transfer' ? 'From' : 'Wallet'}</Label>
+            <Label style={{ marginTop: spacing.md }}>{t(type === 'transfer' ? 'transaction.wallet.from' : 'transaction.wallet')}</Label>
             {walletsLoading ? (
               <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
-                <Body muted>Loading wallets…</Body>
+                <Body muted>{t('transaction.loadingWallets')}</Body>
               </View>
             ) : walletsError ? (
               <View style={{ paddingVertical: spacing.md, gap: spacing.sm }}>
                 <Body style={{ color: colors.error }}>{walletsError}</Body>
-                <Button label="Retry" onPress={refreshWallets} />
+                <Button label={t('common.retry')} onPress={refreshWallets} />
               </View>
             ) : wallets.length === 0 ? (
               <View style={{ paddingVertical: spacing.md }}>
-                <Body muted>No wallets found.</Body>
+                <Body muted>{t('transaction.noWallets')}</Body>
               </View>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
@@ -137,19 +139,19 @@ export default function EditTransaction() {
 
             {type === 'transfer' && (
               <>
-                <Label style={{ marginTop: spacing.md }}>To</Label>
+                <Label style={{ marginTop: spacing.md }}>{t('transaction.wallet.to')}</Label>
                 {walletsLoading ? (
                   <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
-                    <Body muted>Loading wallets…</Body>
+                    <Body muted>{t('transaction.loadingWallets')}</Body>
                   </View>
                 ) : walletsError ? (
                   <View style={{ paddingVertical: spacing.md, gap: spacing.sm }}>
                     <Body style={{ color: colors.error }}>{walletsError}</Body>
-                    <Button label="Retry" onPress={refreshWallets} />
+                    <Button label={t('common.retry')} onPress={refreshWallets} />
                   </View>
                 ) : wallets.length === 0 ? (
                   <View style={{ paddingVertical: spacing.md }}>
-                    <Body muted>No wallets found.</Body>
+                    <Body muted>{t('transaction.noWallets')}</Body>
                   </View>
                 ) : (
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
@@ -161,11 +163,11 @@ export default function EditTransaction() {
               </>
             )}
 
-            <Input testID="edit-tx-note" label="Note (optional)" value={note} onChangeText={setNote} placeholder="Coffee, groceries…" />
+            <Input testID="edit-tx-note" label={t('transaction.note.label')} value={note} onChangeText={setNote} placeholder={t('transaction.note.placeholder')} />
 
             {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
 
-            <Button testID="edit-tx-save" label="Save changes" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
+            <Button testID="edit-tx-save" label={t('transaction.saveChanges')} onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
     </FormLayout>
   );
 }

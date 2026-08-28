@@ -110,7 +110,7 @@ export default function Portfolio() {
                     return (
                       <View key={k} style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: TYPE_COLORS[k] || TYPE_COLORS.other, marginRight: 8 }} />
-                        <Body style={{ flex: 1, textTransform: 'capitalize' }}>{k.replace('_', ' ')}</Body>
+                        <Body style={{ flex: 1 }}>{kindLabel(k as InvestmentDoc['kind'])}</Body>
                         <Body style={{ fontFamily: font.textMedium, marginRight: spacing.md }}>{pct.toFixed(1)}%</Body>
                         <MoneyValue value={v.value} currency={cur} style={{ fontFamily: font.displayBold }} />
                       </View>

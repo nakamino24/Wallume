@@ -146,7 +146,7 @@ export function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
           const statusLabel = over ? t('budgets.over') : t('budgets.remaining');
           const statusAmount = over ? overspent : remaining;
           return (
-            <Card key={b.id} testID={`budget-card-${b.id}`} onPress={() => confirmDialog('Delete budget?', async () => { await api.deleteBudget(b.id); onReload(); })}>
+            <Card key={b.id} testID={`budget-card-${b.id}`} onPress={() => confirmDialog(t('budget.delete.title'), async () => { await api.deleteBudget(b.id); onReload(); })}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
                 <View style={{ flexShrink: 0 }}>
                   <ProgressRing progress={ringProgress} color={color} size={54} stroke={7}>
@@ -261,9 +261,9 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
 
   const onDebtAction = (d: any) => {
     Alert.alert(d.name, undefined, [
-      { text: 'Cancel', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: d.remaining > 0 ? 'Mark as paid' : 'Delete',
+        text: d.remaining > 0 ? t('debts.action.paid') : t('debts.action.delete'),
         style: d.remaining > 0 ? 'default' : 'destructive',
         onPress: async () => {
           try {
@@ -271,8 +271,8 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
               const r = await api.updateDebt(d.id, { remaining: 0 });
               if (r.celebrate) {
                 Alert.alert(
-                  '🎉 Debt paid off!',
-                  `Congratulations! ${d.name} is fully paid off. You're one step closer to financial freedom.`,
+                  t('debts.paidTitle'),
+                  t('debts.paidMessage', { name: d.name }),
                 );
               }
             } else {
@@ -282,7 +282,7 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
           } catch {}
         },
       },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await api.deleteDebt(d.id); onReload(); } },
+      { text: t('common.delete'), style: 'destructive', onPress: async () => { await api.deleteDebt(d.id); onReload(); } },
     ]);
   };
   return (
@@ -298,7 +298,7 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
         <TouchableOpacity testID="debt-planner-link" onPress={() => router.push('/debt-planner')}
           style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.brandSoft, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.md }}>
           <Ionicons name="trending-down" size={18} color={colors.onBrandSoft} />
-          <Body style={{ flex: 1, fontFamily: font.textMedium, color: colors.onBrandSoft }}>See your payoff plan</Body>
+          <Body style={{ flex: 1, fontFamily: font.textMedium, color: colors.onBrandSoft }}>{t('debts.payoffLink')}</Body>
           <Ionicons name="chevron-forward" size={16} color={colors.onBrandSoft} />
         </TouchableOpacity>
       )}
@@ -314,16 +314,16 @@ function DebtsSection({ debts, currency, onAdd, onReload }: any) {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <View style={{ flex: 1 }}>
                 <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{d.name}</Body>
-                <Body muted style={{ marginTop: 2 }}>{d.kind.replace('_', ' ')} · {d.interest_rate}% APR</Body>
+                <Body muted style={{ marginTop: 2 }}>{t(`debt.kind.${d.kind}`)} · {d.interest_rate}% {t('debt.aprLabel')}</Body>
               </View>
               <MoneyValue value={remaining} currency={currency} style={{ fontFamily: font.displayBold, color: colors.error }} />
             </View>
             <View style={{ marginTop: spacing.md }}>
               <ProgressBar progress={p} color={colors.warning} />
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
-                <Body muted style={{ fontSize: 12 }}>Paid </Body>
+                <Body muted style={{ fontSize: 12 }}>{t('debts.paid')} </Body>
                 <MoneyValue value={paid} currency={currency} style={{ color: colors.muted, fontSize: 12 }} />
-                <Body muted style={{ fontSize: 12 }}> of </Body>
+                <Body muted style={{ fontSize: 12 }}> {t('debts.of')} </Body>
                 <MoneyValue value={principal} currency={currency} style={{ color: colors.muted, fontSize: 12 }} />
                 <Body muted style={{ fontSize: 12 }}> ({Math.round(p * 100)}%)</Body>
               </View>
@@ -354,7 +354,7 @@ export function AssetsSection({ assets, currency, onAdd, onReload }: any) {
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <View style={{ flex: 1 }}>
               <Body style={{ fontFamily: font.textBold, fontSize: 15 }}>{a.name}</Body>
-              <Body muted style={{ marginTop: 2 }}>{a.kind.replace('_', ' ')}</Body>
+              <Body muted style={{ marginTop: 2 }}>{t(`asset.kind.${a.kind}`)}</Body>
             </View>
             <MoneyValue value={cv(a, 'value')} currency={currency} style={{ fontFamily: font.displayBold }} />
           </View>
@@ -411,7 +411,7 @@ export function InvestmentsSection({ investments, currency, onAdd }: any) {
 
 function confirmDialog(msg: string, onOk: () => Promise<void>) {
   Alert.alert(msg, undefined, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Delete', style: 'destructive', onPress: () => { onOk(); } },
+    { text: t('common.cancel'), style: 'cancel' },
+    { text: t('common.delete'), style: 'destructive', onPress: () => { onOk(); } },
   ]);
 }

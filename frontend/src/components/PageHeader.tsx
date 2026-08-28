@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { H1, Body } from '@/src/components/ui';
 import { spacing } from '@/src/theme/tokens';
 import { useTheme } from '@/src/theme/ThemeProvider';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 export function PageHeader({ title, subtitle, onBack, action }: {
   title: string;
@@ -13,10 +14,11 @@ export function PageHeader({ title, subtitle, onBack, action }: {
   action?: React.ReactNode;
 }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.lg, gap: spacing.md }}>
       {onBack && (
-        <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={onBack} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('navigation.back')} onPress={onBack} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}>
           <Ionicons name="chevron-back" size={26} color={colors.onSurface} />
         </Pressable>
       )}

@@ -12,10 +12,12 @@ import { Screen, Card, H2, Body, Label, Button, ProgressBar } from '@/src/compon
 import { MoneyInput } from '@/src/components/MoneyInput';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 export default function GoalDetail() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [goal, setGoal] = useState<any>(null);
@@ -27,7 +29,7 @@ export default function GoalDetail() {
   }, [id]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  if (!goal) return <Screen><SafeAreaView><Body style={{ padding: spacing.xl }}>Loading…</Body></SafeAreaView></Screen>;
+  if (!goal) return <Screen><SafeAreaView><Body style={{ padding: spacing.xl }}>{t('common.loading')}</Body></SafeAreaView></Screen>;
 
   const cur = user?.currency || 'USD';
   const saved = cv(goal, 'saved_amount');
@@ -43,9 +45,9 @@ export default function GoalDetail() {
     load();
   };
   const remove = () => {
-    Alert.alert('Delete goal?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await api.deleteGoal(goal.id); router.back(); } },
+    Alert.alert(t('goal.delete.title'), t('goal.delete.message'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: async () => { await api.deleteGoal(goal.id); router.back(); } },
     ]);
   };
 
@@ -53,33 +55,33 @@ export default function GoalDetail() {
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-          <TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('navigation.back')} hitSlop={10} onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
           <H2 style={{ marginLeft: spacing.md, flex: 1 }}>{goal.name}</H2>
-          <TouchableOpacity onPress={remove}><Ionicons name="trash" size={20} color={colors.error} /></TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('goal.delete.title')} hitSlop={10} onPress={remove}><Ionicons name="trash" size={20} color={colors.error} /></TouchableOpacity>
         </View>
         <KeyboardAwareContainer contentContainerStyle={{ padding: spacing.xl, gap: spacing.md }}>
           <Card>
-            <Label>Saved</Label>
+            <Label>{t('goal.saved')}</Label>
             <MoneyValue value={saved} currency={cur} style={{ fontFamily: font.displayBold, fontSize: 38, marginTop: 6, letterSpacing: -0.5 }} />
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}><Body muted>of </Body><MoneyValue value={target} currency={cur} style={{ color: colors.muted, fontSize: 15 }} /><Body muted> target</Body></View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}><Body muted>{t('goal.of')} </Body><MoneyValue value={target} currency={cur} style={{ color: colors.muted, fontSize: 15 }} /><Body muted> {t('goal.targetSuffix')}</Body></View>
             <View style={{ marginTop: spacing.md }}>
               <ProgressBar progress={p} height={10} />
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md }}>
-              <Body muted>{Math.round(p * 100)}% complete</Body>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}><MoneyValue value={remaining} currency={cur} style={{ fontFamily: font.textBold }} /><Body> to go</Body></View>
+              <Body muted>{t('goal.complete', { value: Math.round(p * 100) })}</Body>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}><MoneyValue value={remaining} currency={cur} style={{ fontFamily: font.textBold }} /><Body> {t('goal.toGoSuffix')}</Body></View>
             </View>
           </Card>
 
           <Card>
-            <Label>Add contribution</Label>
+            <Label>{t('goal.addContribution')}</Label>
             <MoneyInput testID="goal-contribute-amt" currency={cur} value={amt} onChange={setAmt} placeholder="100" />
-            <Button testID="goal-contribute-btn" label="Add" onPress={contribute} />
+            <Button testID="goal-contribute-btn" label={t('goal.add')} onPress={contribute} />
           </Card>
 
           {goal.target_date && (
             <Card>
-              <Label>Target date</Label>
+              <Label>{t('goal.targetDate')}</Label>
               <Body style={{ fontFamily: font.textBold, marginTop: 4 }}>{goal.target_date}</Body>
             </Card>
           )}
@@ -88,4 +90,3 @@ export default function GoalDetail() {
     </Screen>
   );
 }
-

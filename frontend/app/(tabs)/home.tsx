@@ -76,20 +76,20 @@ export default function Home() {
 
   // Delete a transaction inline, reusing the exact confirm pattern from
   // transactions.tsx so Home and the full list behave identically.
-  const removeTx = useCallback((t: any) => {
-    Alert.alert('Delete transaction?', undefined, [
-      { text: 'Cancel', style: 'cancel' },
+  const removeTx = useCallback((transaction: any) => {
+    Alert.alert(t('transactions.delete.title'), undefined, [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
-            removeTransaction(t.id);
+            removeTransaction(transaction.id);
           } catch {}
         },
       },
     ]);
-  }, [removeTransaction]);
+  }, [removeTransaction, t]);
 
   const cur = user?.currency || 'USD';
   const shownTxs = filter === 'all' ? txs : txs.filter((t) => t.type === filter);
@@ -408,7 +408,7 @@ export default function Home() {
                 testID="home-tx-empty"
                 title={t('no.transactions')}
                 subtitle={t('no.transactions.sub')}
-                actionLabel="Add transaction"
+                actionLabel={t('add.transaction')}
                 onAction={() => router.push('/transaction/new')}
               />
             ) : (

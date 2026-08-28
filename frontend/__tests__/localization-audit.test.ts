@@ -56,4 +56,45 @@ describe('Localization audit', () => {
     const src = require('fs').readFileSync(require('path').join(__dirname, '..', relativePath), 'utf8');
     expect(src).toContain(expected);
   });
+
+  it.each([
+    ['Transaction create', 'app/transaction/new.tsx', "transaction.new.title"],
+    ['Transaction edit', 'app/transaction/[id].tsx', "transaction.edit.title"],
+    ['Wallet create', 'app/wallet/new.tsx', "wallet.new.title"],
+    ['Wallet edit', 'app/wallet/edit/[id].tsx', "wallet.edit.title"],
+    ['Goal create', 'app/goal/new.tsx', "goal.new.title"],
+    ['Goal detail', 'app/goal/[id].tsx', "goal.addContribution"],
+    ['Budget create', 'app/budget/new.tsx', "budget.new.title"],
+    ['Asset create', 'app/asset/new.tsx', "asset.new.title"],
+    ['Debt create', 'app/debt/new.tsx', "debt.new.title"],
+    ['Debt planner', 'app/debt-planner.tsx', "planner.title"],
+    ['Plan create', 'app/plan/new.tsx', "plan.form.chooseType"],
+    ['Investment create', 'app/investment/new.tsx', "investment.new.title"],
+    ['Investment detail', 'app/investment/[id].tsx', "investment.currentValue"],
+    ['Export report', 'app/export-report.tsx', "export.financialReport"],
+    ['App lock', 'src/auth/AppLockGate.tsx', "applock.title"],
+    ['Category manager', 'src/components/QuickAddCategoryModal.tsx', "category.manageTitle"],
+    ['Report period', 'src/components/ReportPeriodPicker.tsx', "report.chooseRange"],
+  ])('%s secondary flow uses localization', (_name, relativePath, expectedKey) => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', relativePath), 'utf8');
+    expect(src).toContain(expectedKey);
+  });
+
+  it('secondary flows do not regress to known hardcoded English copy', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const files = [
+      'app/transaction/new.tsx', 'app/transaction/[id].tsx',
+      'app/wallet/new.tsx', 'app/wallet/edit/[id].tsx',
+      'app/goal/new.tsx', 'app/goal/[id].tsx',
+      'app/budget/new.tsx', 'app/asset/new.tsx', 'app/debt/new.tsx',
+      'app/debt-planner.tsx', 'app/plan/new.tsx',
+      'app/investment/new.tsx', 'app/investment/[id].tsx',
+      'src/auth/AppLockGate.tsx', 'src/components/QuickAddCategoryModal.tsx',
+      'src/components/ReportPeriodPicker.tsx',
+    ];
+    const source = files.map((file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8')).join('\n');
+    expect(source).not.toMatch(/(?:title|label|subtitle|placeholder)="(?:New |Edit |Delete |Add |Save |Choose |Current |Target |Monthly |Category|Type|Name|Retry)/);
+    expect(source).not.toMatch(/Alert\.alert\(['"](?:Delete|Report|Could not)/);
+  });
 });

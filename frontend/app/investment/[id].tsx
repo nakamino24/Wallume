@@ -12,10 +12,12 @@ import { api } from '@/src/api/client';
 import { Screen, Card, H1, Body, Label, Divider } from '@/src/components/ui';
 import { computeInvestmentMetrics, kindLabel, quantitySummary, type InvestmentDoc } from '@/src/lib/investmentKinds';
 import { MoneyValue } from '@/src/components/MoneyValue';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 export default function InvestmentDetail() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [inv, setInv] = useState<InvestmentDoc | null>(null);
@@ -38,7 +40,7 @@ export default function InvestmentDetail() {
       <Screen>
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-            <TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('navigation.back')} hitSlop={10} onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
           </View>
         </SafeAreaView>
       </Screen>
@@ -68,10 +70,10 @@ export default function InvestmentDetail() {
 
   const onDelete = () => {
     sheetRef.current?.dismiss();
-    Alert.alert('Delete investment?', `Remove ${inv.name} from your portfolio.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('investments.delete.title'), t('investment.deleteMessage', { name: inv.name }), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: async () => { await api.deleteInvestment(inv.id!); router.back(); },
       },
     ]);
@@ -86,8 +88,8 @@ export default function InvestmentDetail() {
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-          <TouchableOpacity testID="inv-detail-back" onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
-          <TouchableOpacity testID="inv-detail-actions" onPress={() => sheetRef.current?.present()}
+          <TouchableOpacity testID="inv-detail-back" accessibilityRole="button" accessibilityLabel={t('navigation.back')} hitSlop={10} onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
+          <TouchableOpacity testID="inv-detail-actions" accessibilityRole="button" accessibilityLabel={t('navigation.moreActions')} onPress={() => sheetRef.current?.present()}
             style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="ellipsis-horizontal" size={18} color={colors.onSurface} />
           </TouchableOpacity>
@@ -99,7 +101,7 @@ export default function InvestmentDetail() {
           {!!inv.ticker && <Body muted style={{ marginTop: 2 }}>{inv.ticker}</Body>}
 
           <Card style={{ marginTop: spacing.lg }}>
-            <Label>Current Value</Label>
+            <Label>{t('investment.currentValue')}</Label>
             <MoneyValue value={value} currency={cur} style={{ fontFamily: font.displayBold, fontSize: 26, marginTop: 4 }} />
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, gap: spacing.sm }}>
               <Ionicons name={pl >= 0 ? 'trending-up' : 'trending-down'} size={16} color={plColor} />
@@ -109,27 +111,27 @@ export default function InvestmentDetail() {
             <Divider />
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
-              <Body muted>Quantity</Body>
+              <Body muted>{t('investment.quantity')}</Body>
               <Body style={{ fontFamily: font.textMedium }}>{quantitySummary(inv)}</Body>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
-              <Body muted>Total Cost</Body>
+              <Body muted>{t('investment.totalCost')}</Body>
               <MoneyValue value={cost} currency={cur} style={{ fontFamily: font.textMedium }} />
             </View>
             {inv.kind === 'bond' && !!inv.face_value && (
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
-                <Body muted>Face Value</Body>
+                <Body muted>{t('investment.faceValue')}</Body>
                 <MoneyValue value={cv(inv, 'face_value')} currency={cur} style={{ fontFamily: font.textMedium }} />
               </View>
             )}
             {inv.kind === 'bond' && !!inv.coupon_rate && (
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
-                <Body muted>Coupon Rate</Body>
+                <Body muted>{t('investment.couponRate')}</Body>
                 <Body style={{ fontFamily: font.textMedium }}>{inv.coupon_rate}%</Body>
               </View>
             )}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Body muted>Portfolio Allocation</Body>
+              <Body muted>{t('investment.portfolioAllocation')}</Body>
               <Body style={{ fontFamily: font.textMedium }}>{allocationPct.toFixed(1)}%</Body>
             </View>
           </Card>
@@ -138,13 +140,13 @@ export default function InvestmentDetail() {
             <Card style={{ marginTop: spacing.md }}>
               {!!inv.purchase_date && (
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: inv.notes ? spacing.sm : 0 }}>
-                  <Body muted>Purchase date</Body>
+                  <Body muted>{t('investment.purchaseDate')}</Body>
                   <Body style={{ fontFamily: font.textMedium }}>{inv.purchase_date}</Body>
                 </View>
               )}
               {!!inv.notes && (
                 <>
-                  <Label style={{ marginBottom: 4 }}>Notes</Label>
+                  <Label style={{ marginBottom: 4 }}>{t('common.notes')}</Label>
                   <Body>{inv.notes}</Body>
                 </>
               )}
@@ -152,7 +154,7 @@ export default function InvestmentDetail() {
           )}
 
           <Body muted style={{ marginTop: spacing.lg, fontSize: 12, textAlign: 'center' }}>
-            Performance chart will appear here once price history tracking is added.
+            {t('investment.performancePending')}
           </Body>
         </View>
       </SafeAreaView>
@@ -163,12 +165,12 @@ export default function InvestmentDetail() {
           <TouchableOpacity testID="inv-sheet-edit" onPress={onEdit}
             style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md }}>
             <Ionicons name="create-outline" size={20} color={colors.onSurface} />
-            <Body style={{ fontFamily: font.textMedium }}>Edit investment</Body>
+            <Body style={{ fontFamily: font.textMedium }}>{t('investment.edit')}</Body>
           </TouchableOpacity>
           <TouchableOpacity testID="inv-sheet-delete" onPress={onDelete}
             style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md }}>
             <Ionicons name="trash-outline" size={20} color={colors.error} />
-            <Body style={{ color: colors.error, fontFamily: font.textMedium }}>Delete investment</Body>
+            <Body style={{ color: colors.error, fontFamily: font.textMedium }}>{t('investment.delete')}</Body>
           </TouchableOpacity>
         </BottomSheetView>
       </BottomSheetModal>

@@ -69,21 +69,21 @@ export default function WalletDetail() {
     setRefreshing(false);
   }, [load]);
 
-  const removeTx = useCallback((t: any) => {
-    Alert.alert('Delete transaction?', undefined, [
-      { text: 'Cancel', style: 'cancel' },
+  const removeTx = useCallback((transaction: any) => {
+    Alert.alert(t('transactions.delete.title'), undefined, [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
-            await api.deleteTransaction(t.id);
-            setTxs((prev) => prev.filter((x) => x.id !== t.id));
+            await api.deleteTransaction(transaction.id);
+            setTxs((prev) => prev.filter((x) => x.id !== transaction.id));
           } catch {}
         },
       },
     ]);
-  }, []);
+  }, [t]);
 
   const cur = user?.currency || 'USD';
   const meta = wallet ? (TYPE_TINT[wallet.type] || '#6B7280') : '#6B7280';

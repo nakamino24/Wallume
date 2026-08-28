@@ -10,19 +10,14 @@ import { api } from '@/src/api/client';
 import { Screen, H2, Body, Label, Button, Input, Chip } from '@/src/components/ui';
 import { MoneyInput } from '@/src/components/MoneyInput';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
+import { useI18n } from '@/src/lib/I18nProvider';
 
-const KINDS = [
-  { id: 'real_estate', label: 'Real Estate' },
-  { id: 'vehicle', label: 'Vehicle' },
-  { id: 'gadget', label: 'Gadget' },
-  { id: 'cash', label: 'Cash' },
-  { id: 'receivable', label: 'Receivable' },
-  { id: 'other', label: 'Other' },
-];
+const KINDS = ['real_estate', 'vehicle', 'gadget', 'cash', 'receivable', 'other'] as const;
 
 export default function NewAsset() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [kind, setKind] = useState('real_estate');
   const [value, setValue] = useState('');
@@ -31,14 +26,14 @@ export default function NewAsset() {
 
   const submit = async () => {
     setErr('');
-    if (!name.trim()) { setErr('Enter a name'); return; }
+    if (!name.trim()) { setErr(t('asset.validation.name')); return; }
     const v = parseFloat(value);
-    if (!v || v <= 0) { setErr('Enter a value'); return; }
+    if (!v || v <= 0) { setErr(t('asset.validation.value')); return; }
     setLoading(true);
     try {
       await api.createAsset({ name: name.trim(), kind, value: v });
       router.back();
-    } catch (e: any) { setErr(e.message); }
+    } catch { setErr(t('common.error')); }
     finally { setLoading(false); }
   };
 
@@ -47,19 +42,19 @@ export default function NewAsset() {
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <KeyboardAwareContainer contentContainerStyle={{ padding: spacing.xl }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 0, paddingTop: spacing.md }}>
-            <TouchableOpacity onPress={() => router.back()}><Ionicons name="close" size={24} color={colors.onSurface} /></TouchableOpacity>
-            <H2 style={{ marginLeft: spacing.md }}>New asset</H2>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('navigation.close')} hitSlop={10} onPress={() => router.back()}><Ionicons name="close" size={24} color={colors.onSurface} /></TouchableOpacity>
+            <H2 style={{ marginLeft: spacing.md }}>{t('asset.new.title')}</H2>
           </View>
-          <Input testID="asset-name" label="Name" value={name} onChangeText={setName} placeholder="Condo, MacBook, Rolex…" />
-          <Label>Kind</Label>
+          <Input testID="asset-name" label={t('common.name')} value={name} onChangeText={setName} placeholder={t('asset.namePlaceholder')} />
+          <Label>{t('goal.kind')}</Label>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-            {KINDS.map((k) => (
-              <Chip key={k.id} testID={`asset-kind-${k.id}`} label={k.label} active={kind === k.id} onPress={() => setKind(k.id)} />
+            {KINDS.map((assetKind) => (
+              <Chip key={assetKind} testID={`asset-kind-${assetKind}`} label={t(`asset.kind.${assetKind}`)} active={kind === assetKind} onPress={() => setKind(assetKind)} />
             ))}
           </ScrollView>
-          <MoneyInput testID="asset-value" label="Current value" value={value} onChange={setValue} placeholder="150000" />
+          <MoneyInput testID="asset-value" label={t('asset.currentValue')} value={value} onChange={setValue} placeholder="150000" />
           {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
-          <Button testID="asset-save" label="Add asset" onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
+          <Button testID="asset-save" label={t('asset.add')} onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
         </KeyboardAwareContainer>
       </SafeAreaView>
     </Screen>
