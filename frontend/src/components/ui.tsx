@@ -12,12 +12,12 @@ export function Screen({ children, style }: { children: React.ReactNode; style?:
   return <AppBackground><View style={[{ flex: 1 }, style]}>{children}</View></AppBackground>;
 }
 
-export function Card({ children, style, onPress, testID }: {
-  children: React.ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; testID?: string;
+export function Card({ children, style, onPress, testID, accessibilityLabel }: {
+  children: React.ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; testID?: string; accessibilityLabel?: string;
 }) {
   const { colors } = useTheme();
   const inner = (
-    <View style={[{
+    <View testID={onPress ? undefined : testID} style={[{
       backgroundColor: colors.surface2,
       borderRadius: radius.md,
       padding: spacing.lg,
@@ -25,7 +25,7 @@ export function Card({ children, style, onPress, testID }: {
       borderColor: colors.border,
     }, style]}>{children}</View>
   );
-  if (onPress) return <Pressable testID={testID} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] })}>{inner}</Pressable>;
+  if (onPress) return <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] })}>{inner}</Pressable>;
   return inner;
 }
 
@@ -74,13 +74,13 @@ export function Label({ children, style }: { children: React.ReactNode; style?: 
 
 // Button
 export function Button({
-  label, onPress, variant = 'primary', loading, disabled, style, testID, icon,
+  label, onPress, variant = 'primary', loading, disabled, style, testID, icon, accessibilityLabel,
 }: {
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   loading?: boolean; disabled?: boolean;
-  style?: StyleProp<ViewStyle>; testID?: string; icon?: React.ReactNode;
+  style?: StyleProp<ViewStyle>; testID?: string; icon?: React.ReactNode; accessibilityLabel?: string;
 }) {
   const { colors } = useTheme();
   const isPrimary = variant === 'primary';
@@ -92,6 +92,9 @@ export function Button({
   return (
     <Pressable
       testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel || label}
+      accessibilityState={{ disabled: Boolean(disabled || loading), busy: Boolean(loading) }}
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [{
@@ -166,9 +169,12 @@ export function Chip({ label, active, onPress, testID }: { label: string; active
   return (
     <Pressable
       testID={testID}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={label}
+      accessibilityState={{ selected: Boolean(active), disabled: !onPress }}
       onPress={onPress}
       style={({ pressed }) => ({
-        height: 34,
+        minHeight: 44,
         flexShrink: 0,
         paddingHorizontal: spacing.md,
         borderRadius: radius.pill,
@@ -226,6 +232,7 @@ export function Input(props: TextInputProps & { label?: string; testID?: string 
       <TextInput
         ref={ref}
         testID={testID}
+        accessibilityLabel={label || rest.placeholder}
         placeholderTextColor={colors.muted}
         onFocus={(e) => { focusToInput(ref.current); if (onFocus) onFocus(e); }}
         {...rest}

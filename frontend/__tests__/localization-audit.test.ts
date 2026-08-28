@@ -42,4 +42,18 @@ describe('Localization audit', () => {
     expect(src).toContain("t('budgets.remaining')");
     expect(src).toContain('budgetCategoryLabel');
   });
+
+  it.each([
+    ['Auth', 'app/(auth)/login.tsx', "t('welcome.back')"],
+    ['Signup', 'app/(auth)/signup.tsx', "t('create.account')"],
+    ['Onboarding', 'app/(auth)/onboarding.tsx', "t('onboarding.payday.title')"],
+    ['Tabs', 'app/(tabs)/_layout.tsx', "t('home')"],
+    ['Profile', 'app/profile.tsx', "t('profile.dataAbout')"],
+    ['Reports', 'app/reports.tsx', "t('reports.netCashFlow')"],
+    ['Recurring', 'app/recurring.tsx', "t('recurring.empty.title')"],
+    ['Privacy', 'app/privacy.tsx', "t('privacy.storage.body')"],
+  ])('%s critical copy uses localization', (_name, relativePath, expected) => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', relativePath), 'utf8');
+    expect(src).toContain(expected);
+  });
 });

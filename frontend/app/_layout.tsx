@@ -17,6 +17,7 @@ import { AuthProvider } from '@/src/auth/AuthProvider';
 import { AppLockGate } from '@/src/auth/AppLockGate';
 import { AppErrorBoundary } from '@/src/components/ErrorBoundary';
 import { ToastProvider } from '@/src/components/Toast';
+import { I18nProvider, useI18n } from '@/src/lib/I18nProvider';
 
 if (__DEV__) {
   const originalWarn = console.warn;
@@ -65,7 +66,21 @@ export default function RootLayout() {
   const [iconsLoaded, iconsErr] = useIconFonts();
   const [fontsLoaded, fontsErr] = useFonts(CUSTOM_FONTS);
 
-  const ready = (iconsLoaded || iconsErr) && fontsLoaded;
+  return (
+    <I18nProvider>
+      <InitializedRoot iconsLoaded={iconsLoaded} iconsErr={iconsErr} fontsLoaded={fontsLoaded} fontsErr={fontsErr} />
+    </I18nProvider>
+  );
+}
+
+function InitializedRoot({ iconsLoaded, iconsErr, fontsLoaded, fontsErr }: {
+  iconsLoaded: boolean;
+  iconsErr: Error | null;
+  fontsLoaded: boolean;
+  fontsErr: Error | null;
+}) {
+  const { ready: localeReady } = useI18n();
+  const ready = (iconsLoaded || iconsErr) && fontsLoaded && localeReady;
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();

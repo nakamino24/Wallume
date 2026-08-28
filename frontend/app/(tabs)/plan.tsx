@@ -8,7 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, radius, font, cv } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H1, H2, Body, Label, ProgressRing, ProgressBar, EmptyState } from '@/src/components/ui';
+import { Screen, Card, H1, H2, Body, Label, ProgressRing, ProgressBar, EmptyState, Button } from '@/src/components/ui';
 import { computeInvestmentMetrics, kindLabel, quantitySummary } from '@/src/lib/investmentKinds';
 import { FinancialHubSwitcher, type FinancialModuleKey } from '@/src/components/finance/FinancialHubSwitcher';
 import { FinancialHubSheet } from '@/src/components/finance/FinancialHubSheet';
@@ -17,6 +17,7 @@ import { PlanTemplateCard } from '@/src/components/plans/PlanTemplateCard';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { t } from '@/src/lib/i18n';
 import { SkeletonCard } from '@/src/components/Skeleton';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 type Section = FinancialModuleKey;
 
@@ -24,6 +25,7 @@ export default function PlanScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const { t: translate } = useI18n();
   const [section, setSection] = useState<Section>('plans');
   const [hubOpen, setHubOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -35,8 +37,10 @@ export default function PlanScreen() {
   const [assets, setAssets] = useState<any[]>([]);
   const [investments, setInvestments] = useState<any[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setLoadError(null);
     try {
       const [b, g, p, d, a, i] = await Promise.all([
         api.budgets(), api.goals(), api.plans(), api.debts(), api.assets(), api.investments(),
@@ -47,11 +51,13 @@ export default function PlanScreen() {
       setDebts(d.debts || []);
       setAssets(a.assets || []);
       setInvestments(i.investments || []);
-    } catch {
+    } catch (cause) {
+      console.error('[Plan] failed to load financial modules', cause);
+      setLoadError(translate('data.loadError'));
     } finally {
       setLoaded(true);
     }
-  }, []);
+  }, [translate]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
   const onRefresh = useCallback(async () => { setRefreshing(true); await load(); setRefreshing(false); }, [load]);
 
@@ -61,8 +67,8 @@ export default function PlanScreen() {
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.md }}>
-          <H1>{t('plans')}</H1>
-          <Body muted style={{ marginTop: 4 }}>{t('hub.subtitle')}</Body>
+          <H1>{translate('plans')}</H1>
+          <Body muted style={{ marginTop: 4 }}>{translate('hub.subtitle')}</Body>
           <View style={{ marginTop: spacing.md }}><FinancialHubSwitcher current={section} onPress={() => setHubOpen(true)} /></View>
         </View>
 
@@ -71,22 +77,28 @@ export default function PlanScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
         >
           {!loaded && <SkeletonCard />}
-          {loaded && section === 'budgets' && (
+          {loaded && loadError && (
+            <Card testID="plan-error">
+              <Body style={{ color: colors.error }}>{loadError}</Body>
+              <Button testID="plan-retry" label={translate('common.retry')} onPress={load} style={{ marginTop: spacing.md, alignSelf: 'flex-start' }} />
+            </Card>
+          )}
+          {loaded && !loadError && section === 'budgets' && (
             <BudgetsSection budgets={budgets} currency={cur} onAdd={() => router.push('/budget/new')} onReload={load} />
           )}
-          {loaded && section === 'goals' && (
+          {loaded && !loadError && section === 'goals' && (
             <GoalsSection goals={goals} currency={cur} onAdd={() => router.push('/goal/new')} onOpen={(id: string) => router.push({ pathname: '/goal/[id]', params: { id } })} onReload={load} />
           )}
-          {loaded && section === 'plans' && (
+          {loaded && !loadError && section === 'plans' && (
             <PlansSection plans={plans} currency={cur} onAdd={(kind: string) => router.push({ pathname: '/plan/new', params: { kind } })} onOpen={(id: string) => router.push({ pathname: '/plan/[id]', params: { id } })} />
           )}
-          {loaded && section === 'debts' && (
+          {loaded && !loadError && section === 'debts' && (
             <DebtsSection debts={debts} currency={cur} onAdd={() => router.push('/debt/new')} onReload={load} />
           )}
-          {loaded && section === 'assets' && (
+          {loaded && !loadError && section === 'assets' && (
             <AssetsSection assets={assets} currency={cur} onAdd={() => router.push('/asset/new')} onReload={load} />
           )}
-          {loaded && section === 'investments' && (
+          {loaded && !loadError && section === 'investments' && (
             <InvestmentsSection investments={investments} currency={cur} onAdd={() => router.push('/investment/new')} />
           )}
         </ScrollView>

@@ -9,9 +9,10 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { Screen, Card, H2, Body, Label } from '@/src/components/ui';
+import { Screen, Card, H2, Body, Label, Button } from '@/src/components/ui';
 import { computeInvestmentMetrics, kindLabel, quantitySummary, type InvestmentDoc } from '@/src/lib/investmentKinds';
 import { MoneyValue } from '@/src/components/MoneyValue';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 const TYPE_COLORS: Record<string, string> = {
   stock: '#10B981', etf: '#34D399', mutual_fund: '#059669',
@@ -29,15 +30,24 @@ export default function Portfolio() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const { t } = useI18n();
   const cur = user?.currency || 'USD';
   const [investments, setInvestments] = useState<InvestmentDoc[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setError(null);
     try {
       const r = await api.investments();
       setInvestments(r.investments || []);
-    } catch {}
-  }, []);
+    } catch (cause) {
+      console.error('[Portfolio] failed to load', cause);
+      setError(t('portfolio.loadError'));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const { totalValue, totalCost, totalPl, returnPct, byKind } = useMemo(() => {
@@ -61,22 +71,25 @@ export default function Portfolio() {
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-          <TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
-          <H2 style={{ marginLeft: spacing.md }}>Portfolio</H2>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('navigation.back')} hitSlop={10} onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
+          <H2 style={{ marginLeft: spacing.md }}>{t('portfolio')}</H2>
         </View>
 
         <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.md, paddingBottom: 60 }}>
+          {loading ? <Card><Body>{t('common.loading')}</Body></Card> : error ? (
+            <Card testID="portfolio-error"><Body style={{ color: colors.error }}>{error}</Body><Button label={t('common.retry')} onPress={load} style={{ marginTop: spacing.md }} /></Card>
+          ) : <>
           {/* Hero */}
           <Card style={{ backgroundColor: colors.inverse }}>
-            <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Total portfolio value</Label>
+            <Label style={{ color: colors.onInverse, opacity: 0.6 }}>{t('portfolio.totalValue')}</Label>
             <MoneyValue value={totalValue} currency={cur} style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 36, letterSpacing: -0.5, marginTop: 6 }} />
             <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.xl }}>
               <View>
-                <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Total invested</Label>
+                <Label style={{ color: colors.onInverse, opacity: 0.6 }}>{t('portfolio.totalInvested')}</Label>
                 <MoneyValue value={totalCost} currency={cur} style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 16, marginTop: 2 }} />
               </View>
               <View>
-                <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Return</Label>
+                <Label style={{ color: colors.onInverse, opacity: 0.6 }}>{t('portfolio.return')}</Label>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}><MoneyValue value={totalPl} currency={cur} style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 16 }} /><Body style={{ color: colors.onInverse, fontFamily: font.displayBold, fontSize: 16 }}> ({returnPct >= 0 ? '+' : ''}{returnPct.toFixed(1)}%)</Body></View>
               </View>
             </View>
@@ -85,7 +98,7 @@ export default function Portfolio() {
           {/* Allocation */}
           {Object.keys(byKind).length > 1 && (
             <Card>
-              <Label>Allocation by type</Label>
+              <Label>{t('portfolio.allocation')}</Label>
               <View style={{ alignItems: 'center', marginTop: spacing.md }}>
                 <DonutChart data={Object.entries(byKind).map(([k, v]) => ({ kind: k, value: v.value }))} />
               </View>
@@ -108,9 +121,9 @@ export default function Portfolio() {
           )}
 
           {/* Holdings */}
-          <Label>Holdings ({investments.length})</Label>
+          <Label>{t('portfolio.holdings', { count: investments.length })}</Label>
           {investments.length === 0 ? (
-            <Body muted style={{ textAlign: 'center', marginTop: spacing.md }}>No investments yet.</Body>
+            <Body muted style={{ textAlign: 'center', marginTop: spacing.md }}>{t('portfolio.empty')}</Body>
           ) : investments.map((iv) => {
             const { value, pl, returnPct: rp } = computeInvestmentMetrics(iv);
             const plColor = pl >= 0 ? colors.success : colors.error;
@@ -134,6 +147,7 @@ export default function Portfolio() {
               </Card>
             );
           })}
+          </>}
         </ScrollView>
       </SafeAreaView>
     </Screen>

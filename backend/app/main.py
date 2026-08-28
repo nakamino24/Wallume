@@ -32,6 +32,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    settings.validate_production_safety()
     app = FastAPI(
         title="Wallume API",
         version="1.0.5c",
@@ -62,7 +63,6 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
 
 
 

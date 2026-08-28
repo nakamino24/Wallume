@@ -12,7 +12,7 @@ import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable }
 import { useOnboarding } from '@/src/hooks/use-onboarding';
 import { usePayday } from '@/src/hooks/use-payday';
 import { api } from '@/src/api/client';
-import { t, setLocale, initLocale } from '@/src/lib/i18n';
+import { useI18n } from '@/src/lib/I18nProvider';
 import { getNotifSettings, setNotifSettings, type NotifSettings } from '@/src/utils/notifications';
 import { spacing, radius, font, CURRENCIES } from '@/src/theme/tokens';
 import { Screen, Card, H1, H2, Body, Label, Button, Chip } from '@/src/components/ui';
@@ -27,8 +27,8 @@ export default function Profile() {
   const { resetOnboarding } = useOnboarding();
   const { info: payday, setPaydayDay, setWorkWeek } = usePayday(user?.payday_day, user?.work_week);
   const router = useRouter();
+  const { locale: lang, setLocale, t } = useI18n();
   const [notif, setNotifState] = useState<NotifSettings>({ billingReminder: true, budgetAlert: true, paydayReminder: true });
-  const [lang, setLangState] = useState<'en' | 'id'>('en');
   const [bioEnabled, setBioEnabled] = useState(false);
   const [bioAvailable, setBioAvailable] = useState(true);
   const [showPicker, setShowPicker] = useState(false);
@@ -38,7 +38,6 @@ export default function Profile() {
       setBioAvailable(await isBiometricAvailable());
       setBioEnabled(await isBiometricLockEnabled());
       setNotifState(await getNotifSettings());
-      setLangState(await initLocale());
     })();
   }, []);
 
@@ -46,7 +45,7 @@ export default function Profile() {
     if (value) {
       const available = await isBiometricAvailable();
       if (!available) {
-        Alert.alert('Not available', 'Set up Face ID, fingerprint, or a screen lock on your device first.');
+        Alert.alert(t('profile.biometricUnavailableTitle'), t('profile.biometricUnavailableMessage'));
         return;
       }
     }
@@ -55,25 +54,25 @@ export default function Profile() {
   };
 
   const doLogout = () => {
-    Alert.alert('Sign out?', 'You can sign back in anytime.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: async () => { await logout(); router.replace('/(auth)/login'); } },
+    Alert.alert(t('sign.out.question'), t('sign.out.confirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('sign.out'), style: 'destructive', onPress: async () => { await logout(); router.replace('/(auth)/login'); } },
     ]);
   };
 
   const doDeleteAccount = () => {
     Alert.alert(
-      'Delete account?',
-      'All your wallets, transactions, budgets, and goals will be permanently deleted. This cannot be undone.',
+      t('delete.confirm'),
+      t('delete.warning'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete everything', style: 'destructive', onPress: async () => {
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('delete.everything'), style: 'destructive', onPress: async () => {
           try {
             await api.deleteAccount();
             await logout();
             router.replace('/(auth)/login');
           } catch (e: any) {
-            Alert.alert('Error', e.message || 'Could not delete account');
+            Alert.alert(t('profile.errorTitle'), t('profile.deleteError'));
           }
         }},
       ],
@@ -92,8 +91,8 @@ export default function Profile() {
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
-          <TouchableOpacity testID="profile-back" onPress={onBack}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
-          <H2 style={{ marginLeft: spacing.md }}>Profile</H2>
+          <TouchableOpacity testID="profile-back" accessibilityRole="button" accessibilityLabel={t('navigation.back')} hitSlop={10} onPress={onBack}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
+          <H2 style={{ marginLeft: spacing.md }}>{t('profile')}</H2>
         </View>
         <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.md, paddingBottom: 60 }}>
           <Card style={{ alignItems: 'center', paddingVertical: spacing.xl, backgroundColor: colors.brandSoft, borderColor: 'transparent', borderRadius: radius.lg }}>
@@ -102,28 +101,28 @@ export default function Profile() {
             </View>
             <H1 style={{ marginTop: spacing.md }}>{user?.name}</H1>
             <Body muted>{user?.email}</Body>
-            <Body muted style={{ fontSize: 12, marginTop: 4 }}>via {user?.provider}</Body>
+            <Body muted style={{ fontSize: 12, marginTop: 4 }}>{t('profile.provider', { provider: user?.provider || '' })}</Body>
           </Card>
 
-          <Label style={{ marginTop: spacing.sm }}>PREFERENCES</Label>
+          <Label style={{ marginTop: spacing.sm }}>{t('profile.preferences').toUpperCase()}</Label>
           <Card>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View>
-                <Label>Appearance</Label>
-                <Body style={{ marginTop: 4, fontFamily: font.textBold }}>{mode === 'dark' ? 'Dark mode' : 'Light mode'}</Body>
+                <Label>{t('appearance')}</Label>
+                <Body style={{ marginTop: 4, fontFamily: font.textBold }}>{mode === 'dark' ? t('dark.mode') : t('light.mode')}</Body>
               </View>
               <Switch testID="profile-dark-toggle" value={mode === 'dark'} onValueChange={toggle} trackColor={{ true: colors.brandPrimary }} />
             </View>
           </Card>
 
-          <Label style={{ marginTop: spacing.sm }}>ACCOUNT</Label>
+          <Label style={{ marginTop: spacing.sm }}>{t('profile.account').toUpperCase()}</Label>
           <Card>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flex: 1, marginRight: spacing.md }}>
-                <Label>Security</Label>
-                <Body style={{ marginTop: 4, fontFamily: font.textBold }}>Face ID / Fingerprint lock</Body>
+                <Label>{t('security')}</Label>
+                <Body style={{ marginTop: 4, fontFamily: font.textBold }}>{t('biometric.lock')}</Body>
                 <Body muted style={{ marginTop: 2, fontSize: 12 }}>
-                  {bioAvailable ? 'Require biometrics to open Wallume' : 'Not available on this device'}
+                  {bioAvailable ? t('biometric.desc') : t('profile.biometricUnavailable')}
                 </Body>
               </View>
               <Switch testID="profile-biometric-toggle" value={bioEnabled} onValueChange={onToggleBiometric}
@@ -145,7 +144,7 @@ export default function Profile() {
           </Card>
 
           <Card>
-            <Label>Currency</Label>
+            <Label>{t('profile.currency')}</Label>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
               {CURRENCIES.map((c) => (
                 <Chip
@@ -160,13 +159,13 @@ export default function Profile() {
           </Card>
 
           <Card>
-            <Label>Payday</Label>
+            <Label>{t('payday')}</Label>
             <Body muted style={{ fontSize: 12, marginTop: 2 }}>
-              {payday ? `Next: ${payday.nextDate.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}` : 'Set your payday date'}
+              {payday ? t('payday.next', { date: payday.nextDate.toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' }) }) : t('set.payday')}
             </Body>
             <TouchableOpacity testID="profile-payday-picker" onPress={() => setShowPicker(true)}
               style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface2, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: 12, marginTop: spacing.md }}>
-              <Body style={{ fontFamily: font.textMedium }}>Every {user?.payday_day || 25}th</Body>
+              <Body style={{ fontFamily: font.textMedium }}>{t('every.nth', { day: user?.payday_day || 25 })}</Body>
               <Ionicons name="calendar-outline" size={18} color={colors.muted} />
             </TouchableOpacity>
             {showPicker && (
@@ -187,13 +186,13 @@ export default function Profile() {
                 }}
               />
             )}
-            <Label style={{ marginTop: spacing.lg }}>Work schedule</Label>
+            <Label style={{ marginTop: spacing.lg }}>{t('profile.workSchedule')}</Label>
             <Body muted style={{ fontSize: 12, marginTop: 2 }}>
-              How many days a week do you work? This decides whether weekends delay your payday.
+              {t('profile.workScheduleDescription')}
             </Body>
             <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
               {([5, 6, 7] as const).map((w) => (
-                <Chip key={w} testID={`profile-workweek-${w}`} label={`${w}-day`}
+                <Chip key={w} testID={`profile-workweek-${w}`} label={t('profile.workDays', { days: w })}
                   active={(user?.work_week ?? 5) === w}
                   onPress={() => { setWorkWeek(w); updateProfile({ work_week: w }); }} />
               ))}
@@ -201,13 +200,13 @@ export default function Profile() {
           </Card>
 
           {/* Language */}
-          <Label style={{ marginTop: spacing.sm }}>NOTIFICATIONS</Label>
+          <Label style={{ marginTop: spacing.sm }}>{t('profile.notificationsSection').toUpperCase()}</Label>
           <Card>
             <Label>{t('language')}</Label>
             <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
               {(['en', 'id'] as const).map((l) => (
                 <Chip key={l} testID={`profile-lang-${l}`} label={l === 'en' ? 'English' : 'Indonesia'}
-                  active={lang === l} onPress={async () => { setLangState(l); await setLocale(l); await refreshNetWorthWidget(); }} />
+                  active={lang === l} onPress={async () => { await setLocale(l); await refreshNetWorthWidget(); }} />
               ))}
             </View>
           </Card>
@@ -222,12 +221,12 @@ export default function Profile() {
             </View>
           </Card>
 
-          <Label style={{ marginTop: spacing.sm }}>DATA & ABOUT</Label>
+          <Label style={{ marginTop: spacing.sm }}>{t('profile.dataAbout').toUpperCase()}</Label>
           <Card onPress={() => router.push('/reports')}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View>
-                <Body style={{ fontFamily: font.textBold }}>Reports</Body>
-                <Body muted style={{ marginTop: 2, fontSize: 12 }}>Charts, trends and category breakdown</Body>
+                <Body style={{ fontFamily: font.textBold }}>{t('reports')}</Body>
+                <Body muted style={{ marginTop: 2, fontSize: 12 }}>{t('profile.reportsDescription')}</Body>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.muted} />
             </View>
@@ -236,8 +235,8 @@ export default function Profile() {
           <Card onPress={() => { resetOnboarding(); router.push('/(auth)/onboarding' as any); }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View>
-                <Body style={{ fontFamily: font.textBold }}>Onboarding tour</Body>
-                <Body muted style={{ marginTop: 2, fontSize: 12 }}>Replay the intro walkthrough</Body>
+                <Body style={{ fontFamily: font.textBold }}>{t('onboarding.tour')}</Body>
+                <Body muted style={{ marginTop: 2, fontSize: 12 }}>{t('onboarding.desc')}</Body>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.muted} />
             </View>
@@ -246,8 +245,8 @@ export default function Profile() {
           <Card onPress={() => router.push('/transactions')}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View>
-                <Body style={{ fontFamily: font.textBold }}>All transactions</Body>
-                <Body muted style={{ marginTop: 2, fontSize: 12 }}>Full history with filters</Body>
+                <Body style={{ fontFamily: font.textBold }}>{t('profile.allTransactions')}</Body>
+                <Body muted style={{ marginTop: 2, fontSize: 12 }}>{t('profile.allTransactionsDescription')}</Body>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.muted} />
             </View>
@@ -256,8 +255,8 @@ export default function Profile() {
           <Card onPress={() => router.push('/privacy' as any)}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View>
-                <Body style={{ fontFamily: font.textBold }}>Privacy Policy</Body>
-                <Body muted style={{ marginTop: 2, fontSize: 12 }}>How your data is handled</Body>
+                <Body style={{ fontFamily: font.textBold }}>{t('privacy')}</Body>
+                <Body muted style={{ marginTop: 2, fontSize: 12 }}>{t('privacy.desc')}</Body>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.muted} />
             </View>
@@ -266,11 +265,11 @@ export default function Profile() {
           <View style={{ alignItems: 'center', paddingTop: spacing.lg }}>
             <AppVersion />
           </View>
-          <Button testID="profile-signout" label="Sign out" variant="danger" onPress={doLogout} style={{ marginTop: spacing.md }} />
+          <Button testID="profile-signout" label={t('sign.out')} variant="danger" onPress={doLogout} style={{ marginTop: spacing.md }} />
 
           <TouchableOpacity testID="profile-delete-account" onPress={doDeleteAccount}
             style={{ alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.sm }}>
-            <Body muted style={{ fontSize: 12 }}>Delete account & all data</Body>
+            <Body muted style={{ fontSize: 12 }}>{t('delete.account')}</Body>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>

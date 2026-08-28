@@ -10,12 +10,13 @@ import { spacing, font, radius } from '@/src/theme/tokens';
 import { Screen, H2, Body, Chip, EmptyState } from '@/src/components/ui';
 import { useTransactions } from '@/src/hooks/use-transactions';
 import { groupTransactionsByDate, TransactionDayGroup } from '@/src/components/transactions/TransactionDayGroup';
-import { t } from '@/src/lib/i18n';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 export default function Transactions() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const { t } = useI18n();
   const { transactions: txs, loading, error, refresh, remove: removeTransaction } = useTransactions();
   const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
 
@@ -38,9 +39,9 @@ export default function Transactions() {
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.lg }}>
-          <TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('navigation.back')} hitSlop={10} onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
           <H2 style={{ marginLeft: spacing.md, flex: 1 }}>{t('transactions.heading')}</H2>
-          <TouchableOpacity testID="tx-add-fab" onPress={() => router.push('/transaction/new')}
+          <TouchableOpacity testID="tx-add-fab" accessibilityRole="button" accessibilityLabel={t('transactions.empty.action')} onPress={() => router.push('/transaction/new')}
             style={{ width: 42, height: 42, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="add" size={20} color={colors.onBrand} />
           </TouchableOpacity>

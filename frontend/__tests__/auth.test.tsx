@@ -126,7 +126,7 @@ describe('Auth Flow', () => {
     fireEvent.press(getByTestId('login-submit'));
 
     await waitFor(() => {
-      expect(getByText(/Invalid credentials/i)).toBeTruthy();
+      expect(getByText(/Could not sign in/i)).toBeTruthy();
     });
   });
 

@@ -13,10 +13,12 @@ import { scale } from '@/src/utils/responsive';
 import { Screen, Body, Button, Input } from '@/src/components/ui';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 import { WallumeMark } from '@/src/components/WallumeMark';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 export default function Login() {
   const { colors } = useTheme();
   const { login, loginWithEmergentToken } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,13 +27,13 @@ export default function Login() {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const submit = async () => {
-    if (!email || !password) { setErr('Please enter email and password'); return; }
+    if (!email || !password) { setErr(t('auth.validation.required')); return; }
     setLoading(true); setErr('');
     try {
       await login(email.trim().toLowerCase(), password);
       router.replace('/(tabs)/home');
-    } catch (e: any) {
-      setErr(e.message || 'Login failed');
+    } catch {
+      setErr(t('auth.error.login'));
     } finally { setLoading(false); }
   };
 
@@ -55,12 +57,12 @@ export default function Login() {
         if (hashIdx >= 0) params = new URLSearchParams(url.substring(hashIdx + 1));
         else if (qIdx >= 0) params = new URLSearchParams(url.substring(qIdx + 1));
         const sid = params.get('session_id');
-        if (!sid) { setErr('Login was cancelled'); return; }
+        if (!sid) { setErr(t('auth.login.cancelled')); return; }
         await loginWithEmergentToken(sid);
         router.replace('/(tabs)/home');
       }
-    } catch (e: any) {
-      setErr(e.message || 'Google sign-in failed');
+    } catch {
+      setErr(t('auth.error.google'));
     } finally {
       setGoogleLoading(false);
     }
@@ -75,19 +77,19 @@ export default function Login() {
                 <WallumeMark size={28} color={colors.onBrand} />
               </View>
               <Body style={{ fontFamily: font.displayBold, fontSize: scale(24), color: colors.onSurface, fontWeight: '600', letterSpacing: -0.3 }}>
-                Welcome back.
+                {t('welcome.back')}
               </Body>
-              <Body muted style={{ marginTop: spacing.xs, fontSize: font.sizes.base }}>Sign in to Wallume</Body>
+              <Body muted style={{ marginTop: spacing.xs, fontSize: font.sizes.base }}>{t('sign.in.to')}</Body>
             </View>
 
             <Input
               testID="login-email"
-              label="Email"
+              label={t('email')}
               autoCapitalize="none"
               keyboardType="email-address"
               value={email}
               onChangeText={setEmail}
-              placeholder="you@example.com"
+              placeholder={t('auth.email.placeholder')}
               autoComplete="email"
               autoFocus
               returnKeyType="next"
@@ -95,38 +97,38 @@ export default function Login() {
             />
             <Input
               testID="login-password"
-              label="Password"
+              label={t('password')}
               secureTextEntry
               value={password}
               onChangeText={setPassword}
-              placeholder="Enter your password"
+              placeholder={t('auth.password.placeholder')}
               returnKeyType="done"
               onSubmitEditing={submit}
             />
 
             {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md, fontSize: font.sizes.sm }}>{err}</Body>}
 
-            <Button testID="login-submit" label="Sign in" onPress={submit} loading={loading} style={{ marginTop: spacing.sm }} />
+            <Button testID="login-submit" label={t('sign.in')} onPress={submit} loading={loading} style={{ marginTop: spacing.sm }} />
 
             <View style={styles.dividerRow}>
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Body muted style={{ marginHorizontal: spacing.md, fontSize: font.sizes.sm }}>or</Body>
+              <Body muted style={{ marginHorizontal: spacing.md, fontSize: font.sizes.sm }}>{t('or')}</Body>
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
             <Button
               testID="login-google"
               variant="secondary"
-              label={googleLoading ? 'Connecting\u2026' : 'Continue with Google'}
+              label={googleLoading ? t('auth.connecting') : t('continue.google')}
               onPress={googleLogin}
               loading={googleLoading}
               icon={<Ionicons name="logo-google" size={16} color={colors.onSurface} />}
             />
 
             <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: spacing.xxl }}>
-              <Body muted style={{ fontSize: font.sizes.sm }}>New here? </Body>
+              <Body muted style={{ fontSize: font.sizes.sm }}>{t('new.here')} </Body>
               <TouchableOpacity testID="login-goto-signup" onPress={() => router.push('/(auth)/signup')}>
-                <Body style={{ color: colors.brandPrimary, fontFamily: font.textMedium, fontSize: font.sizes.sm, fontWeight: '500' }}>Create account</Body>
+                <Body style={{ color: colors.brandPrimary, fontFamily: font.textMedium, fontSize: font.sizes.sm, fontWeight: '500' }}>{t('create.account')}</Body>
               </TouchableOpacity>
             </View>
         </KeyboardAwareContainer>

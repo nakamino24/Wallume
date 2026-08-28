@@ -7,11 +7,13 @@ import { useOnboarding } from '@/src/hooks/use-onboarding';
 import { font, radius, spacing } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
 import { WallumeMark } from '@/src/components/WallumeMark';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 export default function Index() {
   const { user, loading } = useAuth();
   const { done: onboardingDone, checking: onboardingChecking } = useOnboarding();
   const { colors } = useTheme();
+  const { t } = useI18n();
 
   if (loading || onboardingChecking) {
     return (
@@ -22,7 +24,7 @@ export default function Index() {
               <WallumeMark size={36} />
             </View>
             <Text style={[styles.title, { color: colors.onSurface, fontFamily: font.displayBold }]}>Wallume</Text>
-            <Text style={[styles.subtitle, { color: colors.muted, fontFamily: font.text }]}>Organize your money with clarity.</Text>
+            <Text style={[styles.subtitle, { color: colors.muted, fontFamily: font.text }]}>{t('app.tagline')}</Text>
             <ActivityIndicator size="small" color={colors.brandPrimary} style={{ marginTop: spacing.xxl }} />
           </View>
         </SafeAreaView>

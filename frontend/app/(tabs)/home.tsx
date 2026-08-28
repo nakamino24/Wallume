@@ -8,7 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { usePayday } from '@/src/hooks/use-payday';
 import { spacing, radius, font, cv } from '@/src/theme/tokens';
-import { t } from '@/src/lib/i18n';
+import { useI18n } from '@/src/lib/I18nProvider';
 import { useBalancePrivacy } from '@/src/privacy/BalancePrivacyProvider';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { api } from '@/src/api/client';
@@ -31,6 +31,7 @@ export default function Home() {
   const { user } = useAuth();
   const { isBalanceVisible, toggleBalanceVisibility } = useBalancePrivacy();
   const router = useRouter();
+  const { t } = useI18n();
   const [summary, setSummary] = useState<any>(null);
   const { transactions: txs, remove: removeTransaction } = useTransactions();
   const { wallets } = useWallets();
@@ -45,7 +46,7 @@ export default function Home() {
   const load = useCallback(async () => {
     try {
       setLoadError(null);
-      const summaryResult = await api.summary().catch(() => null);
+      const summaryResult = await api.summary();
       const nextSummary = summaryResult;
       const updatedAt = Date.now();
 
@@ -54,11 +55,12 @@ export default function Home() {
       setLastSyncedAt(updatedAt);
       setInitialLoading(false);
       refreshNetWorthWidget();
-    } catch {
-      setLoadError('Could not load your data');
+    } catch (cause) {
+      console.error('[Home] failed to load summary', cause);
+      setLoadError(t('data.loadError'));
       setInitialLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -130,19 +132,19 @@ export default function Home() {
     }, null as any);
     const savingsRate = Math.round(summary?.saving_rate ?? 0);
     const tip = savingsRate >= 20
-      ? 'You are building a healthy cash buffer.'
+      ? t('home.tip.healthy')
       : derivedSummary.month_expense > 0
-        ? 'Trim one recurring expense to improve cash flow.'
-        : 'Add a transaction to unlock personalized insights.';
+        ? t('home.tip.trim')
+        : t('home.tip.add');
 
     return {
-      topCategory: topCategory ? topCategory[0] : 'No expenses',
+      topCategory: topCategory ? localizedCategory(topCategory[0], t) : t('home.noExpenses'),
       topCategoryValue: topCategory ? topCategory[1] : 0,
       largestExpense,
       savingsRate,
       tip,
     };
-  }, [derivedSummary.month_expense, txs, summary]);
+  }, [derivedSummary.month_expense, txs, summary, t]);
 
   if (initialLoading && !summary) {
     return (
@@ -181,7 +183,7 @@ export default function Home() {
           {/* Header */}
             <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View>
-                <Body muted style={{ fontSize: font.sizes.sm }}>Welcome back</Body>
+                <Body muted style={{ fontSize: font.sizes.sm }}>{t('home.welcome')}</Body>
                 <H2 style={{ marginTop: 2 }}>{user?.name?.split(' ')[0] || 'there'}</H2>
             </View>
             <TouchableOpacity testID="home-profile-btn" onPress={() => router.push('/profile')}>
@@ -247,7 +249,7 @@ export default function Home() {
               />
               <View style={{ flexDirection: 'row', marginTop: spacing.lg, gap: spacing.sm }}>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Income (mo)</Label>
+                  <Label style={{ color: colors.onInverse, opacity: 0.6 }}>{t('home.monthIncome')}</Label>
                   <MoneyValue
                     value={derivedSummary.month_income}
                     currency={cur}
@@ -260,7 +262,7 @@ export default function Home() {
                   />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Expense (mo)</Label>
+                  <Label style={{ color: colors.onInverse, opacity: 0.6 }}>{t('home.monthExpense')}</Label>
                   <MoneyValue
                     value={-derivedSummary.month_expense}
                     currency={cur}
@@ -273,7 +275,7 @@ export default function Home() {
                   />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Cash flow</Label>
+                  <Label style={{ color: colors.onInverse, opacity: 0.6 }}>{t('cash.flow')}</Label>
                   <MoneyValue
                     value={derivedSummary.cash_flow}
                     currency={cur}
@@ -291,13 +293,13 @@ export default function Home() {
 
           {/* Quick actions */}
           <View style={{ paddingHorizontal: spacing.xl, flexDirection: 'row', gap: spacing.md }}>
-            <QuickAction testID="home-add-income" icon="arrow-down" label="Income" color={colors.success}
+            <QuickAction testID="home-add-income" icon="arrow-down" label={t('income')} color={colors.success}
               onPress={() => router.push({ pathname: '/transaction/new', params: { type: 'income' } })} />
-            <QuickAction testID="home-add-expense" icon="arrow-up" label="Expense" color={colors.error}
+            <QuickAction testID="home-add-expense" icon="arrow-up" label={t('expense')} color={colors.error}
               onPress={() => router.push({ pathname: '/transaction/new', params: { type: 'expense' } })} />
-            <QuickAction testID="home-add-transfer" icon="swap-horizontal" label="Transfer" color={colors.brandPrimary}
+            <QuickAction testID="home-add-transfer" icon="swap-horizontal" label={t('transactions.type.transfer')} color={colors.brandPrimary}
               onPress={() => router.push({ pathname: '/transaction/new', params: { type: 'transfer' } })} />
-            <QuickAction testID="home-reports" icon="stats-chart" label="Reports" color={colors.warning}
+            <QuickAction testID="home-reports" icon="stats-chart" label={t('reports')} color={colors.warning}
               onPress={() => router.push('/reports')} />
           </View>
 
@@ -305,16 +307,16 @@ export default function Home() {
           <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.xl }}>
             <Card>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-                <H2>Smart insights</H2>
-                <Body muted>{lastSyncedAt ? `Updated ${formatTimeAgo(lastSyncedAt)}` : 'Cached'}</Body>
+                <H2>{t('home.smartInsights')}</H2>
+                <Body muted>{lastSyncedAt ? t('home.updated', { time: formatTimeAgo(lastSyncedAt, t) }) : t('home.cached')}</Body>
               </View>
               <View style={{ gap: spacing.sm }}>
                 <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
-                  <InsightPill label="Savings rate" value={`${insights.savingsRate}%`} color={colors.success} />
-                  <InsightPill label="Top category" value={insights.topCategory} color={colors.warning} />
+                  <InsightPill label={t('saving.rate')} value={`${insights.savingsRate}%`} color={colors.success} />
+                  <InsightPill label={t('home.topCategory')} value={insights.topCategory} color={colors.warning} />
                 </View>
                 <View style={{ backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md }}>
-                  <Body style={{ fontFamily: font.textBold }}>This month’s focus</Body>
+                  <Body style={{ fontFamily: font.textBold }}>{t('home.monthFocus')}</Body>
                   <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
                     {insights.largestExpense ? (
                       <>
@@ -322,7 +324,7 @@ export default function Home() {
                         <MoneyValue value={insights.largestExpense.amount} currency={cur} style={{ color: colors.muted, fontFamily: font.textBold }} />
                       </>
                     ) : (
-                      <Body muted>No major expense yet.</Body>
+                      <Body muted>{t('home.noMajorExpense')}</Body>
                     )}
                   </View>
                   <Body muted style={{ marginTop: 6 }}>{insights.tip}</Body>
@@ -339,8 +341,8 @@ export default function Home() {
                   <DisplayNumber size={22}>{derivedSummary.health_score ?? 0}</DisplayNumber>
                 </ProgressRing>
                 <View style={{ flex: 1 }}>
-                  <Label>Financial Health Score</Label>
-                  <H2 style={{ marginTop: 4 }}>{healthLabel(derivedSummary.health_score ?? 0)}</H2>
+                  <Label>{t('health.score')}</Label>
+                  <H2 style={{ marginTop: 4 }}>{healthLabel(derivedSummary.health_score ?? 0, t)}</H2>
                   <Body muted style={{ marginTop: 4 }}>
                     Saving {derivedSummary.saving_rate ?? 0}% · Debt ratio {derivedSummary.debt_ratio ?? 0}%
                   </Body>
@@ -353,9 +355,9 @@ export default function Home() {
           {upcoming.length > 0 && (
             <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.xl }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-                <H2>Upcoming</H2>
+                <H2>{t('home.upcoming')}</H2>
                 <TouchableOpacity testID="home-recurring-see-all" onPress={() => router.push('/recurring')}>
-                  <Body style={{ color: colors.brandPrimary, fontFamily: font.textBold }}>See all</Body>
+                  <Body style={{ color: colors.brandPrimary, fontFamily: font.textBold }}>{t('home.seeAll')}</Body>
                 </TouchableOpacity>
               </View>
               <Card style={{ padding: 0 }}>
@@ -384,9 +386,9 @@ export default function Home() {
 
           {/* Filter chips */}
           <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <H2>Recent</H2>
+            <H2>{t('home.recent')}</H2>
             <TouchableOpacity onPress={() => router.push('/transactions')}>
-              <Body style={{ color: colors.brandPrimary, fontFamily: font.textBold }}>See all</Body>
+              <Body style={{ color: colors.brandPrimary, fontFamily: font.textBold }}>{t('home.seeAll')}</Body>
             </TouchableOpacity>
           </View>
           <ScrollView
@@ -404,8 +406,8 @@ export default function Home() {
             {shownTxs.length === 0 && wallets.length === 0 ? (
               <EmptyState
                 testID="home-tx-empty"
-                title="No transactions yet"
-                subtitle="Track your first income or expense to see it here."
+                title={t('no.transactions')}
+                subtitle={t('no.transactions.sub')}
                 actionLabel="Add transaction"
                 onAction={() => router.push('/transaction/new')}
               />
@@ -434,10 +436,10 @@ export default function Home() {
                   />
                 )) : (
                   <View style={{ padding: spacing.xl }}>
-                    <Body style={{ fontFamily: font.textMedium }}>Wallet balance available</Body>
+                    <Body style={{ fontFamily: font.textMedium }}>{t('home.walletAvailable')}</Body>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
                       <MoneyValue value={walletBalance} currency={cur} style={{ color: colors.muted, fontFamily: font.textBold }} />
-                      <Body muted> is ready to view from your wallets.</Body>
+                      <Body muted> {t('home.walletReady')}</Body>
                     </View>
                   </View>
                 )}
@@ -460,20 +462,26 @@ export default function Home() {
   );
 }
 
-function healthLabel(score: number) {
-  if (score >= 80) return 'Excellent';
-  if (score >= 60) return 'Healthy';
-  if (score >= 40) return 'Okay';
-  if (score >= 20) return 'Needs work';
-  return 'At risk';
+function localizedCategory(raw: string, translate: (key: string) => string) {
+  const key = `budgets.category.${raw.trim().toLowerCase().replace(/\s+/g, '_')}`;
+  const localized = translate(key);
+  return localized === key ? raw : localized;
 }
 
-function formatTimeAgo(ts: number) {
+function healthLabel(score: number, translate: (key: string) => string) {
+  if (score >= 80) return translate('home.health.excellent');
+  if (score >= 60) return translate('home.health.healthy');
+  if (score >= 40) return translate('home.health.okay');
+  if (score >= 20) return translate('home.health.needsWork');
+  return translate('home.health.atRisk');
+}
+
+function formatTimeAgo(ts: number, translate: (key: string, params?: Record<string, string | number>) => string) {
   const diff = Math.max(1, Math.floor((Date.now() - ts) / 60000));
-  if (diff < 60) return `${diff}m ago`;
+  if (diff < 60) return translate('home.ago.minutes', { value: diff });
   const hrs = Math.floor(diff / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  if (hrs < 24) return translate('home.ago.hours', { value: hrs });
+  return translate('home.ago.days', { value: Math.floor(hrs / 24) });
 }
 
 function InsightPill({ label, value, color }: { label: string; value: string; color: string }) {

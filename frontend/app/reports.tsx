@@ -13,6 +13,7 @@ import { Screen, Card, H2, Body, Label } from '@/src/components/ui';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { useReportPeriod } from '@/src/hooks/use-report-period';
 import { ReportPeriodPicker } from '@/src/components/ReportPeriodPicker';
+import { useI18n } from '@/src/lib/I18nProvider';
 
 const CAT_COLORS = ['#287565', '#D69A57', '#527C8A', '#7C9A6A', '#B86C20', '#8B7763', '#70807A', '#B64A4A'];
 
@@ -20,6 +21,7 @@ export default function Reports() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const { t } = useI18n();
   const cur = user?.currency || 'USD';
 
   const { period, setPeriod } = useReportPeriod();
@@ -43,11 +45,11 @@ export default function Reports() {
       setSummary(await api.reports.getSummary({ from_date: fromDate, to_date: toDate }));
     } catch (e: any) {
       console.error('[Reports] failed to load:', e?.message || e);
-      setError('Unable to load this period. Try again.');
+      setError(t('reports.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -56,10 +58,10 @@ export default function Reports() {
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-            <TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
-            <H2 style={{ marginLeft: spacing.md }}>Reports</H2>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('navigation.back')} hitSlop={10} onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
+            <H2 style={{ marginLeft: spacing.md }}>{t('reports')}</H2>
           </View>
-          <TouchableOpacity testID="reports-export-btn" onPress={() => router.push('/export-report' as any)}
+          <TouchableOpacity testID="reports-export-btn" accessibilityRole="button" accessibilityLabel={t('reports.export')} onPress={() => router.push('/export-report' as any)}
             style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="share-outline" size={18} color={colors.onSurface} />
           </TouchableOpacity>
@@ -81,33 +83,33 @@ export default function Reports() {
 
         <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.md, paddingBottom: 60 }}>
           {loading ? (
-            <Card><Body>Updating report...</Body></Card>
+            <Card><Body>{t('reports.updating')}</Body></Card>
           ) : error ? (
             <Card>
               <Body style={{ color: colors.error }}>{error}</Body>
               <TouchableOpacity onPress={load} style={{ marginTop: spacing.md, paddingVertical: 10, paddingHorizontal: spacing.lg, backgroundColor: colors.brandPrimary, borderRadius: 8, alignSelf: 'flex-start' }}>
-                <Body style={{ color: colors.onBrand, fontFamily: font.textBold }}>Try again</Body>
+                <Body style={{ color: colors.onBrand, fontFamily: font.textBold }}>{t('reports.tryAgain')}</Body>
               </TouchableOpacity>
             </Card>
           ) : summary?.transaction_count === 0 ? (
-            <Card><Body>No transactions in this period.</Body></Card>
+            <Card><Body>{t('reports.empty')}</Body></Card>
           ) : (
             <>
               {/* Summary — Net cash flow is NOT Net Worth, privacy-aware */}
               <Card style={{ backgroundColor: colors.inverse, borderColor: 'transparent', borderRadius: radius.lg }}>
-                <Label style={{ color: colors.onInverse, opacity: 0.6 }}>Net cash flow</Label>
+                <Label style={{ color: colors.onInverse, opacity: 0.6 }}>{t('reports.netCashFlow')}</Label>
                 <MoneyValue value={netFlow} currency={cur} style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 34, letterSpacing: -0.5, marginTop: 6 }} />
                 <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.sm }}>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>Income</Body>
+                    <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>{t('income')}</Body>
                     <MoneyValue value={income} currency={cur} compact style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>Expense</Body>
+                    <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>{t('expense')}</Body>
                     <MoneyValue value={expense} currency={cur} compact style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>Transactions</Body>
+                    <Body style={{ color: colors.onInverse, fontSize: 12, opacity: 0.7 }}>{t('transactions')}</Body>
                     <Body numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }}>{String(summary?.transaction_count ?? 0)}</Body>
                   </View>
                 </View>
@@ -115,9 +117,9 @@ export default function Reports() {
 
               {/* Category breakdown */}
               <Card>
-                <Label>Spending by category</Label>
+                <Label>{t('reports.spendingCategory')}</Label>
                 {categoryBreakdown.length === 0 ? (
-                  <Body muted style={{ marginTop: spacing.md }}>No expenses in this period.</Body>
+                  <Body muted style={{ marginTop: spacing.md }}>{t('reports.noExpenses')}</Body>
                 ) : (
               <>
                 <View style={{ alignItems: 'center', marginTop: spacing.md }}>
@@ -127,7 +129,7 @@ export default function Reports() {
                   {categoryBreakdown.map((c, i) => (
                     <View key={c.category} style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: CAT_COLORS[i % CAT_COLORS.length], marginRight: 8 }} />
-                      <Body style={{ flex: 1 }}>{c.category}</Body>
+                      <Body style={{ flex: 1 }}>{systemCategoryLabel(c.category, t)}</Body>
                        <MoneyValue value={c.amount} currency={cur} compact privacy="balance" style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 14 }} />
                     </View>
                   ))}
@@ -138,10 +140,10 @@ export default function Reports() {
 
           {/* Ratios */}
           <Card>
-            <Label>Ratios</Label>
+            <Label>{t('reports.ratios')}</Label>
             <View style={{ flexDirection: 'row', marginTop: spacing.md, gap: spacing.xl }}>
-              <MiniStat label="Income vs Expense" value={income > 0 ? `${Math.round((expense / income) * 100)}%` : '-'} />
-              <MiniStat label="Saving rate" value={income > 0 ? `${Math.round((netFlow / income) * 100)}%` : '-'} />
+              <MiniStat label={t('reports.incomeExpense')} value={income > 0 ? `${Math.round((expense / income) * 100)}%` : '-'} />
+              <MiniStat label={t('saving.rate')} value={income > 0 ? `${Math.round((netFlow / income) * 100)}%` : '-'} />
             </View>
           </Card>
             </>
@@ -150,6 +152,13 @@ export default function Reports() {
       </SafeAreaView>
     </Screen>
   );
+}
+
+function systemCategoryLabel(raw: string, translate: (key: string) => string) {
+  const key = raw.trim().toLowerCase().replace(/\s+/g, '_');
+  const translationKey = `budgets.category.${key}`;
+  const translated = translate(translationKey);
+  return translated === translationKey ? raw : translated;
 }
 
 function MiniStat({ label, value, color }: any) {

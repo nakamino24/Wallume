@@ -2,6 +2,20 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased] — Pre-preview hardening
+
+### Changed
+- Added reactive EN/ID locale initialization at app startup and localized critical auth, onboarding, navigation, profile, reports, recurring, and privacy paths.
+- Reworded Privacy Policy to match current Groq processing and Wallume Coach-history storage without unsupported provider-retention claims.
+- Added explicit error and retry states to financial data screens where request failures could previously appear empty.
+- Synchronized frontend package metadata with the existing `1.0.6c` Expo version; no release or tag was created.
+
+### Security
+- Production startup now rejects the documented development JWT secret.
+
+### CI
+- Added validation-only GitHub Actions checks for frontend and backend.
+
 ## [1.0.6c] — 2026-08-24 (HOTFIX — preview crash, wallet selector, balance staleness, reports & caching — continued, now with <1ms optimistic & persistent cache)
 
 ### Fixed

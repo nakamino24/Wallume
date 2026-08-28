@@ -36,7 +36,13 @@ jest.mock('@/src/auth/AppLockGate', () => ({ isBiometricAvailable: jest.fn(() =>
 jest.mock('@/src/hooks/use-onboarding', () => ({ useOnboarding: () => ({ resetOnboarding: jest.fn() }) }));
 jest.mock('@/src/hooks/use-payday', () => ({ usePayday: () => ({ info: null, setPaydayDay: jest.fn(), setWorkWeek: jest.fn() }) }));
 jest.mock('@/src/utils/notifications', () => ({ getNotifSettings: jest.fn(() => Promise.resolve({ billingReminder: true, budgetAlert: true, paydayReminder: true })), setNotifSettings: jest.fn() }));
-jest.mock('@/src/lib/i18n', () => ({ t: (value: string) => value, setLocale: jest.fn(), initLocale: jest.fn(() => Promise.resolve('en')) }));
+jest.mock('@/src/lib/I18nProvider', () => ({
+  useI18n: () => ({
+    locale: 'en',
+    setLocale: jest.fn(),
+    t: (key: string) => ({ 'sign.out': 'Sign out' }[key] || key),
+  }),
+}));
 jest.mock('@/src/api/client', () => ({ api: { deleteAccount: jest.fn() } }));
 
 import Profile from '@/app/profile';
