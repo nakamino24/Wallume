@@ -7,6 +7,7 @@ LIVE_SERVICE_TEST_FILES = {
     "test_backend_api.py",
     "test_mongo_runtime_transactions.py",
     "test_reports_explain.py",
+    "test_wallet_patch.py",
 }
 
 
