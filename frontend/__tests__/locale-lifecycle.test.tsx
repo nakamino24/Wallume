@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, Text } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,10 +8,12 @@ import { initLocale } from '@/src/lib/i18n';
 
 function LocaleProbe() {
   const { locale, setLocale, t } = useI18n();
+  const memoizedHome = useMemo(() => t('home'), [t]);
   return (
     <>
       <Text testID="locale">{locale}</Text>
       <Text testID="home-label">{t('home')}</Text>
+      <Text testID="memoized-home-label">{memoizedHome}</Text>
       <Pressable testID="set-id" onPress={() => void setLocale('id')} />
     </>
   );
@@ -41,6 +43,7 @@ describe('locale lifecycle', () => {
 
     fireEvent.press(getByTestId('set-id'));
     await waitFor(() => expect(getByTestId('home-label').props.children).toBe('Beranda'));
+    expect(getByTestId('memoized-home-label').props.children).toBe('Beranda');
     expect(await initLocale()).toBe('id');
   });
 });

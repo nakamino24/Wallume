@@ -37,12 +37,17 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     await persistLocale(nextLocale);
   }, []);
 
+  // Bind the callback identity to locale as well as the module-level locale
+  // value. Consumers can safely use `t` in dependency arrays without keeping
+  // memoized copy from the previous language.
+  const t = useCallback<typeof translate>((key, params) => translate(key, params), [locale]);
+
   const value = useMemo<I18nContextValue>(() => ({
     locale,
     ready,
     setLocale,
-    t: translate,
-  }), [locale, ready, setLocale]);
+    t,
+  }), [locale, ready, setLocale, t]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
