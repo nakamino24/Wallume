@@ -8,10 +8,11 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
-import { groupActivitiesByDay } from '@/src/lib/activity';
+import { groupActivitiesByDay, walletActivityTitle } from '@/src/lib/activity';
 import { Screen, Card, H2, Body, Label, EmptyState, Caption, Button } from '@/src/components/ui';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { useI18n } from '@/src/lib/I18nProvider';
+import { intlLocale } from '@/src/lib/i18n';
 
 const CATEGORY_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
@@ -35,7 +36,7 @@ export default function WalletDetail() {
   const { user } = useAuth();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
 
   const [wallet, setWallet] = useState<any>(null);
   const [txs, setTxs] = useState<any[]>([]);
@@ -89,7 +90,11 @@ export default function WalletDetail() {
   const meta = wallet ? (TYPE_TINT[wallet.type] || '#6B7280') : '#6B7280';
   const icon = wallet ? (TYPE_ICON[wallet.type] || 'wallet-outline') : 'wallet-outline';
 
-  const grouped = useMemo(() => groupActivitiesByDay(txs), [txs]);
+  const grouped = useMemo(() => groupActivitiesByDay(txs, {
+    locale: intlLocale(locale),
+    todayLabel: t('activity.today'),
+    yesterdayLabel: t('activity.yesterday'),
+  }), [locale, t, txs]);
 
   if (loading && !wallet) {
     return (
@@ -220,13 +225,13 @@ function localizedWalletType(raw: string, translate: (key: string) => string) {
 
 function ActivityRow({ tx, walletId, currency, last, onPress, onLongPress }: any) {
   const { colors } = useTheme();
+  const { t } = useI18n();
 
   const isSource = tx.wallet_id === walletId;
   const isDest = tx.to_wallet_id === walletId;
 
   let direction: 'IN' | 'OUT' = 'OUT';
   let displayAmount = Number(tx.amount);
-  let counterparty: string | null = null;
 
   if (tx.type === 'income') {
     direction = 'IN';
@@ -235,10 +240,8 @@ function ActivityRow({ tx, walletId, currency, last, onPress, onLongPress }: any
   } else if (tx.type === 'transfer') {
     if (isSource) {
       direction = 'OUT';
-      counterparty = tx.to_wallet_name || 'Transfer out';
     } else if (isDest) {
       direction = 'IN';
-      counterparty = tx.wallet_name || 'Transfer in';
     }
   }
 
@@ -256,7 +259,7 @@ function ActivityRow({ tx, walletId, currency, last, onPress, onLongPress }: any
         </View>
         <View style={{ flex: 1 }}>
           <Body style={{ fontFamily: font.textMedium, fontSize: 14 }}>
-            {tx.type === 'transfer' ? (counterparty || 'Transfer') : tx.category}
+            {walletActivityTitle(tx, walletId, t)}
           </Body>
           {!!tx.note && <Caption muted style={{ marginTop: 1 }}>{tx.note.length > 30 ? tx.note.slice(0, 30) + '…' : tx.note}</Caption>}
         </View>

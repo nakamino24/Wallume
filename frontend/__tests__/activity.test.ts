@@ -9,7 +9,7 @@
  * The full flow is exercised per case: stored timestamp -> day key ->
  * grouping/order -> rendered time string.
  */
-import { groupActivitiesByDay, compareIntraDay } from '../src/lib/activity';
+import { groupActivitiesByDay, compareIntraDay, walletActivityTitle } from '../src/lib/activity';
 import { activityDayKey, todayLocalISO } from '../src/utils/dates';
 
 const WIB = 'Asia/Jakarta';
@@ -134,5 +134,42 @@ describe('ordering determinism across all zones', () => {
     expect(labels[0]).toBe('TODAY');
     expect(labels[1]).toBe('YESTERDAY');
     expect(labels[2]).toMatch(/JUL/);
+  });
+});
+
+describe('Wallume-locale activity presentation', () => {
+  const now = new Date('2026-08-28T12:00:00Z');
+  const txs = [
+    { id: 'today', date: '2026-08-28' },
+    { id: 'yesterday', date: '2026-08-27' },
+    { id: 'historical', date: '2026-08-26' },
+  ];
+
+  it('renders Indonesian relative and historical day headings', () => {
+    const labels = groupActivitiesByDay(txs, {
+      now, timeZone: UTC, locale: 'id-ID', todayLabel: 'HARI INI', yesterdayLabel: 'KEMARIN',
+    }).map((group) => group.label);
+    expect(labels).toEqual(['HARI INI', 'KEMARIN', expect.stringMatching(/RAB.*26.*AGU/)]);
+  });
+
+  it('renders English relative and historical day headings', () => {
+    const labels = groupActivitiesByDay(txs, {
+      now, timeZone: UTC, locale: 'en-US', todayLabel: 'TODAY', yesterdayLabel: 'YESTERDAY',
+    }).map((group) => group.label);
+    expect(labels).toEqual(['TODAY', 'YESTERDAY', expect.stringMatching(/WED.*AUG.*26/)]);
+  });
+
+  it('localizes transfer direction without changing its stored type', () => {
+    const labels: Record<string, string> = {
+      'wallet.activity.transferOut': 'Transfer keluar',
+      'wallet.activity.transferIn': 'Transfer masuk',
+      'wallet.activity.transfer': 'Transfer',
+    };
+    const translate = (key: string) => labels[key] || key;
+    const outgoing = { id: 'out', type: 'transfer', wallet_id: 'w1', to_wallet_id: 'w2' };
+    const incoming = { id: 'in', type: 'transfer', wallet_id: 'w2', to_wallet_id: 'w1' };
+    expect(walletActivityTitle(outgoing, 'w1', translate)).toBe('Transfer keluar');
+    expect(walletActivityTitle(incoming, 'w1', translate)).toBe('Transfer masuk');
+    expect(outgoing.type).toBe('transfer');
   });
 });

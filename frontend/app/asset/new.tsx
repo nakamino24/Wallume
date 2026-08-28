@@ -47,7 +47,7 @@ export default function NewAsset() {
           </View>
           <Input testID="asset-name" label={t('common.name')} value={name} onChangeText={setName} placeholder={t('asset.namePlaceholder')} />
           <Label>{t('goal.kind')}</Label>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md, alignItems: 'center' }}>
             {KINDS.map((assetKind) => (
               <Chip key={assetKind} testID={`asset-kind-${assetKind}`} label={t(`asset.kind.${assetKind}`)} active={kind === assetKind} onPress={() => setKind(assetKind)} />
             ))}

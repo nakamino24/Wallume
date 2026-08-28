@@ -5,6 +5,14 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, radius } from '@/src/theme/tokens';
 import { Body, Label } from '@/src/components/ui';
+import { useI18n } from '@/src/lib/I18nProvider';
+import { intlLocale, type Locale } from '@/src/lib/i18n';
+
+export function formatDateFieldDisplay(value: string, locale: Locale, emptyLabel: string): string {
+  if (!value) return emptyLabel;
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00`) : new Date(value);
+  return parsed.toLocaleDateString(intlLocale(locale), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 export function DateField({
   label, value, onChange, testID, style,
@@ -16,15 +24,14 @@ export function DateField({
   style?: any;
 }) {
   const { colors } = useTheme();
+  const { locale, t } = useI18n();
   const [show, setShow] = useState(false);
 
   const parsed = value && /^\d{4}-\d{2}-\d{2}$/.test(value)
     ? new Date(`${value}T00:00:00`)
     : new Date();
 
-  const display = value
-    ? parsed.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
-    : 'Select date';
+  const display = formatDateFieldDisplay(value, locale, t('date.select'));
 
   return (
     <View style={{ marginBottom: spacing.md, ...style }}>
@@ -53,6 +60,7 @@ export function DateField({
           testID={testID ? `${testID}-picker` : undefined}
           value={parsed}
           mode="date"
+          locale={intlLocale(locale)}
           maximumDate={new Date(2100, 11, 31)}
           onChange={(event: DateTimePickerEvent, date?: Date) => {
             if (Platform.OS === 'android') setShow(false);

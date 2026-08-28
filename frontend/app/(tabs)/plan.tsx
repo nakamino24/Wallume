@@ -18,6 +18,7 @@ import { MoneyValue } from '@/src/components/MoneyValue';
 import { t } from '@/src/lib/i18n';
 import { SkeletonCard } from '@/src/components/Skeleton';
 import { useI18n } from '@/src/lib/I18nProvider';
+import { systemCategoryLabel } from '@/src/lib/categories';
 
 type Section = FinancialModuleKey;
 
@@ -108,18 +109,14 @@ export default function PlanScreen() {
   );
 }
 
-export function budgetCategoryLabel(raw: string): string {
-  if (!raw) return raw;
-  const key = raw.trim().toLowerCase().replace(/\s+/g, '_');
-  const translated = t(`budgets.category.${key}`);
-  if (translated !== `budgets.category.${key}`) return translated;
-  // Fallback: Title Case original
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
+export function budgetCategoryLabel(raw: string, translate = t): string {
+  return systemCategoryLabel(raw, translate);
 }
 
 /* --------------------- BUDGETS --------------------- */
 export function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
   const { colors } = useTheme();
+  const { t: translate } = useI18n();
   return (
     <>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
@@ -154,7 +151,7 @@ export function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
                   </ProgressRing>
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Body numberOfLines={1} style={{ fontFamily: font.textBold, fontSize: 15 }}>{budgetCategoryLabel(b.category)}</Body>
+                  <Body numberOfLines={1} style={{ fontFamily: font.textBold, fontSize: 15 }}>{budgetCategoryLabel(b.category, translate)}</Body>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 2, gap: 4 }}>
                     <MoneyValue value={spent} currency={currency} style={{ color: colors.muted, fontSize: 14, lineHeight: 18 }} />
                     <Body muted style={{ fontSize: 14, lineHeight: 18 }}> {t('budgets.of')} </Body>

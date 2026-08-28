@@ -113,7 +113,7 @@ export default function InvestmentForm() {
       )}
 
       <Label>{t('investment.category')}</Label>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md, alignItems: 'center' }}>
         {INVESTMENT_KINDS.map((k) => (
           <Chip key={k.id} testID={`inv-kind-${k.id}`} label={t(`investment.kind.${k.id}`)} active={kind === k.id} onPress={() => setKind(k.id)} />
         ))}

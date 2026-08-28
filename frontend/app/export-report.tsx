@@ -14,23 +14,26 @@ import { Screen, Card, H2, Body, Label, Button } from '@/src/components/ui';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { useReportPeriod } from '@/src/hooks/use-report-period';
 import { useI18n } from '@/src/lib/I18nProvider';
+import { intlLocale } from '@/src/lib/i18n';
+import { systemCategoryLabel } from '@/src/lib/categories';
 
 function buildReportHTML(opts: {
   userName: string; currency: string; period: string;
   report: ReportSummary; netWorth: number; healthScore: number; wallets: any[]; txs: any[];
   translate: (key: string, params?: Record<string, string | number>) => string;
+  locale: 'id-ID' | 'en-US';
 }) {
-  const { userName, currency, period, report, netWorth, healthScore, wallets, txs, translate } = opts;
+  const { userName, currency, period, report, netWorth, healthScore, wallets, txs, translate, locale } = opts;
   const fmt = (n: number) => formatMoneyFull(n, currency);
 
   const catRows = (report.expense_by_category || []).map((c: any) => `
-    <tr><td>${c.category}</td><td style="text-align:right">${fmt(c.amount)}</td></tr>
+    <tr><td>${systemCategoryLabel(c.category, translate)}</td><td style="text-align:right">${fmt(c.amount)}</td></tr>
   `).join('');
 
   const txRows = txs.slice(0, 40).map((t: any) => `
     <tr>
-      <td>${/^\d{4}-\d{2}-\d{2}$/.test(t.date || '') ? new Date(`${t.date}T00:00:00`).toLocaleDateString() : new Date(t.date).toLocaleDateString()}</td>
-      <td>${t.category}</td>
+      <td>${/^\d{4}-\d{2}-\d{2}$/.test(t.date || '') ? new Date(`${t.date}T00:00:00`).toLocaleDateString(locale) : new Date(t.date).toLocaleDateString(locale)}</td>
+      <td>${systemCategoryLabel(t.category, translate)}</td>
       <td>${t.note || ''}</td>
       <td style="text-align:right;color:${t.type === 'income' ? '#059669' : t.type === 'expense' ? '#DC2626' : '#111'}">
         ${t.type === 'income' ? '+' : t.type === 'expense' ? '-' : ''}${fmt(t.amount)}
@@ -96,7 +99,7 @@ function buildReportHTML(opts: {
 export default function ExportReport() {
   const { colors } = useTheme();
   const { user } = useAuth();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const router = useRouter();
   const { period } = useReportPeriod();
   const [generating, setGenerating] = useState(false);
@@ -147,6 +150,7 @@ export default function ExportReport() {
         wallets: walletRes.wallets || [],
         txs: txRes.transactions || [],
         translate: t,
+        locale: intlLocale(locale),
       });
       const { uri } = await Print.printToFileAsync({ html, base64: false });
       const canShare = await Sharing.isAvailableAsync();

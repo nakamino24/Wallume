@@ -2,6 +2,7 @@
 // Framework-free and zone-explicit so it is unit-testable across timezones.
 
 import { activityDayKey, ymdInZone } from '@/src/utils/dates';
+import { systemCategoryLabel } from '@/src/lib/categories';
 
 export type ActivityTx = {
   id: string;
@@ -11,12 +12,17 @@ export type ActivityTx = {
 };
 
 export type ActivityGroup = { label: string; items: ActivityTx[] };
+type Translate = (key: string, params?: Record<string, string | number>) => string;
 
 export type GroupOptions = {
   /** Reference "now" for TODAY/YESTERDAY labels (defaults to real now). */
   now?: Date;
   /** IANA zone used to render instants; omitted = device zone. */
   timeZone?: string;
+  /** Explicit Intl locale chosen in Wallume, never inferred from the device. */
+  locale?: string;
+  todayLabel?: string;
+  yesterdayLabel?: string;
 };
 
 /** Newest save-time first inside a calendar-day group; deterministic id
@@ -28,16 +34,23 @@ export function compareIntraDay(a: ActivityTx, b: ActivityTx): number {
   return (b.id || '').localeCompare(a.id || '');
 }
 
+export function walletActivityTitle(tx: ActivityTx, walletId: string, translate: Translate): string {
+  if (tx.type !== 'transfer') return systemCategoryLabel(tx.category || 'Other', translate);
+  if (tx.wallet_id === walletId) return tx.to_wallet_name || translate('wallet.activity.transferOut');
+  if (tx.to_wallet_id === walletId) return tx.wallet_name || translate('wallet.activity.transferIn');
+  return translate('wallet.activity.transfer');
+}
+
 function labelFor(key: string, opts: GroupOptions): string {
   const now = opts.now ?? new Date();
   const tz = opts.timeZone;
-  if (key === ymdInZone(now, tz)) return 'TODAY';
+  if (key === ymdInZone(now, tz)) return opts.todayLabel ?? 'TODAY';
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  if (key === ymdInZone(yesterday, tz)) return 'YESTERDAY';
+  if (key === ymdInZone(yesterday, tz)) return opts.yesterdayLabel ?? 'YESTERDAY';
   // Noon-UTC anchor: with a real Intl the timeZone option decides the day;
   // if an environment ever drops it, midday keeps the calendar day stable
   // across offsets instead of flipping at midnight boundaries.
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(opts.locale ?? 'en-US', {
     weekday: 'short',
     day: 'numeric',
     month: 'short',

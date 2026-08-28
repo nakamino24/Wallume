@@ -11,6 +11,7 @@ import { api } from '@/src/api/client';
 import { Screen, Card, H2, Body, Label, EmptyState, Button } from '@/src/components/ui';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { useI18n } from '@/src/lib/I18nProvider';
+import { systemCategoryLabel } from '@/src/lib/categories';
 
 export default function Recurring() {
   const { colors } = useTheme();
@@ -127,12 +128,4 @@ export default function Recurring() {
       </SafeAreaView>
     </Screen>
   );
-}
-
-function systemCategoryLabel(raw: string, translate: (key: string) => string) {
-  if (!raw) return raw;
-  const key = raw.trim().toLowerCase().replace(/\s+/g, '_');
-  const translationKey = `budgets.category.${key}`;
-  const translated = translate(translationKey);
-  return translated === translationKey ? raw : translated;
 }
