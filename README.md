@@ -37,6 +37,8 @@ Wallume/
 cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload
+pytest                    # deterministic unit suite
+pytest --run-integration  # requires live API + transaction-capable MongoDB
 ```
 
 **Frontend**
