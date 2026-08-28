@@ -12,6 +12,7 @@ import { api } from '@/src/api/client';
 import { Screen, Card, H1, Body, Label, Divider, Button } from '@/src/components/ui';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { useI18n } from '@/src/lib/I18nProvider';
+import { systemCategoryLabel } from '@/src/lib/categories';
 
 export default function RecurringDetail() {
   const { colors } = useTheme();
@@ -105,7 +106,7 @@ export default function RecurringDetail() {
         </View>
 
         <View style={{ padding: spacing.xl }}>
-          <Label>{localizedCategory(item.category, t)} · {t(`recurring.frequency.${item.frequency}`)}</Label>
+          <Label>{systemCategoryLabel(item.category, t)} · {t(`recurring.frequency.${item.frequency}`)}</Label>
           <H1 style={{ marginTop: 4 }}>{item.name}</H1>
 
           <Card style={{ marginTop: spacing.lg }}>
@@ -158,10 +159,4 @@ export default function RecurringDetail() {
       </BottomSheetModal>
     </Screen>
   );
-}
-
-function localizedCategory(raw: string, translate: (key: string) => string) {
-  const key = `budgets.category.${raw.trim().toLowerCase().replace(/\s+/g, '_')}`;
-  const localized = translate(key);
-  return localized === key ? raw : localized;
 }

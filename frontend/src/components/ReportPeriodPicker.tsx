@@ -8,9 +8,10 @@ import { radius, spacing, font } from '@/src/theme/tokens';
 import { todayLocalISO } from '@/src/utils/dates';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useI18n } from '@/src/lib/I18nProvider';
+import { intlLocale, Locale } from '@/src/lib/i18n';
 
-function formatPeriod(fromDate: string, toDate: string) {
-  const format = (date: string) => new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+function formatPeriod(fromDate: string, toDate: string, locale: Locale) {
+  const format = (date: string) => new Date(`${date}T00:00:00`).toLocaleDateString(intlLocale(locale), { day: 'numeric', month: 'short', year: 'numeric' });
   return `${format(fromDate)} – ${format(toDate)}`;
 }
 
@@ -20,7 +21,7 @@ export function ReportPeriodPicker({ fromDate, toDate, onChange }: {
   onChange: (range: { from: string; to: string }) => void;
 }) {
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [open, setOpen] = useState(false);
   const [draftFrom, setDraftFrom] = useState(fromDate);
   const [draftTo, setDraftTo] = useState(toDate);
@@ -54,7 +55,7 @@ export function ReportPeriodPicker({ fromDate, toDate, onChange }: {
       <Pressable testID="report-period-picker" onPress={() => { setDraftFrom(fromDate); setDraftTo(toDate); setOpen(true); }} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, opacity: pressed ? 0.86 : 1 })}>
         <View>
           <Label>{t('report.period')}</Label>
-          <Body style={{ marginTop: 3, fontFamily: font.textMedium }}>{formatPeriod(fromDate, toDate)}</Body>
+          <Body style={{ marginTop: 3, fontFamily: font.textMedium }}>{formatPeriod(fromDate, toDate, locale)}</Body>
         </View>
         <Ionicons name="chevron-down" size={20} color={colors.muted} />
       </Pressable>
@@ -66,7 +67,7 @@ export function ReportPeriodPicker({ fromDate, toDate, onChange }: {
               <Label>{t('report.periodTitle')}</Label>
               <Body style={{ fontFamily: font.displayBold, fontSize: font.sizes.lg, marginTop: 4 }}>{t('report.chooseRange')}</Body>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm, alignItems: 'center' }}>
               {presets.map((preset) => (
                 <Pressable key={preset.label} onPress={() => apply(preset.from, preset.to)} style={({ pressed }) => ({ borderRadius: radius.pill, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, backgroundColor: colors.brandSoft, opacity: pressed ? 0.8 : 1 })}>
                   <Body style={{ color: colors.onBrandSoft, fontFamily: font.textMedium, fontSize: font.sizes.sm }}>{preset.label}</Body>

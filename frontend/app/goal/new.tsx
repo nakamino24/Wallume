@@ -47,7 +47,7 @@ export default function NewGoal() {
     <FormLayout title={t('goal.new.title')} onBack={() => router.back()}>
       <Input testID="goal-name" label={t('common.name')} value={name} onChangeText={setName} placeholder={t('goal.namePlaceholder')} />
       <Label>{t('goal.kind')}</Label>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md, alignItems: 'center' }}>
         {KINDS.map((goalKind) => (
           <Chip key={goalKind} testID={`goal-kind-${goalKind}`} label={t(`goal.kind.${goalKind}`)} active={kind === goalKind} onPress={() => setKind(goalKind)} />
         ))}

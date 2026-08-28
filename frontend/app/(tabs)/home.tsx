@@ -9,6 +9,8 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { usePayday } from '@/src/hooks/use-payday';
 import { spacing, radius, font, cv } from '@/src/theme/tokens';
 import { useI18n } from '@/src/lib/I18nProvider';
+import { intlLocale } from '@/src/lib/i18n';
+import { systemCategoryLabel } from '@/src/lib/categories';
 import { useBalancePrivacy } from '@/src/privacy/BalancePrivacyProvider';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { api } from '@/src/api/client';
@@ -31,7 +33,7 @@ export default function Home() {
   const { user } = useAuth();
   const { isBalanceVisible, toggleBalanceVisibility } = useBalancePrivacy();
   const router = useRouter();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [summary, setSummary] = useState<any>(null);
   const { transactions: txs, remove: removeTransaction } = useTransactions();
   const { wallets } = useWallets();
@@ -138,7 +140,7 @@ export default function Home() {
         : t('home.tip.add');
 
     return {
-      topCategory: topCategory ? localizedCategory(topCategory[0], t) : t('home.noExpenses'),
+      topCategory: topCategory ? systemCategoryLabel(topCategory[0], t) : t('home.noExpenses'),
       topCategoryValue: topCategory ? topCategory[1] : 0,
       largestExpense,
       savingsRate,
@@ -209,10 +211,10 @@ export default function Home() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Body style={{ fontFamily: font.textMedium, fontSize: font.sizes.sm }}>
-                      {payday.isPaydayToday ? 'Payday today!' : `${payday.daysRemaining} days until payday`}
+                      {payday.isPaydayToday ? t('payday.today') : t('payday.days', { days: payday.daysRemaining })}
                     </Body>
                     <Caption muted>
-                      {payday.nextDate.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+                      {payday.nextDate.toLocaleDateString(intlLocale(locale), { weekday: 'long', day: 'numeric', month: 'long' })}
                     </Caption>
                   </View>
                   {!payday.isPaydayToday && (
@@ -320,7 +322,7 @@ export default function Home() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
                     {insights.largestExpense ? (
                       <>
-                        <Body muted>{insights.largestExpense.category}: </Body>
+                        <Body muted>{systemCategoryLabel(insights.largestExpense.category, t)}: </Body>
                         <MoneyValue value={insights.largestExpense.amount} currency={cur} style={{ color: colors.muted, fontFamily: font.textBold }} />
                       </>
                     ) : (
@@ -462,12 +464,6 @@ export default function Home() {
   );
 }
 
-function localizedCategory(raw: string, translate: (key: string) => string) {
-  const key = `budgets.category.${raw.trim().toLowerCase().replace(/\s+/g, '_')}`;
-  const localized = translate(key);
-  return localized === key ? raw : localized;
-}
-
 function healthLabel(score: number, translate: (key: string) => string) {
   if (score >= 80) return translate('home.health.excellent');
   if (score >= 60) return translate('home.health.healthy');
@@ -511,6 +507,7 @@ function QuickAction({ icon, label, color, onPress, testID }: any) {
 
 function TxRow({ tx, last, currency, onPress, onLongPress }: any) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const positive = tx.type === 'income';
   const negative = tx.type === 'expense';
   const iconName = CATEGORY_ICON[tx.category] || 'ellipsis-horizontal';
@@ -523,7 +520,7 @@ function TxRow({ tx, last, currency, onPress, onLongPress }: any) {
           <Ionicons name={tx.type === 'transfer' ? 'swap-horizontal' : iconName} size={18} color={color} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Body style={{ fontFamily: font.textMedium }} numberOfLines={1}>{tx.category}</Body>
+          <Body style={{ fontFamily: font.textMedium }} numberOfLines={1}>{systemCategoryLabel(tx.category, t)}</Body>
           {!!tx.note && <Body muted style={{ fontSize: 12, marginTop: 2 }} numberOfLines={1}>{tx.note}</Body>}
         </View>
         <MoneyValue

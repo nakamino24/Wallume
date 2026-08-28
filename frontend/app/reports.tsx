@@ -14,6 +14,7 @@ import { MoneyValue } from '@/src/components/MoneyValue';
 import { useReportPeriod } from '@/src/hooks/use-report-period';
 import { ReportPeriodPicker } from '@/src/components/ReportPeriodPicker';
 import { useI18n } from '@/src/lib/I18nProvider';
+import { systemCategoryLabel } from '@/src/lib/categories';
 
 const CAT_COLORS = ['#287565', '#D69A57', '#527C8A', '#7C9A6A', '#B86C20', '#8B7763', '#70807A', '#B64A4A'];
 
@@ -152,13 +153,6 @@ export default function Reports() {
       </SafeAreaView>
     </Screen>
   );
-}
-
-function systemCategoryLabel(raw: string, translate: (key: string) => string) {
-  const key = raw.trim().toLowerCase().replace(/\s+/g, '_');
-  const translationKey = `budgets.category.${key}`;
-  const translated = translate(translationKey);
-  return translated === translationKey ? raw : translated;
 }
 
 function MiniStat({ label, value, color }: any) {

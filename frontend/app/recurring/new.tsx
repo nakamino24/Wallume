@@ -11,6 +11,7 @@ import { DateField } from '@/src/components/DateField';
 import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
 import { useI18n } from '@/src/lib/I18nProvider';
+import { systemCategoryLabel } from '@/src/lib/categories';
 
 const FREQUENCIES = ['weekly', 'monthly', 'yearly'] as const;
 
@@ -92,13 +93,13 @@ export default function RecurringForm() {
       <DateField testID="recurring-next-date" label={t('recurring.form.nextDate')} value={nextDate} onChange={setNextDate} />
 
       <Label>{t('recurring.form.category')}</Label>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
-        {getOptions(type).map((c) => (<Chip key={c} testID={`recurring-cat-${c}`} label={localizedCategory(c, t)} active={category === c} onPress={() => setCategory(c)} />))}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md, alignItems: 'center' }}>
+        {getOptions(type).map((c) => (<Chip key={c} testID={`recurring-cat-${c}`} label={systemCategoryLabel(c, t)} active={category === c} onPress={() => setCategory(c)} />))}
       </ScrollView>
 
       <Label>{t('recurring.form.wallet')}</Label>
       {!!walletError && <><Body style={{ color: colors.error }}>{walletError}</Body><Button label={t('common.retry')} onPress={load} /></>}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md, alignItems: 'center' }}>
         {wallets.map((w) => (<Chip key={w.id} testID={`recurring-wallet-${w.id}`} label={w.name} active={walletId === w.id} onPress={() => setWalletId(w.id)} />))}
       </ScrollView>
 
@@ -108,10 +109,4 @@ export default function RecurringForm() {
       <Button testID="recurring-save" label={isEdit ? t('recurring.form.saveChanges') : t('recurring.form.save')} onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
     </FormLayout>
   );
-}
-
-function localizedCategory(raw: string, translate: (key: string) => string) {
-  const key = `budgets.category.${raw.trim().toLowerCase().replace(/\s+/g, '_')}`;
-  const localized = translate(key);
-  return localized === key ? raw : localized;
 }

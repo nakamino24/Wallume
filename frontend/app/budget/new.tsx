@@ -10,6 +10,7 @@ import { useUserCategories } from '@/src/hooks/use-user-categories';
 import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
 import { useI18n } from '@/src/lib/I18nProvider';
+import { systemCategoryLabel } from '@/src/lib/categories';
 
 export default function NewBudget() {
   const { colors } = useTheme();
@@ -37,9 +38,9 @@ export default function NewBudget() {
   return (
     <FormLayout title={t('budget.new.title')} onBack={() => router.back()}>
       <Label>{t('category.title')}</Label>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md, alignItems: 'center' }}>
         {cats.map((c) => (
-          <Chip key={c} testID={`budget-cat-${c}`} label={c} active={category === c} onPress={() => setCategory(c)} />
+          <Chip key={c} testID={`budget-cat-${c}`} label={systemCategoryLabel(c, t)} active={category === c} onPress={() => setCategory(c)} />
         ))}
       </ScrollView>
       <MoneyInput testID="budget-amount" label={t('budget.monthlyLimit')} value={amount} onChange={setAmount} placeholder="500" />

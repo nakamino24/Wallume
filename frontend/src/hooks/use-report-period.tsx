@@ -1,6 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { storage } from '@/src/utils/storage';
 import { todayLocalISO } from '@/src/utils/dates';
+import { useI18n } from '@/src/lib/I18nProvider';
+import { intlLocale, Locale } from '@/src/lib/i18n';
 
 export type ReportPeriodKind = 'this_month' | 'last_month' | 'last_7_days' | 'last_30_days' | 'last_90_days' | 'monthly' | 'custom';
 
@@ -13,16 +15,16 @@ export type ReportPeriod = {
 
 const KEY = 'wallume.reportPeriod.v1';
 
-function monthLabel(from: string, to: string): string {
+function monthLabel(from: string, to: string, locale: Locale): string {
   const f = new Date(`${from}T00:00:00`);
   const t = new Date(`${to}T00:00:00`);
   const sameMonth = f.getFullYear() === t.getFullYear() && f.getMonth() === t.getMonth() && from.slice(0, 7) === to.slice(0, 7) && new Date(to).getDate() >= 28;
   if (sameMonth) {
-    return f.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    return f.toLocaleDateString(intlLocale(locale), { month: 'long', year: 'numeric' });
   }
   const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
-  const a = f.toLocaleDateString(undefined, opts);
-  const b = t.toLocaleDateString(undefined, { ...opts, year: 'numeric' });
+  const a = f.toLocaleDateString(intlLocale(locale), opts);
+  const b = t.toLocaleDateString(intlLocale(locale), { ...opts, year: 'numeric' });
   return `${a} – ${b}`;
 }
 
@@ -31,7 +33,7 @@ function defaultPeriod(): ReportPeriod {
   d.setDate(1);
   const from = todayLocalISO(d);
   const to = todayLocalISO();
-  return { fromDate: from, toDate: to, kind: 'this_month', label: new Date(`${from}T00:00:00`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) };
+  return { fromDate: from, toDate: to, kind: 'this_month', label: derivePeriodLabel(from, to, 'this_month', 'en') };
 }
 
 type Ctx = {
@@ -43,6 +45,7 @@ type Ctx = {
 const ReportPeriodCtx = createContext<Ctx | null>(null);
 
 export function ReportPeriodProvider({ children }: { children: React.ReactNode }) {
+  const { locale } = useI18n();
   const [period, setPeriodState] = useState<ReportPeriod>(() => defaultPeriod());
   const [isReady, setReady] = useState(false);
 
@@ -65,7 +68,11 @@ export function ReportPeriodProvider({ children }: { children: React.ReactNode }
     storage.setItem(KEY, JSON.stringify(p));
   }, []);
 
-  const value = useMemo(() => ({ period, setPeriod, isReady }), [period, setPeriod, isReady]);
+  const localizedPeriod = useMemo(() => ({
+    ...period,
+    label: derivePeriodLabel(period.fromDate, period.toDate, period.kind, locale),
+  }), [locale, period]);
+  const value = useMemo(() => ({ period: localizedPeriod, setPeriod, isReady }), [localizedPeriod, setPeriod, isReady]);
   return <ReportPeriodCtx.Provider value={value}>{children}</ReportPeriodCtx.Provider>;
 }
 
@@ -75,9 +82,9 @@ export function useReportPeriod() {
   return c;
 }
 
-export function derivePeriodLabel(from: string, to: string, kind: ReportPeriodKind): string {
+export function derivePeriodLabel(from: string, to: string, kind: ReportPeriodKind, locale: Locale = 'en'): string {
   if (kind === 'this_month' || kind === 'monthly') {
-    return new Date(`${from}T00:00:00`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    return new Date(`${from}T00:00:00`).toLocaleDateString(intlLocale(locale), { month: 'long', year: 'numeric' });
   }
-  return monthLabel(from, to);
+  return monthLabel(from, to, locale);
 }

@@ -91,7 +91,7 @@ export default function EditWallet() {
       <Input testID="edit-wallet-name" label={t('wallet.name.label')} value={name} onChangeText={setName} placeholder={t('wallet.form.namePlaceholder')} />
 
       <Label>{t('common.type')}</Label>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md, alignItems: 'center' }}>
         {TYPES.map((walletType) => (
           <Chip key={walletType} testID={`edit-wtype-${walletType}`} label={t(`wallet.type.${walletType}`)} active={type === walletType} onPress={() => setType(walletType)} />
         ))}

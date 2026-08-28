@@ -48,7 +48,7 @@ export default function NewDebt() {
     <FormLayout title={t('debt.new.title')} onBack={() => router.back()}>
       <Input testID="debt-name" label={t('common.name')} value={name} onChangeText={setName} placeholder={t('debt.namePlaceholder')} />
       <Label>{t('goal.kind')}</Label>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md, alignItems: 'center' }}>
         {KINDS.map((debtKind) => (
           <Chip key={debtKind} testID={`debt-kind-${debtKind}`} label={t(`debt.kind.${debtKind}`)} active={kind === debtKind} onPress={() => setKind(debtKind)} />
         ))}

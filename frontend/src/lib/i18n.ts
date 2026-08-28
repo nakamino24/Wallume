@@ -2,6 +2,9 @@ import { Platform, NativeModules } from 'react-native';
 import { storage } from '@/src/utils/storage';
 
 export type Locale = 'en' | 'id';
+export function intlLocale(locale: Locale): 'id-ID' | 'en-US' {
+  return locale === 'id' ? 'id-ID' : 'en-US';
+}
 const KEY = 'mf.locale';
 
 let _forcedLocale: Locale | null = null;
@@ -176,6 +179,15 @@ const EN: Record<string, string> = {
   'transaction.type.transfer': 'Transfer',
   'transaction.amount': 'Amount',
   'transaction.date': 'Date',
+  'date.select': 'Select date',
+  'date.today': 'Today',
+  'date.yesterday': 'Yesterday',
+  'transaction.fallback': 'Transaction',
+  'activity.today': 'TODAY',
+  'activity.yesterday': 'YESTERDAY',
+  'wallet.activity.transferOut': 'Transfer out',
+  'wallet.activity.transferIn': 'Transfer in',
+  'wallet.activity.transfer': 'Transfer',
   'transaction.wallet': 'Wallet',
   'transaction.wallet.from': 'From',
   'transaction.wallet.to': 'To',
@@ -818,6 +830,15 @@ const ID: Record<string, string> = {
   'transaction.type.transfer': 'Transfer',
   'transaction.amount': 'Jumlah',
   'transaction.date': 'Tanggal',
+  'date.select': 'Pilih tanggal',
+  'date.today': 'Hari ini',
+  'date.yesterday': 'Kemarin',
+  'transaction.fallback': 'Transaksi',
+  'activity.today': 'HARI INI',
+  'activity.yesterday': 'KEMARIN',
+  'wallet.activity.transferOut': 'Transfer keluar',
+  'wallet.activity.transferIn': 'Transfer masuk',
+  'wallet.activity.transfer': 'Transfer',
   'transaction.wallet': 'Dompet',
   'transaction.wallet.from': 'Dari',
   'transaction.wallet.to': 'Ke',
@@ -847,7 +868,7 @@ const ID: Record<string, string> = {
   'coach.placeholder': 'Tanya soal keuangan\u2026',
   'payday': 'Hari Gajian',
   'payday.today': 'Hari ini gajian!',
-  'payday.days': '{days} hari lagi gajian',
+  'payday.days': '{days} hari lagi menuju gajian',
   'payday.next': 'Berikutnya: {date}',
   'set.payday': 'Atur tanggal gajian',
   'every.nth': 'Tiap tgl {day}',

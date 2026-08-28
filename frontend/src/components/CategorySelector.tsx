@@ -8,6 +8,7 @@ import { Chip, Label } from '@/src/components/ui';
 import { QuickAddCategoryModal } from '@/src/components/QuickAddCategoryModal';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
 import { useI18n } from '@/src/lib/I18nProvider';
+import { systemCategoryLabel } from '@/src/lib/categories';
 
 export function CategorySelector({
   type, value, onChange, testID,
@@ -34,9 +35,9 @@ export function CategorySelector({
           <Label style={{ color: colors.brandPrimary }}>{t('common.manage')}</Label>
         </TouchableOpacity>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md, alignItems: 'center' }}>
         {options.map((c) => (
-          <Chip key={c} testID={`${testID ? `${testID}-` : ''}cat-${c}`} label={c} active={value === c} onPress={() => onChange(c)} />
+          <Chip key={c} testID={`${testID ? `${testID}-` : ''}cat-${c}`} label={systemCategoryLabel(c, t)} active={value === c} onPress={() => onChange(c)} />
         ))}
       </ScrollView>
 
