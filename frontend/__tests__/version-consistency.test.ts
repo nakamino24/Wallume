@@ -10,4 +10,3 @@ describe('frontend version metadata', () => {
     expect(appJson.expo.version).toBe('1.0.6c');
   });
 });
-

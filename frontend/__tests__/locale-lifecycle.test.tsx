@@ -44,4 +44,3 @@ describe('locale lifecycle', () => {
     expect(await initLocale()).toBe('id');
   });
 });
-

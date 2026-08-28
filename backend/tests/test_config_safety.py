@@ -27,4 +27,3 @@ def test_railway_production_name_is_also_protected():
     )
     with pytest.raises(RuntimeError, match="default JWT_SECRET"):
         settings.validate_production_safety()
-
