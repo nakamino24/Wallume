@@ -16,12 +16,12 @@ type Translate = (key: string, params?: Record<string, string | number>) => stri
 
 const SYSTEM_CATEGORY_KEYS = new Map<string, string>(
   [...DEFAULT_CATEGORIES.income, ...DEFAULT_CATEGORIES.expense]
-    .map((label): [string, string] => [label, `budgets.category.${label.toLowerCase().replace(/\s+/g, '_')}`]),
+    .map((label): [string, string] => [label.toLowerCase(), `budgets.category.${label.toLowerCase().replace(/\s+/g, '_')}`]),
 );
 
 /** Localize only Wallume's canonical system categories; preserve custom user labels verbatim. */
 export function systemCategoryLabel(raw: string, translate: Translate): string {
-  const key = SYSTEM_CATEGORY_KEYS.get(raw);
+  const key = SYSTEM_CATEGORY_KEYS.get(raw.trim().toLowerCase());
   if (!key) return raw;
   const localized = translate(key);
   return localized === key ? raw : localized;

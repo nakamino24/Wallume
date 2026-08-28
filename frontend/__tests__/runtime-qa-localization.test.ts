@@ -22,6 +22,7 @@ describe('runtime QA localization regressions', () => {
 
   it('localizes only known system categories and preserves custom labels exactly', () => {
     expect(systemCategoryLabel('Food', translate('id'))).toBe('Makanan');
+    expect(systemCategoryLabel('food', translate('id'))).toBe('Makanan');
     expect(systemCategoryLabel('Food', translate('en'))).toBe('Food');
     expect(systemCategoryLabel('Coffee Beans', translate('id'))).toBe('Coffee Beans');
   });

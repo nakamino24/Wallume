@@ -12,7 +12,10 @@ jest.mock('@/src/theme/ThemeProvider', () => ({
 }));
 
 const mockGetLocale = jest.fn(() => 'en');
-jest.mock('@/src/lib/i18n', () => ({ getLocale: () => mockGetLocale() }));
+jest.mock('@/src/lib/i18n', () => ({
+  getLocale: () => mockGetLocale(),
+  intlLocale: (locale: string) => locale.startsWith('id') ? 'id-ID' : 'en-US',
+}));
 jest.mock('@/src/privacy/BalancePrivacyProvider', () => ({
   useBalancePrivacy: () => ({ isBalanceVisible: true, isPrivacyReady: true }),
 }));
