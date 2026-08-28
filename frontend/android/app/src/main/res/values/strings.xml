@@ -1,9 +1,0 @@
-<resources>
-  <string name="app_name">Wallume</string>
-  <string name="expo_system_ui_user_interface_style" translatable="false">automatic</string>
-  <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
-  <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>
-  <string name="expo_navigation_bar_border_color" translatable="false">-15722474</string>
-  <string name="expo_navigation_bar_visibility" translatable="false">visible</string>
-  <string name="widget_networth_description" translatable="false">Your balance and this month\'s income, expense, and cash flow. Resize large for Financial Health.</string>
-</resources>
