@@ -1,88 +1,111 @@
-"""User fixtures — current vs legacy vs external."""
-import pytest
+import unittest
+from unittest.mock import AsyncMock, patch
+
+from fastapi import HTTPException
+
+from app.repositories.base import BaseRepository
+from app.repositories.repos import UserRepository
+from app.security.auth import hash_password
+from app.services.auth_service import AuthService
 from app.utils.email import normalize_email
-from app.utils.compat import normalize_user_document
-from app.security.auth import hash_password, verify_password
-
-CURRENT_EMAIL_USER = {
-    "user_id": "user_abc123",
-    "email": "alex@wallume.app",
-    "name": "Alex",
-    "password_hash": hash_password("Password123"),
-    "provider": "email",
-    "currency": "IDR",
-    "theme": "dark",
-    "payday_day": 25,
-    "work_week": 5,
-    "created_at": "2026-08-28T00:00:00Z",
-}
-
-LEGACY_EMAIL_USER = {
-    "user_id": "user_abc123",
-    "email": "Alex@Wallume.App",  # mixed case, no strip
-    "name": "Alex",
-    "password_hash": hash_password("Password123"),
-    "provider": "email",
-    # missing optional: currency, theme, payday_day, work_week
-}
-
-EXTERNAL_USER = {
-    "user_id": "user_ext456",
-    "email": "bob@gmail.com",
-    "name": "Bob",
-    "password_hash": None,
-    "provider": "google",
-    "currency": "USD",
-}
 
 
-def test_normalize_email_variants():
-    assert normalize_email("User@Example.com") == "user@example.com"
-    assert normalize_email("user@example.com") == "user@example.com"
-    assert normalize_email(" user@example.com ") == "user@example.com"
-    assert normalize_email("USER@EXAMPLE.COM  ") == "user@example.com"
+PASSWORD = "Password123"
 
 
-def test_current_user_normalizes_to_canonical():
-    doc = normalize_user_document(dict(CURRENT_EMAIL_USER))
-    assert doc["email"] == "alex@wallume.app"
-    assert doc["user_id"] == "user_abc123"
+def email_user(**overrides):
+    doc = {
+        "user_id": "user_abc123",
+        "email": "alex@wallume.app",
+        "name": "Alex",
+        "password_hash": hash_password(PASSWORD),
+        "provider": "email",
+        "currency": "IDR",
+        "theme": "dark",
+        "payday_day": 25,
+        "work_week": 5,
+        "created_at": "2026-08-28T00:00:00Z",
+    }
+    doc.update(overrides)
+    return doc
 
 
-def test_legacy_user_missing_optionals_defaults():
-    doc = normalize_user_document(dict(LEGACY_EMAIL_USER))
-    assert doc["email"] == "alex@wallume.app"  # lower+strip applied
-    assert doc["provider"] == "email"
-    assert doc["currency"] == "USD"
-    assert doc["theme"] == "light"
-    assert doc["payday_day"] is None
-    assert doc["work_week"] == 5
-    # user_id preserved
-    assert doc["user_id"] == "user_abc123"
+class UserRepositoryCompatibilityTests(unittest.IsolatedAsyncioTestCase):
+    async def test_repository_normalizes_legacy_missing_optionals_non_destructively(self):
+        raw = email_user()
+        raw["legacy_marker"] = "preserve-me"
+        for field in ("picture", "currency", "theme", "payday_day", "work_week"):
+            raw.pop(field, None)
+
+        repo = UserRepository()
+        with patch.object(BaseRepository, "find_one", AsyncMock(return_value=raw)) as find_one:
+            user = await repo.find_by_user_id("user_abc123")
+
+        find_one.assert_awaited_once_with({"user_id": "user_abc123"})
+        self.assertEqual(user["user_id"], raw["user_id"])
+        self.assertEqual(user["password_hash"], raw["password_hash"])
+        self.assertEqual(user["provider"], "email")
+        self.assertEqual(user["currency"], "USD")
+        self.assertEqual(user["theme"], "light")
+        self.assertIsNone(user["payday_day"])
+        self.assertEqual(user["work_week"], 5)
+        self.assertEqual(user["created_at"], raw["created_at"])
+        self.assertEqual(user["legacy_marker"], "preserve-me")
+        self.assertNotIn("currency", raw)
+
+    async def test_email_lookup_normalizes_input_but_remains_exact(self):
+        repo = UserRepository()
+        with patch.object(BaseRepository, "find_one", AsyncMock(return_value=None)) as find_one:
+            await repo.find_by_email("  Alex@Wallume.App ")
+        find_one.assert_awaited_once_with({"email": "alex@wallume.app"})
 
 
-def test_external_user_no_password_hash():
-    doc = normalize_user_document(dict(EXTERNAL_USER))
-    assert doc["password_hash"] is None
-    assert doc["provider"] == "google"
+class AuthServiceContractTests(unittest.IsolatedAsyncioTestCase):
+    async def test_login_current_user_correct_password(self):
+        service = AuthService()
+        service.users.find_by_email = AsyncMock(return_value=email_user())
+        result = await service.login(" ALEX@wallume.app ", PASSWORD)
+        self.assertTrue(result["token"])
+        self.assertEqual(result["user"]["user_id"], "user_abc123")
+        service.users.find_by_email.assert_awaited_once_with("alex@wallume.app")
+
+    async def test_login_wrong_password_is_401(self):
+        service = AuthService()
+        service.users.find_by_email = AsyncMock(return_value=email_user())
+        with self.assertRaises(HTTPException) as raised:
+            await service.login("alex@wallume.app", "WrongPass123")
+        self.assertEqual(raised.exception.status_code, 401)
+
+    async def test_external_provider_without_password_is_401(self):
+        service = AuthService()
+        service.users.find_by_email = AsyncMock(return_value=email_user(provider="google", password_hash=None))
+        with self.assertRaises(HTTPException) as raised:
+            await service.login("alex@wallume.app", PASSWORD)
+        self.assertEqual(raised.exception.status_code, 401)
+
+    async def test_legacy_user_flows_repository_to_login_with_same_identity(self):
+        raw = email_user()
+        for field in ("picture", "currency", "theme", "payday_day", "work_week"):
+            raw.pop(field, None)
+        service = AuthService()
+        with patch.object(BaseRepository, "find_one", AsyncMock(return_value=raw)):
+            result = await service.login("alex@wallume.app", PASSWORD)
+        user = result["user"]
+        self.assertEqual(user["user_id"], raw["user_id"])
+        self.assertEqual(user["currency"], "USD")
+        self.assertEqual(user["theme"], "light")
+        self.assertEqual(user["work_week"], 5)
+
+    async def test_signup_duplicate_normalized_email_does_not_insert(self):
+        service = AuthService()
+        service.users.find_by_email = AsyncMock(return_value=email_user())
+        service.users.insert_one = AsyncMock()
+        with self.assertRaises(HTTPException) as raised:
+            await service.signup(" ALEX@WALLUME.APP ", PASSWORD, "Alex")
+        self.assertEqual(raised.exception.status_code, 400)
+        service.users.find_by_email.assert_awaited_once_with("alex@wallume.app")
+        service.users.insert_one.assert_not_awaited()
 
 
-def test_legacy_bcrypt_still_verifies():
-    assert verify_password("Password123", CURRENT_EMAIL_USER["password_hash"])
-    assert verify_password("Password123", LEGACY_EMAIL_USER["password_hash"])
-    assert not verify_password("WrongPass123", CURRENT_EMAIL_USER["password_hash"])
-
-
-def test_external_provider_rejected_for_email_login():
-    # Simulate login check: no password_hash -> 401
-    user = EXTERNAL_USER
-    assert not user.get("password_hash")
-    # login would raise 401
-    assert True
-
-
-def test_same_user_id_preserved_after_normalization():
-    legacy = normalize_user_document(dict(LEGACY_EMAIL_USER))
-    current = normalize_user_document(dict(CURRENT_EMAIL_USER))
-    assert legacy["user_id"] == current["user_id"]
-    assert legacy["user_id"] == "user_abc123"
+def test_normalize_email_is_input_normalization():
+    assert normalize_email(" User@Example.com ") == "user@example.com"

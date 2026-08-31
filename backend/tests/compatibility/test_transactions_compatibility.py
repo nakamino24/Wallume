@@ -1,29 +1,55 @@
-"""Transaction fixtures — date normalization."""
-from app.utils.compat import normalize_transaction_document
+import unittest
+from unittest.mock import AsyncMock
 
-CURRENT_TX = {"id": "tx1", "user_id": "user_abc123", "date": "2026-08-28", "amount": 1000}
-LEGACY_TX_DATETIME = {"id": "tx2", "user_id": "user_abc123", "date": "2026-08-28T14:00:00Z", "amount": 1000}
-LEGACY_TX_DATETIME_NOZ = {"id": "tx3", "user_id": "user_abc123", "date": "2026-08-28T00:00:00", "amount": 1000}
+from bson import Decimal128
 
-
-def test_canonical_date_preserved():
-    doc = normalize_transaction_document(dict(CURRENT_TX))
-    assert doc["date"] == "2026-08-28"
+from app.repositories.repos import TransactionRepository
 
 
-def test_legacy_iso_datetime_normalizes_to_date():
-    doc = normalize_transaction_document(dict(LEGACY_TX_DATETIME))
-    assert doc["date"] == "2026-08-28"
+class FakeCursor:
+    def __init__(self, docs):
+        self.docs = docs
+
+    def sort(self, *args, **kwargs):
+        return self
+
+    def limit(self, *args, **kwargs):
+        return self
+
+    async def to_list(self, *args, **kwargs):
+        return self.docs
 
 
-def test_legacy_iso_noz_normalizes():
-    doc = normalize_transaction_document(dict(LEGACY_TX_DATETIME_NOZ))
-    assert doc["date"] == "2026-08-28"
+class FakeCollection:
+    def __init__(self, docs):
+        self.docs = docs
+
+    def find(self, *args, **kwargs):
+        return FakeCursor(self.docs)
 
 
-def test_writer_emits_canonical():
-    # Simulate writer: todayLocalISO() -> YYYY-MM-DD
-    from datetime import date
-    canonical = date(2026, 8, 28).isoformat()
-    assert canonical == "2026-08-28"
-    assert "T" not in canonical
+class TransactionRepositoryCompatibilityTests(unittest.IsolatedAsyncioTestCase):
+    async def test_repository_read_normalizes_proven_iso_date_and_money(self):
+        raw = {
+            "id": "tx_legacy",
+            "user_id": "user_abc123",
+            "date": "2026-08-28T14:00:00Z",
+            "amount": Decimal128("150000.75"),
+        }
+        repo = TransactionRepository()
+        repo._collection = AsyncMock(return_value=FakeCollection([raw]))
+
+        result = await repo.find_by_user("user_abc123")
+
+        self.assertEqual(result[0]["date"], "2026-08-28")
+        self.assertEqual(result[0]["amount"], 150000.75)
+        self.assertEqual(raw["date"], "2026-08-28T14:00:00Z")
+        self.assertIsInstance(raw["amount"], Decimal128)
+
+    async def test_repository_preserves_canonical_date(self):
+        repo = TransactionRepository()
+        repo._collection = AsyncMock(return_value=FakeCollection([{
+            "id": "tx_current", "user_id": "user_abc123", "date": "2026-08-28", "amount": 1000,
+        }]))
+        result = await repo.find_by_user("user_abc123")
+        self.assertEqual(result[0]["date"], "2026-08-28")

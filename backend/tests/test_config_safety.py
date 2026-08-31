@@ -15,7 +15,12 @@ def test_production_rejects_default_jwt_secret():
 
 
 def test_production_accepts_configured_jwt_secret():
-    settings = Settings(environment="production", jwt_secret="a-long-unique-production-secret")
+    settings = Settings(
+        environment="production",
+        jwt_secret="a-long-unique-production-secret",
+        mongo_url="mongodb://cluster.example.com:27017",
+        db_name="wallume_prod",
+    )
     settings.validate_production_safety()
 
 

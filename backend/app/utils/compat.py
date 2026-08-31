@@ -6,6 +6,7 @@ Keep near persistence boundary, not in UI.
 from typing import Any
 
 from app.utils.email import normalize_email
+from app.utils.helpers import to_canonical_date
 
 
 def normalize_user_document(doc: dict[str, Any]) -> dict[str, Any]:
@@ -26,20 +27,11 @@ def normalize_user_document(doc: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def normalize_money_value(value: Any):
-    """Delegate to existing tolerant to_decimal — legacy int/float/str/Decimal/Decimal128 → Decimal."""
-    from app.utils.money import to_decimal
-
-    return to_decimal(value)
-
-
 def normalize_transaction_document(doc: dict[str, Any]) -> dict[str, Any]:
-    """Tolerate historical date forms; writer still emits YYYY-MM-DD."""
+    """Normalize proven historical ISO transaction dates without mutating Mongo."""
     if not doc or "date" not in doc:
         return doc
     out = dict(doc)
-    v = out["date"]
-    if isinstance(v, str) and "T" in v:
-        # Legacy ISO datetime → keep calendar date part (no timezone fabrication)
-        out["date"] = v.split("T")[0]
+    if isinstance(out["date"], str):
+        out["date"] = to_canonical_date(out["date"])
     return out

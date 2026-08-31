@@ -33,8 +33,7 @@ HTTP/API (app/api/*.py) → Service (app/services/*.py) → Repository (app/repo
   - CURRENT: single file `repositories/repos.py` 847 lines mixing 10 repos (partial).
   - TARGET: split `repositories/{users,wallets,transactions,categories,planning}.py`.
 - `app/core/config.py` is single backend config source (MONGO_URL, DB_NAME, JWT_SECRET).
-  - CURRENT: validates `JWT_SECRET` default only; localhost/empty `MONGO_URL` not rejected (partial).
-  - TARGET: production fails on `localhost`/`empty` `MONGO_URL` and unsafe `DB_NAME` too.
+  - CURRENT: production fails on a default JWT secret, localhost/empty `MONGO_URL`, and empty/unsafe `DB_NAME`; development keeps local defaults.
 - `create_indexes()` is safe startup (indexes only); migrations are explicit scripts `backend/scripts/migrations/YYYYMMDD_*.py` with `--dry-run/--apply`.
   - CURRENT: `create_indexes` safe, but `migrations/` runner not yet exists (only `tmp/` audits).
 
@@ -46,40 +45,39 @@ All frontend calls via `frontend/src/api/client.ts:50` `req()`:
 Frontend `METHOD PATH` map is documented in `docs/api.md` (to be expanded to `src/api/types/`).
 
 ## Database compatibility
-Mongo is schemaless. **Target** is **READ OLD + READ NEW, WRITE NEW** (not yet fully implemented).
+Mongo is schemaless. The compatibility rule is **READ OLD + READ NEW, WRITE NEW**.
 
 - **Money**:
-  - CURRENT: `app/utils/money.py` tolerates `float/int/string/Decimal/Decimal128` on read via `to_decimal`, but repository normalization is ad-hoc (direct `Decimal128` in some paths).
-  - TARGET: repository-boundary `normalize_money_value()` pure helper; new writes `Decimal128` only; legacy reads via repository.
+  - PROVEN HISTORICAL: numeric `int`/`float` values from releases before Decimal128 adoption (`f439750`).
+  - CURRENT CANONICAL: new repository writes use `Decimal128`; `BaseRepository` reads expose API-safe numbers.
+  - HYPOTHETICAL/REMOVED: a separate `normalize_money_value()` compatibility layer. Existing `money.py` and `BaseRepository` already own this boundary.
 
 - **Dates**:
-  - CURRENT: canonical `YYYY-MM-DD` for new `transaction.date` (`todayLocalISO`), `groupTransactionsByDate` + `audit_tx_timestamps.py` already tolerates `YYYY-MM-DDTHH:mm:ss` legacy.
-  - TARGET: explicit `normalize_transaction_document()` in repository; writer emits `YYYY-MM-DD` only.
+  - PROVEN HISTORICAL: three full-ISO transaction dates recorded by the `dc36fa2` migration/audit history.
+  - CURRENT CANONICAL: repository reads normalize ISO dates without a database write; writers emit `YYYY-MM-DD` only.
 
 - **Email**:
-  - CURRENT: `signup/login` use `email.lower()` (no `strip()`), `find_by_email` uses lower only.
-  - TARGET: `normalize_email(email) = email.strip().lower()` via single helper used in `signup/login/lookup/duplicate check`.
+  - PROVEN HISTORICAL: signup has lowercased stored email since the backend service was introduced (`dec054f`).
+  - CURRENT CANONICAL: `normalize_email(email) = email.strip().lower()` is used before exact indexed lookup and writes.
+  - HYPOTHETICAL/REMOVED: mixed-case stored email fixtures and regex/collation login lookup.
 
 - **User**:
-  - CURRENT: `user_id` immutable FK across collections; `provider` `email` vs `google/emergent` + `password_hash` presence determines login; missing optional `payday_day/work_week` defaulted in `AuthService` but not yet via repository normalization.
-  - TARGET: `normalize_user_document()` in repository; same `user_id` preserved.
+  - PROVEN HISTORICAL: records predating later optional profile fields can omit them.
+  - CURRENT CANONICAL: `UserRepository` supplies defaults on reads while preserving identity, credentials, provider, timestamps, and unknown fields.
 
-Normalization **TARGET** lives in repository layer, not screens. **CURRENT** is partial.
+Compatibility normalization lives at the repository boundary and never mutates Mongo during reads.
 
 ## Migration policy
 **TARGET:** EXPAND → MIGRATE → VERIFY → CONTRACT. Each `backend/scripts/migrations/YYYYMMDD_*.py` supports `--dry-run/--apply` and reports `before/candidate/changed/skipped/error`. No auto-migration on API startup; `scripts/backups/` retained as audit. **CURRENT:** no `migrations/` runner yet; only `tmp/` audit scripts exist.
 
 ## Auth identity
-- CURRENT: `user_id` stable, `provider` check via `password_hash` presence, `bcrypt` + `jti` blacklist + `SecureStore mf.token` + `10/min` limit preserved.
-- TARGET: single `normalize_email` helper (see above) and `normalize_user_document()` for missing optional fields; same `user_id` preserved (verified by compatibility tests).
+- CURRENT: `user_id` remains stable, repository reads normalize optional fields, and `provider`/`password_hash`, bcrypt, JTI blacklist, SecureStore token, and login rate limit behavior are preserved.
 
 ## Money / Date rules
-- CURRENT: new `Decimal128` already, legacy tolerant via `to_decimal`; `YYYY-MM-DD` canonical with ISO tolerant read. No timezone fabrication (good).
-- TARGET: strict writer + explicit repository normalization helpers (see above).
+- CURRENT: new money writes use `Decimal128`; repository reads tolerate proven historical numeric forms. Transaction writers use `YYYY-MM-DD`; repository reads normalize proven ISO dates without changing ordering or stored data.
 
 ## Configuration
-- CURRENT: `app/core/config.py` is single source but `validate_production_safety()` only checks `JWT_SECRET` default, **not** `MONGO_URL` localhost/empty or `DB_NAME` unsafe; `frontend/src/api/client.ts:4` is single source for `EXPO_PUBLIC_BACKEND_URL` with fallback (good).
-- TARGET: `validate_production_safety()` must also reject `localhost` Mongo, empty `MONGO_URL`, unsafe `DB_NAME`; dev/test keep local defaults.
+- CURRENT: `app/core/config.py` rejects unsafe production secrets/database configuration; `frontend/src/api/client.ts:4` remains the single `EXPO_PUBLIC_BACKEND_URL` source.
 
 ## Invariant (MANDATORY)
 > Application updates must be backward-compatible with valid persisted data from supported historical Wallume versions. Readers may support legacy representations. Writers always emit the current canonical representation. Destructive migration requires an explicit reviewed migration.
@@ -87,11 +85,8 @@ Normalization **TARGET** lives in repository layer, not screens. **CURRENT** is 
 ## CI / Testing
 - Frontend gate: `yarn install --frozen`, `expo install --check`, `expo-doctor 18/18`, `tsc --noEmit`, `lint`, `jest --runInBand` (29 suites 229 tests at baseline `52c3aa7`, including `locale-lifecycle`, `localization-audit`, `budgets`, `auth-refresh`, `auth-routing`).
   - CURRENT: green at `52c3aa7` (verified `2026-08-28`).
-- Backend gate: `pytest` (requires `bson`/`motor`; CI has full env).
-  - CURRENT: local `pytest` needs `.venv` (`pip install -r requirements.txt`); `python -m pytest` not run in this doc commit, but last `origin/main` CI was green.
-- Compatibility fixtures: `tests/compatibility/` (planned) with sanitized `legacy user/tx/money` → new repo → valid model.
-  - CURRENT: not yet existent (this phase will create `backend/tests/compatibility/`).
-  - TARGET: 4 files `test_users/money/transactions/dates_compatibility.py`.
+- Backend gate: `pytest` (requires `bson`/`motor`; CI installs the full environment).
+- Compatibility tests in `backend/tests/compatibility/` exercise repository and auth-service paths; endpoint contracts live in `backend/tests/test_api_envelope.py`.
 - Architecture drift: `git ls-tree -r HEAD -- frontend/android` must be empty (CNG), no `os.environ` outside `core/config`, no `fetch` outside `src/api` (except widget/coach streaming).
   - CURRENT: `frontend/android` removed in `95e49b8`, `expo-doctor` 18/18 PASS.
 

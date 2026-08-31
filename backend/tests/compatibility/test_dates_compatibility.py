@@ -1,5 +1,5 @@
 """Date fixtures — canonical vs historical."""
-from datetime import date, datetime
+from datetime import date
 
 from app.utils.compat import normalize_transaction_document
 

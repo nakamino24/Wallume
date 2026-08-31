@@ -2,8 +2,6 @@
  * Frontend contract: req() must handle both
  * CURRENT ENVELOPE {success,data} and LEGACY FLAT {token,user,...}
  */
-import { Text } from 'react-native';
-
 const mockFetch = jest.fn();
 global.fetch = mockFetch as any;
 
@@ -43,18 +41,19 @@ describe('frontend API contract', () => {
     expect(res.user.user_id).toBe('u2');
   });
 
-  it('attaches err.status for 401/429/500', async () => {
+  it.each([401, 429, 500])('propagates HTTP status %i and detail', async (status) => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
-      status: 401,
-      json: async () => ({ detail: 'Invalid credentials' }),
+      status,
+      json: async () => ({ detail: `Failure ${status}` }),
     } as any);
-    try {
-      await (client as any).api.login({ email: 'a@b.com', password: 'x' });
-      fail('should throw');
-    } catch (e: any) {
-      expect(e.status).toBe(401);
-      expect(e.detail).toBe('Invalid credentials');
-    }
+    await expect((client as any).api.login({ email: 'a@b.com', password: 'x' }))
+      .rejects.toMatchObject({ status, detail: `Failure ${status}` });
+  });
+
+  it('keeps fetch rejections classifiable as network errors', async () => {
+    const networkError = new TypeError('Network request failed');
+    mockFetch.mockRejectedValueOnce(networkError);
+    await expect((client as any).api.wallets()).rejects.toBe(networkError);
   });
 });
