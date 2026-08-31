@@ -42,9 +42,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const r = await api.me();
       setUser(r.user);
       storage.setItem('mf.widget.currency', r.user.currency || 'USD');
-    } catch {
-      await setToken(null);
-      setUser(null);
+    } catch (e: any) {
+      const status = e?.status;
+      const isDefinitiveAuthFailure = status === 401 || status === 403;
+      if (isDefinitiveAuthFailure) {
+        await setToken(null);
+        setUser(null);
+      } else {
+        // Transient: network / 5xx / timeout — preserve token, keep user null but do not delete session
+        // Refresh will retry on next app focus; UI can show offline if needed without silent logout
+        setUser(null);
+      }
     }
   }, []);
 

@@ -117,7 +117,9 @@ describe('Auth Flow', () => {
   });
 
   it('displays error message on login failure', async () => {
-    mockLogin.mockRejectedValueOnce(new Error('Invalid credentials'));
+    const err: any = new Error('Invalid credentials');
+    err.status = 401;
+    mockLogin.mockRejectedValueOnce(err);
     const Login = require('@/app/(auth)/login').default;
     const { getByTestId, getByText } = render(<Login />);
 
@@ -126,7 +128,7 @@ describe('Auth Flow', () => {
     fireEvent.press(getByTestId('login-submit'));
 
     await waitFor(() => {
-      expect(getByText(/Could not sign in/i)).toBeTruthy();
+      expect(getByText(/Incorrect email or password/i)).toBeTruthy();
     });
   });
 
