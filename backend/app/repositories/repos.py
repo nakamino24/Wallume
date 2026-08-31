@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any, Optional
 from bson import Decimal128
 from app.repositories.base import BaseRepository
+from app.utils.compat import normalize_transaction_document, normalize_user_document
+from app.utils.email import normalize_email
 from app.utils.money import from_decimal128
 
 
@@ -11,10 +13,12 @@ class UserRepository(BaseRepository):
         super().__init__("users")
 
     async def find_by_email(self, email: str) -> dict[str, Any] | None:
-        return await self.find_one({"email": email})
+        doc = await self.find_one({"email": normalize_email(email)})
+        return normalize_user_document(doc) if doc else None
 
     async def find_by_user_id(self, user_id: str) -> dict[str, Any] | None:
-        return await self.find_one({"user_id": user_id})
+        doc = await self.find_one({"user_id": user_id})
+        return normalize_user_document(doc) if doc else None
 
     async def update_profile(self, user_id: str, data: dict) -> None:
         await self.update_one({"user_id": user_id}, {"$set": data})
@@ -70,6 +74,13 @@ class TransactionRepository(BaseRepository):
     def __init__(self) -> None:
         super().__init__("transactions")
 
+    def _compat_out(self, docs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [normalize_transaction_document(doc) for doc in self._money_out_list(docs)]
+
+    async def find_one(self, filter: dict, session=None) -> dict[str, Any] | None:
+        doc = await super().find_one(filter, session=session)
+        return normalize_transaction_document(doc) if doc else None
+
     async def find_by_user(self, user_id: str, type_filter: Optional[str] = None,
                            wallet_id: Optional[str] = None, limit: int = 100,
                            from_date: Optional[str] = None, to_date: Optional[str] = None) -> list[dict]:
@@ -100,7 +111,7 @@ class TransactionRepository(BaseRepository):
             ("date", -1), ("created_at", -1), ("id", -1)
         ]).limit(limit)
         docs = await cursor.to_list(limit)
-        return self._money_out_list(docs)
+        return self._compat_out(docs)
 
     async def aggregate_report_summary(self, user_id: str, from_date: str, to_date_exclusive: str) -> dict:
         """Return complete cash-flow aggregates for one user's date range.
@@ -176,7 +187,7 @@ class TransactionRepository(BaseRepository):
         q = self._active_filter({"user_id": user_id, "date": {"$gte": start_date}})
         cursor = (await self._collection()).find(q, {"_id": 0, "type": 1, "amount": 1, "category": 1, "date": 1})
         docs = await cursor.to_list(10000)
-        return self._money_out_list(docs)
+        return self._compat_out(docs)
 
     async def count_by_category(self, user_id: str, category_label: str) -> int:
         """Number of transactions currently tagged with a given category label."""

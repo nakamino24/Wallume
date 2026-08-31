@@ -14,6 +14,7 @@ from app.repositories.repos import (
 from app.security.auth import hash_password, verify_password, create_access_token, decode_access_token
 from app.utils.helpers import new_id, now_utc, clean_user
 from app.utils.money import round_money
+from app.utils.email import normalize_email
 
 
 class AuthService:
@@ -31,14 +32,15 @@ class AuthService:
         if not any(c.isupper() for c in pw):
             raise HTTPException(400, "Password must contain at least one uppercase letter")
 
-        existing = await self.users.find_by_email(email.lower())
+        normalized = normalize_email(email)
+        existing = await self.users.find_by_email(normalized)
         if existing:
             raise HTTPException(400, "Email already registered")
 
         user_id = new_id("user")
         doc = {
             "user_id": user_id,
-            "email": email.lower(),
+            "email": normalized,
             "name": name.strip() or email.split("@")[0],
             "password_hash": hash_password(password),
             "picture": None,
@@ -53,7 +55,7 @@ class AuthService:
         return {"token": create_access_token(user_id), "user": clean_user(doc)}
 
     async def login(self, email: str, password: str) -> dict:
-        user = await self.users.find_by_email(email.lower())
+        user = await self.users.find_by_email(normalize_email(email))
         if not user or not user.get("password_hash") or not verify_password(password, user["password_hash"]):
             raise HTTPException(401, "Invalid credentials")
         return {"token": create_access_token(user["user_id"]), "user": clean_user(user)}
