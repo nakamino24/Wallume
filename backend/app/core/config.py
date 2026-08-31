@@ -44,11 +44,23 @@ class Settings(BaseSettings):
 
     def validate_production_safety(self) -> None:
         environments = {self.environment.lower(), self.railway_environment_name.lower()}
-        if environments.intersection({"production", "prod"}) and self.jwt_secret == self.DEFAULT_JWT_SECRET:
+        is_prod = bool(environments.intersection({"production", "prod"}))
+        if is_prod and self.jwt_secret == self.DEFAULT_JWT_SECRET:
             raise RuntimeError(
                 "Refusing to start in production with the default JWT_SECRET. "
                 "Configure a strong, unique JWT_SECRET first."
             )
+        if is_prod:
+            mongo = (self.mongo_url or "").strip()
+            if not mongo:
+                raise RuntimeError("Refusing to start in production with empty MONGO_URL.")
+            if mongo in ("mongodb://localhost:27017", "mongodb://127.0.0.1:27017") or mongo.startswith("mongodb://localhost") or mongo.startswith("mongodb://127.0.0.1"):
+                raise RuntimeError("Refusing to start in production with localhost MONGO_URL.")
+            db = (self.db_name or "").strip()
+            if not db:
+                raise RuntimeError("Refusing to start in production with empty DB_NAME.")
+            if db.lower() in ("test",):
+                raise RuntimeError("Refusing to start in production with unsafe DB_NAME 'test'.")
 
 
 settings = Settings()
