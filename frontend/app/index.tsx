@@ -8,14 +8,15 @@ import { font, radius, spacing } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
 import { WallumeMark } from '@/src/components/WallumeMark';
 import { useI18n } from '@/src/lib/I18nProvider';
+import { Button, Body } from '@/src/components/ui';
 
 export default function Index() {
-  const { user, loading } = useAuth();
+  const { user, loading, status, refresh } = useAuth();
   const { done: onboardingDone, checking: onboardingChecking } = useOnboarding();
   const { colors } = useTheme();
   const { t } = useI18n();
 
-  if (loading || onboardingChecking) {
+  if (loading || status === 'initializing' || onboardingChecking) {
     return (
       <View style={[styles.gradient, { backgroundColor: colors.surface }]}>
         <SafeAreaView style={styles.safeArea}>
@@ -32,7 +33,24 @@ export default function Index() {
     );
   }
 
-  if (!user) return <Redirect href={'/(auth)/login' as any} />;
+  if (status === 'temporarily-unavailable') {
+    return (
+      <View style={[styles.gradient, { backgroundColor: colors.surface }]}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.shell}>
+            <View style={[styles.logoWrap, { backgroundColor: colors.brandPrimary }]}>
+              <WallumeMark size={36} />
+            </View>
+            <Text style={[styles.title, { color: colors.onSurface, fontFamily: font.displayBold }]}>{t('auth.session.unavailable.title')}</Text>
+            <Body muted style={{ marginTop: spacing.sm, textAlign: 'center' }}>{t('auth.session.unavailable.subtitle')}</Body>
+            <Button label={t('auth.session.retry')} onPress={refresh} style={{ marginTop: spacing.xl }} />
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  if (status === 'unauthenticated' || !user) return <Redirect href={'/(auth)/login' as any} />;
   if (!onboardingDone) return <Redirect href={'/(auth)/onboarding' as any} />;
   return <Redirect href="/(tabs)/home" />;
 }

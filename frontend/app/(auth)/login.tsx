@@ -36,6 +36,7 @@ export default function Login() {
       const status = e?.status;
       const msg = String(e?.detail || e?.message || '').toLowerCase();
       if (status === 401 || msg.includes('invalid credentials')) setErr(t('auth.error.invalidCredentials'));
+      else if (status === 429) setErr(t('auth.error.rateLimited'));
       else if (status >= 500) setErr(t('auth.error.server'));
       else if (!status || msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) setErr(t('auth.error.network'));
       else setErr(t('auth.error.login'));

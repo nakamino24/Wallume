@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { AppState } from 'react-native';
 import { api, getToken, setToken } from '@/src/api/client';
 import { clearTransactionsState } from '@/src/hooks/use-transactions';
 import { storage } from '@/src/utils/storage';
@@ -15,9 +16,12 @@ type User = {
   work_week?: number | null;
 };
 
+export type AuthStatus = 'initializing' | 'authenticated' | 'unauthenticated' | 'temporarily-unavailable';
+
 type Ctx = {
   user: User | null;
   loading: boolean;
+  status: AuthStatus;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
   loginWithEmergentToken: (session_token: string) => Promise<void>;
@@ -31,43 +35,63 @@ const AuthCtx = createContext<Ctx | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<AuthStatus>('initializing');
+  const userRef = useRef<User | null>(null);
+  useEffect(() => { userRef.current = user; }, [user]);
 
   const refresh = useCallback(async () => {
     const t = await getToken();
     if (!t) {
       setUser(null);
+      setStatus('unauthenticated');
+      setLoading(false);
       return;
     }
     try {
       const r = await api.me();
       setUser(r.user);
+      setStatus('authenticated');
       storage.setItem('mf.widget.currency', r.user.currency || 'USD');
     } catch (e: any) {
-      const status = e?.status;
-      const isDefinitiveAuthFailure = status === 401 || status === 403;
-      if (isDefinitiveAuthFailure) {
+      const httpStatus = e?.status;
+      const isDefinitive = httpStatus === 401 || httpStatus === 403;
+      if (isDefinitive) {
         await setToken(null);
         setUser(null);
+        setStatus('unauthenticated');
       } else {
-        // Transient: network / 5xx / timeout — preserve token, keep user null but do not delete session
-        // Refresh will retry on next app focus; UI can show offline if needed without silent logout
-        setUser(null);
+        // Transient network/5xx/timeout — preserve token and existing user
+        setStatus('temporarily-unavailable');
+        // Keep existing user if we already had one, otherwise stay null but not unauthenticated
+        // Do not clear token
       }
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     (async () => {
       await refresh();
-      setLoading(false);
     })();
   }, [refresh]);
+
+  // Retry when app returns to foreground if temporarily unavailable
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active' && status === 'temporarily-unavailable') {
+        refresh();
+      }
+    });
+    return () => sub.remove();
+  }, [status, refresh]);
 
   const login = async (email: string, password: string) => {
     clearTransactionsState();
     const r = await api.login({ email, password });
     await setToken(r.token);
     setUser(r.user);
+    setStatus('authenticated');
     storage.setItem('mf.widget.currency', r.user.currency || 'USD');
   };
 
@@ -76,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const r = await api.signup({ name, email, password });
     await setToken(r.token);
     setUser(r.user);
+    setStatus('authenticated');
     storage.setItem('mf.widget.currency', r.user.currency || 'USD');
   };
 
@@ -84,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const r = await api.emergentSession(session_token);
     await setToken(r.token);
     setUser(r.user);
+    setStatus('authenticated');
     storage.setItem('mf.widget.currency', r.user.currency || 'USD');
   };
 
@@ -92,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await setToken(null);
     clearTransactionsState();
     setUser(null);
+    setStatus('unauthenticated');
   };
 
   const updateProfile = async (patch: Partial<User>) => {
@@ -101,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthCtx.Provider value={{ user, loading, login, signup, loginWithEmergentToken, logout, refresh, updateProfile }}>
+    <AuthCtx.Provider value={{ user, loading, status, login, signup, loginWithEmergentToken, logout, refresh, updateProfile }}>
       {children}
     </AuthCtx.Provider>
   );
