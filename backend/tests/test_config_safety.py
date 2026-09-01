@@ -68,3 +68,45 @@ def test_production_rejects_unsafe_db_test():
 def test_production_accepts_proper_config():
     s = Settings(environment="production", jwt_secret="a-long-unique-production-secret", mongo_url="mongodb://cluster.example.com:27017", db_name="wallume_prod")
     s.validate_production_safety()
+
+
+def production_with_password_reset(**overrides):
+    values = {
+        "environment": "production",
+        "jwt_secret": "a-long-unique-production-secret",
+        "mongo_url": "mongodb://cluster.example.com:27017",
+        "db_name": "wallume_prod",
+        "password_reset_enabled": True,
+        "password_reset_secret": "a-dedicated-password-reset-secret-over-32-characters",
+        "password_reset_email_provider": "resend",
+        "password_reset_from_email": "Wallume <support@wallume.app>",
+        "resend_api_key": "re_test_secret",
+    }
+    values.update(overrides)
+    return Settings(**values)
+
+
+@pytest.mark.parametrize(
+    ("override", "message"),
+    [
+        ({"password_reset_secret": "short"}, "unsafe PASSWORD_RESET_SECRET"),
+        ({"password_reset_email_provider": "disabled"}, "must be 'resend'"),
+        ({"password_reset_from_email": ""}, "PASSWORD_RESET_FROM_EMAIL"),
+        ({"resend_api_key": ""}, "RESEND_API_KEY"),
+        ({
+            "jwt_secret": "one-shared-secret-that-is-definitely-longer-than-32-characters",
+            "password_reset_secret": "one-shared-secret-that-is-definitely-longer-than-32-characters",
+        }, "must not reuse JWT_SECRET"),
+        ({"password_reset_otp_minutes": 0}, "PASSWORD_RESET_OTP_MINUTES"),
+        ({"password_reset_token_minutes": 0}, "PASSWORD_RESET_TOKEN_MINUTES"),
+        ({"password_reset_cooldown_seconds": 0}, "PASSWORD_RESET_COOLDOWN_SECONDS"),
+        ({"password_reset_max_attempts": 0}, "PASSWORD_RESET_MAX_ATTEMPTS"),
+    ],
+)
+def test_production_rejects_unsafe_password_reset_configuration(override, message):
+    with pytest.raises(RuntimeError, match=message):
+        production_with_password_reset(**override).validate_production_safety()
+
+
+def test_production_accepts_safe_password_reset_configuration():
+    production_with_password_reset().validate_production_safety()

@@ -14,6 +14,20 @@ export type ReportSummary = {
   expense_by_category: { category: string; amount: number }[];
 };
 
+export type PasswordResetRequestResult = {
+  request_id: string;
+  message: string;
+};
+
+export type PasswordResetVerifyResult = {
+  reset_token: string;
+  expires_in: number;
+};
+
+export type PasswordResetConfirmResult = {
+  message: string;
+};
+
 function normalizeToken(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
@@ -85,6 +99,18 @@ export const api = {
     req('/auth/signup', { method: 'POST', body: JSON.stringify(body) }),
   login: (body: { email: string; password: string }) =>
     req('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
+  requestPasswordReset: (body: { email: string; locale: 'en' | 'id' }): Promise<PasswordResetRequestResult> =>
+    req('/auth/password-reset/request', { method: 'POST', body: JSON.stringify(body) }) as Promise<PasswordResetRequestResult>,
+  resendPasswordReset: (body: { request_id: string }): Promise<PasswordResetRequestResult> =>
+    req('/auth/password-reset/resend', { method: 'POST', body: JSON.stringify(body) }) as Promise<PasswordResetRequestResult>,
+  verifyPasswordReset: (body: { request_id: string; code: string }): Promise<PasswordResetVerifyResult> =>
+    req('/auth/password-reset/verify', { method: 'POST', body: JSON.stringify(body) }) as Promise<PasswordResetVerifyResult>,
+  confirmPasswordReset: (body: {
+    reset_token: string;
+    new_password: string;
+    confirm_password: string;
+  }): Promise<PasswordResetConfirmResult> =>
+    req('/auth/password-reset/confirm', { method: 'POST', body: JSON.stringify(body) }) as Promise<PasswordResetConfirmResult>,
   emergentSession: (session_token: string) =>
     req('/auth/emergent-session', { method: 'POST', body: JSON.stringify({ session_token }) }),
   me: () => req('/auth/me'),

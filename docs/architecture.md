@@ -32,8 +32,9 @@ HTTP/API (app/api/*.py) → Service (app/services/*.py) → Repository (app/repo
 - Repository: `UserRepository`, `WalletRepository`, etc. — persistence + `deleted_at` active filter + normalization. No business decisions.
   - CURRENT: single file `repositories/repos.py` 847 lines mixing 10 repos (partial).
   - TARGET: split `repositories/{users,wallets,transactions,categories,planning}.py`.
-- `app/core/config.py` is single backend config source (MONGO_URL, DB_NAME, JWT_SECRET).
+- `app/core/config.py` is single backend config source (MONGO_URL, DB_NAME, JWT_SECRET, and opt-in password-recovery email settings).
   - CURRENT: production fails on a default JWT secret, localhost/empty `MONGO_URL`, and empty/unsafe `DB_NAME`; development keeps local defaults.
+  - Password recovery follows API → Service → Repository → MongoDB, stores HMAC/SHA-256 challenge material rather than plaintext credentials, and sends mail through a small Resend HTTPS boundary.
 - `create_indexes()` is safe startup (indexes only); migrations are explicit scripts `backend/scripts/migrations/YYYYMMDD_*.py` with `--dry-run/--apply`.
   - CURRENT: `create_indexes` safe, but `migrations/` runner not yet exists (only `tmp/` audits).
 

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Literal, Optional
 
 
@@ -14,6 +14,26 @@ class SignupRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+    locale: Literal["en", "id"] = "en"
+
+
+class PasswordResetVerifyRequest(BaseModel):
+    request_id: str = Field(min_length=16, max_length=200)
+    code: str = Field(pattern=r"^\d{6}$")
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    reset_token: str = Field(min_length=32, max_length=512)
+    new_password: str = Field(max_length=256)
+    confirm_password: str = Field(max_length=256)
+
+
+class PasswordResetResendRequest(BaseModel):
+    request_id: str = Field(min_length=16, max_length=200)
 
 class EmergentSessionRequest(BaseModel):
     session_token: str

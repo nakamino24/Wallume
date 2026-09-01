@@ -34,6 +34,7 @@ async def create_indexes() -> None:
     await db.user_sessions.create_index("expires_at", expireAfterSeconds=0)
     await db.token_blacklist.create_index("jti", unique=True)
     await db.token_blacklist.create_index("expires_at", expireAfterSeconds=0)
+    await _create_password_reset_indexes(db)
     for coll in ("wallets", "transactions", "budgets", "goals", "plans",
                  "debts", "investments", "assets", "chat_messages", "recurring", "categories"):
         await db[coll].create_index("user_id")
@@ -52,6 +53,14 @@ async def create_indexes() -> None:
     # Completed records remain replayable for 30 days. TTL expiry begins only
     # after the atomic completion write; no in-progress record is TTL-eligible.
     await db.idempotency.create_index("created_at", expireAfterSeconds=30*24*3600)
+
+
+async def _create_password_reset_indexes(db: AsyncIOMotorDatabase) -> None:
+    challenges = db.password_reset_challenges
+    await challenges.create_index("id", unique=True)
+    await challenges.create_index("expires_at", expireAfterSeconds=0)
+    await challenges.create_index([("user_id", 1), ("created_at", -1)])
+    await challenges.create_index("reset_token_hash", sparse=True)
 
 
 async def _ensure_obsolete_transaction_mutation_index_removed(db: AsyncIOMotorDatabase) -> None:

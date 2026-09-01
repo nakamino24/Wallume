@@ -28,12 +28,54 @@ def test_openapi_contains_required_contract_routes():
     for path in (
         "/api/auth/signup",
         "/api/auth/login",
+        "/api/auth/password-reset/request",
+        "/api/auth/password-reset/resend",
+        "/api/auth/password-reset/verify",
+        "/api/auth/password-reset/confirm",
         "/api/auth/me",
         "/api/wallets",
         "/api/transactions",
         "/api/reports/summary",
     ):
         assert path in paths
+
+
+def test_password_reset_endpoints_use_safe_envelopes():
+    public = {
+        "request_id": "request_contract",
+        "message": "If an eligible account exists, a verification code has been sent.",
+    }
+    with patch.object(auth.password_reset_service, "request", AsyncMock(return_value=public)):
+        data = assert_success(client.post("/api/auth/password-reset/request", json={
+            "email": "contract@wallume.app", "locale": "id",
+        }))
+        assert data == public
+
+    with patch.object(
+        auth.password_reset_service, "resend", AsyncMock(return_value=public)
+    ) as resend:
+        data = assert_success(client.post("/api/auth/password-reset/resend", json={
+            "request_id": "request_contract",
+        }))
+        assert data == public
+        assert resend.await_args.args[0] == "request_contract"
+        assert resend.await_args.args[1].__class__.__name__ == "BackgroundTasks"
+
+    reset_token = "opaque-reset-token-that-is-at-least-32-characters"
+    verified = {"reset_token": reset_token, "expires_in": 600}
+    with patch.object(auth.password_reset_service, "verify", AsyncMock(return_value=verified)):
+        data = assert_success(client.post("/api/auth/password-reset/verify", json={
+            "request_id": "request_contract", "code": "123456",
+        }))
+        assert data == verified
+
+    with patch.object(auth.password_reset_service, "confirm", AsyncMock(return_value=None)):
+        data = assert_success(client.post("/api/auth/password-reset/confirm", json={
+            "reset_token": reset_token,
+            "new_password": "NewPassword456",
+            "confirm_password": "NewPassword456",
+        }))
+        assert data == {"message": "Password updated. Sign in with your new password."}
 
 
 def test_auth_success_endpoints_use_current_envelope():
