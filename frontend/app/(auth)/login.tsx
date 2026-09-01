@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
@@ -14,6 +14,10 @@ import { Screen, Body, Button, Input } from '@/src/components/ui';
 import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer';
 import { WallumeMark } from '@/src/components/WallumeMark';
 import { useI18n } from '@/src/lib/I18nProvider';
+import {
+  consumePasswordRecoverySuccess,
+  hasPasswordRecoverySuccess,
+} from '@/src/auth/password-recovery-state';
 
 export default function Login() {
   const { colors } = useTheme();
@@ -25,6 +29,11 @@ export default function Login() {
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [resetSucceeded] = useState(() => hasPasswordRecoverySuccess());
+
+  useEffect(() => {
+    if (resetSucceeded) consumePasswordRecoverySuccess();
+  }, [resetSucceeded]);
 
   const submit = async () => {
     if (!email || !password) { setErr(t('auth.validation.required')); return; }
@@ -112,7 +121,23 @@ export default function Login() {
               onSubmitEditing={submit}
             />
 
+            <TouchableOpacity
+              testID="login-forgot-password"
+              accessibilityRole="button"
+              onPress={() => router.push('/(auth)/forgot-password')}
+              style={{ alignSelf: 'flex-end', marginTop: -spacing.sm, marginBottom: spacing.md }}
+            >
+              <Body style={{ color: colors.brandPrimary, fontFamily: font.textMedium, fontSize: font.sizes.sm }}>
+                {t('auth.forgot.link')}
+              </Body>
+            </TouchableOpacity>
+
             {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md, fontSize: font.sizes.sm }}>{err}</Body>}
+            {resetSucceeded && (
+              <Body testID="login-reset-success" style={{ color: colors.success, marginBottom: spacing.md, fontSize: font.sizes.sm }}>
+                {t('auth.reset.success')}
+              </Body>
+            )}
 
             <Button testID="login-submit" label={t('sign.in')} onPress={submit} loading={loading} style={{ marginTop: spacing.sm }} />
 

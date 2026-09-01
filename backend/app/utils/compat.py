@@ -24,6 +24,9 @@ def normalize_user_document(doc: dict[str, Any]) -> dict[str, Any]:
     out.setdefault("payday_day", None)
     out.setdefault("work_week", 5)
     out.setdefault("picture", None)
+    # Historical users and JWTs predate session versioning. Both normalize to
+    # zero until the first credential reset increments the persisted version.
+    out.setdefault("auth_version", 0)
     return out
 
 

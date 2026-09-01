@@ -11,7 +11,10 @@ from app.repositories.repos import (
     InvestmentRepository, AssetRepository, RecurringRepository,
     ChatMessageRepository,
 )
-from app.security.auth import hash_password, verify_password, create_access_token, decode_access_token
+from app.security.auth import (
+    hash_password, verify_password, create_access_token, decode_access_token,
+    password_policy_error,
+)
 from app.utils.helpers import new_id, now_utc, clean_user
 from app.utils.money import round_money
 from app.utils.email import normalize_email
@@ -24,13 +27,9 @@ class AuthService:
         self.blacklist = TokenBlacklistRepository()
 
     async def signup(self, email: str, password: str, name: str, payday_day: Optional[int] = None, currency: Optional[str] = None, work_week: Optional[int] = None) -> dict:
-        pw = password
-        if len(pw) < 8:
-            raise HTTPException(400, "Password must be at least 8 characters")
-        if not any(c.isdigit() for c in pw):
-            raise HTTPException(400, "Password must contain at least one number")
-        if not any(c.isupper() for c in pw):
-            raise HTTPException(400, "Password must contain at least one uppercase letter")
+        policy_error = password_policy_error(password)
+        if policy_error:
+            raise HTTPException(400, policy_error)
 
         normalized = normalize_email(email)
         existing = await self.users.find_by_email(normalized)
@@ -49,31 +48,40 @@ class AuthService:
             "theme": "light",
             "payday_day": payday_day if payday_day and 1 <= payday_day <= 31 else None,
             "work_week": work_week if work_week in (5, 6, 7) else 5,
+            "auth_version": 0,
             "created_at": now_utc(),
         }
         await self.users.insert_one(doc)
-        return {"token": create_access_token(user_id), "user": clean_user(doc)}
+        return {"token": create_access_token(user_id, 0), "user": clean_user(doc)}
 
     async def login(self, email: str, password: str) -> dict:
         user = await self.users.find_by_email(normalize_email(email))
         if not user or not user.get("password_hash") or not verify_password(password, user["password_hash"]):
             raise HTTPException(401, "Invalid credentials")
-        return {"token": create_access_token(user["user_id"]), "user": clean_user(user)}
+        return {
+            "token": create_access_token(user["user_id"], user.get("auth_version", 0)),
+            "user": clean_user(user),
+        }
 
     async def get_current_user(self, authorization: Optional[str]) -> dict:
         if not authorization or not authorization.startswith("Bearer "):
             raise HTTPException(401, "Missing bearer token")
         token = authorization.split(" ", 1)[1]
+        payload = None
         try:
             payload = decode_access_token(token)
+        except Exception:
+            # Non-JWT historical provider session tokens continue through the
+            # legacy user_sessions lookup below.
+            pass
+        if payload is not None:
             jti = payload.get("jti", "")
             if jti and await self.blacklist.is_blacklisted(jti):
-                raise HTTPException(401, "Token revoked")
-            user = await self.users.find_by_user_id(payload["sub"])
-            if user:
-                return user
-        except Exception:
-            pass
+                raise HTTPException(401, "Invalid or expired token")
+            user = await self.users.find_by_user_id(payload.get("sub", ""))
+            if not user or payload.get("ver", 0) != user.get("auth_version", 0):
+                raise HTTPException(401, "Invalid or expired token")
+            return user
         session = await self.sessions.find_one({"session_token": token})
         if not session:
             raise HTTPException(401, "Invalid or expired token")

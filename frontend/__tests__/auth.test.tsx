@@ -6,6 +6,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 // Mock the auth and theme hooks
 const mockLogin = jest.fn();
 const mockRouterReplace = jest.fn();
+const mockRouterPush = jest.fn();
 
 jest.mock('@/src/auth/AuthProvider', () => ({
   useAuth: () => ({
@@ -45,7 +46,7 @@ jest.mock('@/src/theme/ThemeProvider', () => ({
 
 // Mock router
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn(), replace: mockRouterReplace, back: jest.fn() }),
+  useRouter: () => ({ push: mockRouterPush, replace: mockRouterReplace, back: jest.fn() }),
   useFocusEffect: jest.fn((cb) => cb()),
   Redirect: 'Redirect',
 }));
@@ -61,6 +62,7 @@ describe('Auth Flow', () => {
   beforeEach(() => {
     mockLogin.mockReset();
     mockRouterReplace.mockReset();
+    mockRouterPush.mockReset();
   });
 
   it('renders login screen with all key elements', () => {
@@ -72,6 +74,7 @@ describe('Auth Flow', () => {
     expect(getByTestId('login-submit')).toBeTruthy();
     expect(getByTestId('login-google')).toBeTruthy();
     expect(getByTestId('login-goto-signup')).toBeTruthy();
+    expect(getByTestId('login-forgot-password')).toBeTruthy();
     expect(getByText('Sign in to Wallume')).toBeTruthy();
     expect(getByText('Welcome back.')).toBeTruthy();
   });
@@ -133,15 +136,30 @@ describe('Auth Flow', () => {
   });
 
   it('navigates to signup screen', () => {
-    const mockPush = jest.fn();
-    jest.mock('expo-router', () => ({
-      useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn() }),
-    }));
-
     const Login = require('@/app/(auth)/login').default;
     const { getByTestId } = render(<Login />);
 
     fireEvent.press(getByTestId('login-goto-signup'));
+    expect(mockRouterPush).toHaveBeenCalledWith('/(auth)/signup');
+  });
+
+  it('navigates to forgot password', () => {
+    const Login = require('@/app/(auth)/login').default;
+    const { getByTestId } = render(<Login />);
+
+    fireEvent.press(getByTestId('login-forgot-password'));
+    expect(mockRouterPush).toHaveBeenCalledWith('/(auth)/forgot-password');
+  });
+
+  it('shows one-time reset success feedback on return to login', () => {
+    const recovery = require('@/src/auth/password-recovery-state');
+    recovery.completePasswordRecovery();
+    const Login = require('@/app/(auth)/login').default;
+    const { getByTestId, getByText } = render(<Login />);
+
+    expect(getByTestId('login-reset-success')).toBeTruthy();
+    expect(getByText('Password updated. Sign in with your new password.')).toBeTruthy();
+    expect(recovery.consumePasswordRecoverySuccess()).toBe(false);
   });
 
   it('renders signup screen with all required fields', () => {

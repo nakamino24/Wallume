@@ -22,6 +22,27 @@ Set in Railway dashboard:
 | `DB_NAME` | Yes | `wallume` |
 | `JWT_SECRET` | Yes | 64-char hex string |
 | `GROQ_API_KEY` | No | `gsk_...` |
+| `PASSWORD_RESET_ENABLED` | No | `true` only after the email settings below are ready |
+| `PASSWORD_RESET_SECRET` | When reset enabled | Independent random secret, at least 32 characters; do not reuse `JWT_SECRET` |
+| `PASSWORD_RESET_EMAIL_PROVIDER` | When reset enabled | `resend` |
+| `PASSWORD_RESET_FROM_EMAIL` | When reset enabled | `Wallume <support@example.com>` using a verified sender |
+| `RESEND_API_KEY` | When reset enabled | Resend secret API key |
+
+Password recovery is disabled by default and uses Resend's HTTPS API when
+enabled. OTP and reset-token lifetimes default to 10 minutes, the resend
+cooldown defaults to 60 seconds, and OTP verification allows five attempts.
+The backing `password_reset_challenges` collection and TTL index are created
+by normal application startup; no manual data migration or user replacement is
+required. Do not put any of these secret values in Expo public environment
+variables or source control.
+
+Password-reset request and resend delivery use FastAPI/Starlette
+`BackgroundTasks` so generic API responses are not delayed by account-specific
+lookups or Resend network latency. These tasks are process-local and are not a
+durable queue: if the backend process stops after responding but before mail
+delivery finishes, that email may not be sent. The user can safely request a
+new code. A durable worker/queue can be considered if delivery scale or
+reliability requirements increase; none is required at the current stage.
 
 ### Start Command
 ```bash

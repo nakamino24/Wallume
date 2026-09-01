@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 from bson import Decimal128
+from pymongo import ReturnDocument
 from app.repositories.base import BaseRepository
 from app.utils.compat import normalize_transaction_document, normalize_user_document
 from app.utils.email import normalize_email
@@ -23,6 +24,25 @@ class UserRepository(BaseRepository):
     async def update_profile(self, user_id: str, data: dict) -> None:
         await self.update_one({"user_id": user_id}, {"$set": data})
 
+    async def update_password_and_auth_version(self, user_id: str, password_hash: str) -> bool:
+        doc = await (await self._collection()).find_one_and_update(
+            {
+                "user_id": user_id,
+                "deleted_at": None,
+                "password_hash": {"$type": "string"},
+                # Historical password accounts may predate the provider field.
+                # Explicit external-provider users remain ineligible.
+                "$or": [{"provider": "email"}, {"provider": {"$exists": False}}],
+            },
+            {
+                "$set": {"password_hash": password_hash, "provider": "email"},
+                "$inc": {"auth_version": 1},
+            },
+            projection={"_id": 0, "user_id": 1},
+            return_document=ReturnDocument.AFTER,
+        )
+        return doc is not None
+
     async def hard_delete(self, user_id: str) -> None:
         await self.delete_one({"user_id": user_id}, hard=True)
 
@@ -30,6 +50,9 @@ class UserRepository(BaseRepository):
 class UserSessionRepository(BaseRepository):
     def __init__(self) -> None:
         super().__init__("user_sessions")
+
+    async def delete_by_user(self, user_id: str) -> None:
+        await (await self._collection()).delete_many({"user_id": user_id})
 
 
 class TokenBlacklistRepository(BaseRepository):
@@ -44,6 +67,112 @@ class TokenBlacklistRepository(BaseRepository):
             {"jti": jti},
             {"$set": {"jti": jti, "expires_at": expires_at}},
             upsert=True,
+        )
+
+
+class PasswordResetRepository(BaseRepository):
+    def __init__(self) -> None:
+        super().__init__("password_reset_challenges")
+
+    async def create_challenge(self, doc: dict[str, Any]) -> None:
+        await (await self._collection()).insert_one(doc)
+
+    async def find_latest_for_user(self, user_id: str) -> dict[str, Any] | None:
+        return await (await self._collection()).find_one(
+            {"user_id": user_id, "used_at": None},
+            {"_id": 0},
+            sort=[("created_at", -1)],
+        )
+
+    async def find_by_id(self, request_id: str) -> dict[str, Any] | None:
+        return await (await self._collection()).find_one({"id": request_id}, {"_id": 0})
+
+    async def invalidate_for_user(self, user_id: str, now: Any) -> None:
+        await (await self._collection()).update_many(
+            {"user_id": user_id, "used_at": None},
+            {"$set": {"used_at": now}},
+        )
+
+    async def invalidate(self, request_id: str, now: Any) -> None:
+        await (await self._collection()).update_one(
+            {"id": request_id, "used_at": None},
+            {"$set": {"used_at": now}},
+        )
+
+    async def replace_code(
+        self, request_id: str, code_hash: str, created_at: Any, expires_at: Any
+    ) -> dict[str, Any] | None:
+        return await (await self._collection()).find_one_and_update(
+            {"id": request_id, "used_at": None},
+            {"$set": {
+                "code_hash": code_hash,
+                "created_at": created_at,
+                "expires_at": expires_at,
+                "attempt_count": 0,
+                "verified_at": None,
+                "reset_token_hash": None,
+                "reset_token_expires_at": None,
+            }},
+            projection={"_id": 0},
+            return_document=ReturnDocument.AFTER,
+        )
+
+    async def verify_code(
+        self,
+        request_id: str,
+        code_hash: str,
+        now: Any,
+        max_attempts: int,
+        reset_token_hash: str,
+        reset_token_expires_at: Any,
+    ) -> dict[str, Any] | None:
+        return await (await self._collection()).find_one_and_update(
+            {
+                "id": request_id,
+                "code_hash": code_hash,
+                "expires_at": {"$gt": now},
+                "attempt_count": {"$lt": max_attempts},
+                "verified_at": None,
+                "used_at": None,
+            },
+            {"$set": {
+                "verified_at": now,
+                "reset_token_hash": reset_token_hash,
+                "reset_token_expires_at": reset_token_expires_at,
+                # Keep the document alive for the reset-token lifetime.
+                "expires_at": reset_token_expires_at,
+            }},
+            projection={"_id": 0},
+            return_document=ReturnDocument.AFTER,
+        )
+
+    async def record_failed_attempt(
+        self, request_id: str, now: Any, max_attempts: int
+    ) -> dict[str, Any] | None:
+        return await (await self._collection()).find_one_and_update(
+            {
+                "id": request_id,
+                "expires_at": {"$gt": now},
+                "attempt_count": {"$lt": max_attempts},
+                "verified_at": None,
+                "used_at": None,
+            },
+            {"$inc": {"attempt_count": 1}},
+            projection={"_id": 0},
+            return_document=ReturnDocument.AFTER,
+        )
+
+    async def claim_reset_token(self, reset_token_hash: str, now: Any) -> dict[str, Any] | None:
+        return await (await self._collection()).find_one_and_update(
+            {
+                "reset_token_hash": reset_token_hash,
+                "reset_token_expires_at": {"$gt": now},
+                "verified_at": {"$ne": None},
+                "used_at": None,
+            },
+            {"$set": {"used_at": now}},
+            projection={"_id": 0},
+            return_document=ReturnDocument.AFTER,
         )
 
 
