@@ -3,11 +3,13 @@ from __future__ import annotations
 import math
 import hashlib
 import json
+import asyncio
 from typing import Any, Optional
 from fastapi import APIRouter, Header, HTTPException
 from app.schemas.models import TransactionCreate
 from app.repositories.repos import WalletRepository, TransactionRepository
 from app.services.auth_service import AuthService
+from app.services.domain_services import FxService
 from app.utils.helpers import new_id, now_utc, strict_canonical_date
 from app.utils.money import to_decimal, to_decimal128
 from app.database.mongo import get_database
@@ -56,25 +58,50 @@ def _require_positive_amount(value: Any) -> None:
 
 
 async def _apply_effect(user_id: str, wallet_id: str, to_wallet_id: Optional[str],
-                        tx_type: str, amount, session, reverse: bool):
+                        tx_type: str, amount, session, reverse: bool,
+                        tx_currency: Optional[str] = None,
+                        wallet_amount: Any = None,
+                        to_wallet_amount: Any = None):
     """Apply (or reverse) a transaction's wallet effect inside a session.
 
     `Decimal128` cannot be negated (`-Decimal128(...)` raises TypeError), so we
     convert the amount to a Python Decimal first and negate that — the root-cause
     bug that left transfer balances half-reverted or un-reverted.
     """
-    amt = to_decimal(amount)
+    source_wallet = await wallets.find_one({"id": wallet_id, "user_id": user_id}, session)
+    if not source_wallet:
+        raise HTTPException(400, "Wallet not found")
+    source_currency = source_wallet.get("currency") or tx_currency or "USD"
+    input_currency = tx_currency or source_currency
+    source_amount = (
+        to_decimal(wallet_amount)
+        if wallet_amount is not None
+        else to_decimal(await FxService.convert(float(amount), input_currency, source_currency))
+    )
+    source_delta = source_amount if tx_type == "income" else -source_amount
     if reverse:
-        amt = -amt
+        source_delta = -source_delta
     if tx_type == "income":
-        await wallets.adjust_balance(wallet_id, user_id, amt, session)
+        await wallets.adjust_balance(wallet_id, user_id, source_delta, session)
     elif tx_type == "expense":
-        await wallets.adjust_balance(wallet_id, user_id, -amt, session)
+        await wallets.adjust_balance(wallet_id, user_id, source_delta, session)
     elif tx_type == "transfer":
         if not to_wallet_id:
             raise HTTPException(400, "to_wallet_id required for transfer")
-        await wallets.adjust_balance(wallet_id, user_id, -amt, session)
-        await wallets.adjust_balance(to_wallet_id, user_id, amt, session)
+        destination_wallet = await wallets.find_one({"id": to_wallet_id, "user_id": user_id}, session)
+        if not destination_wallet:
+            raise HTTPException(400, "Wallet not found")
+        destination_currency = destination_wallet.get("currency") or input_currency
+        destination_amount = (
+            to_decimal(to_wallet_amount)
+            if to_wallet_amount is not None
+            else to_decimal(await FxService.convert(float(amount), input_currency, destination_currency))
+        )
+        destination_delta = -destination_amount if reverse else destination_amount
+        await wallets.adjust_balance(wallet_id, user_id, source_delta, session)
+        await wallets.adjust_balance(to_wallet_id, user_id, destination_delta, session)
+        return source_amount, destination_amount
+    return source_amount, None
 
 
 @router.get("")
@@ -88,6 +115,20 @@ async def list_transactions(
 ):
     u = await auth_service.get_current_user(authorization)
     items = await txs.find_by_user(u["user_id"], type, wallet_id, limit, from_date, to_date)
+    home_currency = u.get("currency", "USD")
+    wallet_items = await wallets.find_by_user(u["user_id"])
+    wallet_currencies = {wallet["id"]: wallet.get("currency") or home_currency for wallet in wallet_items}
+
+    async def _convert_one(item: dict) -> None:
+        item_currency = item.get("currency") or wallet_currencies.get(item.get("wallet_id")) or home_currency
+        item["currency"] = item_currency
+        item["converted_amount"] = round(
+            await FxService.convert(float(item.get("amount", 0.0)), item_currency, home_currency), 2
+        )
+        item["home_currency"] = home_currency
+
+    if items:
+        await asyncio.gather(*(_convert_one(item) for item in items))
     return {"success": True, "data": {"transactions": items}}
 
 
@@ -117,6 +158,7 @@ async def create_transaction(payload: TransactionCreate, authorization: Optional
     w = await wallets.find_one({"id": payload.wallet_id, "user_id": u["user_id"]})
     if not w:
         raise HTTPException(400, "Wallet not found")
+    doc["currency"] = payload.currency or u.get("currency", "USD")
     if payload.type == "transfer":
         if not payload.to_wallet_id:
             raise HTTPException(400, "to_wallet_id required for transfer")
@@ -130,7 +172,13 @@ async def create_transaction(payload: TransactionCreate, authorization: Optional
                     dw = await wallets.find_one({"id": payload.to_wallet_id, "user_id": u["user_id"]}, session)
                     if not dw:
                         raise HTTPException(400, "Destination wallet not found")
-                await _apply_effect(u["user_id"], payload.wallet_id, payload.to_wallet_id, payload.type, payload.amount, session, reverse=False)
+                wallet_amount, to_wallet_amount = await _apply_effect(
+                    u["user_id"], payload.wallet_id, payload.to_wallet_id, payload.type,
+                    payload.amount, session, reverse=False, tx_currency=doc["currency"],
+                )
+                doc["wallet_amount"] = float(wallet_amount)
+                if to_wallet_amount is not None:
+                    doc["to_wallet_amount"] = float(to_wallet_amount)
                 await txs.insert_one(doc, session)
                 result = {"transaction": {k: v for k, v in doc.items() if k != "_id"}}
                 if client_mid:
@@ -165,7 +213,7 @@ async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Op
                     raise HTTPException(404, "Not found")
 
                 allowed = {k: v for k, v in body.items()
-                           if k in {"wallet_id", "to_wallet_id", "type", "amount", "category", "note", "date"}}
+                           if k in {"wallet_id", "to_wallet_id", "type", "amount", "category", "note", "date", "currency"}}
                 # Validate only CHANGED fields: re-validating the stored amount
                 # would make legacy bad-amount records impossible to edit at all.
                 if "amount" in allowed:
@@ -193,10 +241,31 @@ async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Op
                 sw = await wallets.find_one({"id": merged["wallet_id"], "user_id": u["user_id"]}, session)
                 if not sw:
                     raise HTTPException(400, "Wallet not found")
+                merged["currency"] = allowed.get("currency") or tx.get("currency") or u.get("currency", "USD")
+                allowed["currency"] = merged["currency"]
 
                 # The resource, balances, and replay record must commit together.
-                await _apply_effect(u["user_id"], tx["wallet_id"], tx.get("to_wallet_id"), tx["type"], tx["amount"], session, reverse=True)
-                await _apply_effect(u["user_id"], merged["wallet_id"], merged.get("to_wallet_id"), merged["type"], merged["amount"], session, reverse=False)
+                old_currency = tx.get("currency")
+                if not old_currency:
+                    old_wallet = await wallets.find_one({"id": tx["wallet_id"], "user_id": u["user_id"]}, session)
+                    old_currency = (old_wallet or {}).get("currency") or u.get("currency", "USD")
+                await _apply_effect(
+                    u["user_id"], tx["wallet_id"], tx.get("to_wallet_id"), tx["type"],
+                    tx["amount"], session, reverse=True, tx_currency=old_currency,
+                    wallet_amount=tx.get("wallet_amount"),
+                    to_wallet_amount=tx.get("to_wallet_amount"),
+                )
+                wallet_amount, to_wallet_amount = await _apply_effect(
+                    u["user_id"], merged["wallet_id"], merged.get("to_wallet_id"), merged["type"],
+                    merged["amount"], session, reverse=False, tx_currency=merged["currency"],
+                )
+                allowed["wallet_amount"] = float(wallet_amount)
+                if to_wallet_amount is None:
+                    allowed.pop("to_wallet_amount", None)
+                    if tx.get("to_wallet_amount") is not None:
+                        allowed["to_wallet_amount"] = None
+                else:
+                    allowed["to_wallet_amount"] = float(to_wallet_amount)
 
                 await txs.update_one({"id": tx_id, "user_id": u["user_id"]}, {"$set": allowed}, session=session)
                 updated = await txs.find_one({"id": tx_id, "user_id": u["user_id"]}, session)
@@ -231,7 +300,16 @@ async def delete_transaction(tx_id: str, authorization: Optional[str] = Header(N
                 if not tx:
                     raise HTTPException(404, "Not found")
 
-                await _apply_effect(u["user_id"], tx["wallet_id"], tx.get("to_wallet_id"), tx["type"], tx["amount"], session, reverse=True)
+                tx_currency = tx.get("currency")
+                if not tx_currency:
+                    source_wallet = await wallets.find_one({"id": tx["wallet_id"], "user_id": u["user_id"]}, session)
+                    tx_currency = (source_wallet or {}).get("currency") or u.get("currency", "USD")
+                await _apply_effect(
+                    u["user_id"], tx["wallet_id"], tx.get("to_wallet_id"), tx["type"],
+                    tx["amount"], session, reverse=True, tx_currency=tx_currency,
+                    wallet_amount=tx.get("wallet_amount"),
+                    to_wallet_amount=tx.get("to_wallet_amount"),
+                )
                 await txs.delete_one({"id": tx_id, "user_id": u["user_id"]}, session=session)
                 if x_client_mutation_id:
                     await db.idempotency.insert_one({

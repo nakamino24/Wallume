@@ -83,6 +83,7 @@ class TransactionCreate(BaseModel):
     category: str
     note: Optional[str] = ""
     date: Optional[str] = None
+    currency: Optional[str] = None
     client_mutation_id: Optional[str] = None
 
     @field_validator("amount")

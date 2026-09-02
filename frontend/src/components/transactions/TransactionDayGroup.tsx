@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Body } from '@/src/components/ui';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { font, radius, spacing } from '@/src/theme/tokens';
+import { cv, font, radius, spacing } from '@/src/theme/tokens';
 import { intlLocale } from '@/src/lib/i18n';
 import { useI18n } from '@/src/lib/I18nProvider';
 import { systemCategoryLabel } from '@/src/lib/categories';
@@ -72,6 +72,7 @@ function TransactionRow({ transaction, currency, isLast, onOpen, onRemove }: { t
   const color = positive ? colors.success : negative ? colors.error : colors.brandPrimary;
   const date = parseDate(transaction.date);
   const time = transaction.date?.includes('T') ? new Intl.DateTimeFormat(intlLocale(locale), { hour: '2-digit', minute: '2-digit' }).format(date) : '';
+  const amount = cv(transaction, 'amount');
   return (
     <Pressable accessibilityRole="button" onPress={onOpen} onLongPress={onRemove} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', padding: spacing.md, opacity: pressed ? 0.82 : 1, borderBottomWidth: isLast ? 0 : 1, borderBottomColor: colors.border })}>
       <View style={{ width: 38, height: 38, borderRadius: radius.sm, backgroundColor: color + '22', alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
@@ -83,7 +84,7 @@ function TransactionRow({ transaction, currency, isLast, onOpen, onRemove }: { t
       </View>
       <View style={{ alignItems: 'flex-end', flexShrink: 0 }}>
         <MoneyValue
-          value={positive ? transaction.amount : negative ? -Math.abs(transaction.amount) : transaction.amount}
+          value={positive ? amount : negative ? -Math.abs(amount) : amount}
           currency={currency}
           numberOfLines={1}
           adjustsFontSizeToFit

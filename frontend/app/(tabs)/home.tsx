@@ -429,6 +429,7 @@ export default function Home() {
                         to_wallet_id: t.to_wallet_id || '',
                         type: t.type,
                         amount: String(t.amount),
+                        converted_amount: String(t.converted_amount ?? t.amount),
                         category: t.category,
                         note: t.note || '',
                         date: (t.date || '').split('T')[0],
@@ -512,7 +513,8 @@ function TxRow({ tx, last, currency, onPress, onLongPress }: any) {
   const negative = tx.type === 'expense';
   const iconName = CATEGORY_ICON[tx.category] || 'ellipsis-horizontal';
   const color = positive ? colors.success : negative ? colors.error : colors.brandPrimary;
-  const amount = positive ? tx.amount : negative ? -Math.abs(tx.amount) : tx.amount;
+  const convertedAmount = cv(tx, 'amount');
+  const amount = positive ? convertedAmount : negative ? -Math.abs(convertedAmount) : convertedAmount;
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress} onLongPress={onLongPress}>
       <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.border }}>

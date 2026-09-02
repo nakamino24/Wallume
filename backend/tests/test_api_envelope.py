@@ -131,9 +131,11 @@ def test_wallet_transaction_and_report_endpoints_use_current_envelope():
         assert_success(client.get("/api/wallets", headers={"Authorization": "Bearer token"}), "wallets")
 
     with patch.object(transactions.auth_service, "get_current_user", AsyncMock(return_value=USER)), \
-         patch.object(transactions.txs, "find_by_user", AsyncMock(return_value=[legacy_tx])):
+         patch.object(transactions.txs, "find_by_user", AsyncMock(return_value=[legacy_tx])), \
+         patch.object(transactions.wallets, "find_by_user", AsyncMock(return_value=[])):
         data = assert_success(client.get("/api/transactions", headers={"Authorization": "Bearer token"}), "transactions")
-        assert data["transactions"] == [legacy_tx]
+        assert data["transactions"][0]["id"] == legacy_tx["id"]
+        assert data["transactions"][0]["converted_amount"] == legacy_tx["amount"]
 
     with patch.object(reports.auth_service, "get_current_user", AsyncMock(return_value=USER)), \
          patch.object(reports.txs, "aggregate_report_summary", AsyncMock(return_value=summary)):
