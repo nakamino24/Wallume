@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Modal, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import { api } from '@/src/api/client';
 import {
@@ -12,7 +13,7 @@ import { KeyboardAwareContainer } from '@/src/components/KeyboardAwareContainer'
 import { Body, Button, Input, Screen } from '@/src/components/ui';
 import { useI18n } from '@/src/lib/I18nProvider';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { font, spacing } from '@/src/theme/tokens';
+import { font, radius, spacing } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
 
 export default function ResetPassword() {
@@ -24,10 +25,11 @@ export default function ResetPassword() {
   const [confirmation, setConfirmation] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<'success' | 'error' | null>(null);
 
   useEffect(() => {
-    if (!resetToken) router.replace('/(auth)/forgot-password');
-  }, [resetToken, router]);
+    if (!resetToken && feedback !== 'success') router.replace('/(auth)/forgot-password');
+  }, [feedback, resetToken, router]);
 
   const submit = async () => {
     if (password.length < 8) { setError(t('auth.validation.passwordLength')); return; }
@@ -45,12 +47,20 @@ export default function ResetPassword() {
         confirm_password: confirmation,
       });
       completePasswordRecovery();
-      router.replace('/(auth)/login');
+      setFeedback('success');
     } catch {
-      setError(t('auth.reset.error.confirm'));
+      setFeedback('error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const closeFeedback = () => {
+    if (feedback === 'success') {
+      router.replace('/(auth)/login');
+      return;
+    }
+    setFeedback(null);
   };
 
   return (
@@ -85,6 +95,70 @@ export default function ResetPassword() {
           <Button testID="reset-password-submit" label={t('auth.reset.action')} onPress={submit} loading={loading} />
         </KeyboardAwareContainer>
       </SafeAreaView>
+      <Modal
+        visible={feedback !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={closeFeedback}
+      >
+        <View
+          testID="reset-password-feedback-modal"
+          accessibilityViewIsModal
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.48)',
+            justifyContent: 'center',
+            padding: spacing.xl,
+          }}
+        >
+          <View style={{
+            backgroundColor: colors.surface2,
+            borderRadius: radius.lg,
+            borderWidth: 1,
+            borderColor: colors.border,
+            padding: spacing.xl,
+            alignItems: 'center',
+          }}>
+            <View style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: spacing.lg,
+              backgroundColor: feedback === 'success' ? colors.brandSoft : colors.surface3,
+            }}>
+              <Ionicons
+                testID={feedback === 'success' ? 'reset-password-success-icon' : 'reset-password-error-icon'}
+                name={feedback === 'success' ? 'checkmark-circle' : 'close-circle'}
+                size={42}
+                color={feedback === 'success' ? colors.success : colors.error}
+              />
+            </View>
+            <Body
+              testID="reset-password-feedback-title"
+              style={{
+                color: colors.onSurface,
+                fontFamily: font.displayBold,
+                fontSize: scale(20),
+                fontWeight: '600',
+                textAlign: 'center',
+              }}
+            >
+              {t(feedback === 'success' ? 'auth.reset.feedback.successTitle' : 'auth.reset.feedback.errorTitle')}
+            </Body>
+            <Body muted style={{ marginTop: spacing.sm, marginBottom: spacing.xl, textAlign: 'center' }}>
+              {t(feedback === 'success' ? 'auth.reset.feedback.successMessage' : 'auth.reset.feedback.errorMessage')}
+            </Body>
+            <Button
+              testID="reset-password-feedback-action"
+              label={t(feedback === 'success' ? 'auth.reset.feedback.login' : 'auth.reset.feedback.retry')}
+              onPress={closeFeedback}
+              style={{ alignSelf: 'stretch' }}
+            />
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }

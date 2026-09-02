@@ -61,7 +61,7 @@ export default function NewTransaction() {
     const optimisticTx = {
       wallet_id: walletId,
       to_wallet_id: type === 'transfer' ? toWalletId : undefined,
-      type, amount: amt, category, note, date: date || todayLocalISO(),
+      type, amount: amt, category, note, date: date || todayLocalISO(), currency: user?.currency || 'USD',
       created_at: new Date().toISOString(),
     };
     create(optimisticTx);
@@ -105,6 +105,7 @@ export default function NewTransaction() {
                 testID="tx-amount"
                 label={t('transaction.amount')}
                 variant="hero"
+                currency={cur}
                 symbol={currencySymbol(cur)}
                 value={amount}
                 onChange={setAmount}

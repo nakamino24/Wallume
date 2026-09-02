@@ -231,7 +231,7 @@ function ActivityRow({ tx, walletId, currency, last, onPress, onLongPress }: any
   const isDest = tx.to_wallet_id === walletId;
 
   let direction: 'IN' | 'OUT' = 'OUT';
-  let displayAmount = Number(tx.amount);
+  let displayAmount = Number(tx.converted_amount ?? tx.amount);
 
   if (tx.type === 'income') {
     direction = 'IN';

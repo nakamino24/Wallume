@@ -31,13 +31,14 @@ export default function EditTransaction() {
     to_wallet_id?: string;
     type?: string;
     amount?: string;
+    converted_amount?: string;
     category?: string;
     note?: string;
     date?: string;
   }>();
 
   const [type, setType] = useState<'income' | 'expense' | 'transfer'>((params.type as any) || 'expense');
-  const [amount, setAmount] = useState(params.amount ? String(params.amount) : '');
+  const [amount, setAmount] = useState(params.converted_amount ? String(params.converted_amount) : (params.amount ? String(params.amount) : ''));
   const [category, setCategory] = useState(params.category || 'Food');
   const [note, setNote] = useState(params.note || '');
   const { wallets, loading: walletsLoading, error: walletsError, refresh: refreshWallets } = useWallets();
@@ -57,7 +58,7 @@ export default function EditTransaction() {
     edit(params.id, {
         wallet_id: walletId,
         to_wallet_id: type === 'transfer' ? toWalletId : undefined,
-        type, amount: amt, category, note, date: date || undefined,
+        type, amount: amt, category, note, date: date || undefined, currency: user?.currency || 'USD',
       });
     router.back();
   };
@@ -101,6 +102,7 @@ export default function EditTransaction() {
                 testID="edit-tx-amount"
                 label={t('transaction.amount')}
                 variant="hero"
+                currency={cur}
                 symbol={currencySymbol(cur)}
                 value={amount}
                 onChange={setAmount}

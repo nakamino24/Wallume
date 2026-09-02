@@ -1,7 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, ActivityIndicator, ViewStyle, TextStyle, StyleProp, TextInput, TextInputProps, Pressable } from 'react-native';
 import type { TextProps } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/theme/ThemeProvider';
+import { useI18n } from '@/src/lib/I18nProvider';
 import { spacing, radius, font } from '@/src/theme/tokens';
 import { scale } from '@/src/utils/responsive';
 import Svg, { Circle } from 'react-native-svg';
@@ -223,31 +225,62 @@ export function EmptyState({
 
 export function Input(props: TextInputProps & { label?: string; testID?: string }) {
   const { colors } = useTheme();
-  const { label, style, testID, onFocus, ...rest } = props;
+  const { t } = useI18n();
+  const { label, style, testID, onFocus, secureTextEntry, ...rest } = props;
   const { focusToInput } = useKeyboardScroll();
   const ref = useRef<TextInput>(null);
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const isPassword = secureTextEntry === true;
   return (
     <View style={{ marginBottom: spacing.md }}>
       {label && <Label style={{ marginBottom: 6 }}>{label}</Label>}
-      <TextInput
-        ref={ref}
-        testID={testID}
-        accessibilityLabel={label || rest.placeholder}
-        placeholderTextColor={colors.muted}
-        onFocus={(e) => { focusToInput(ref.current); if (onFocus) onFocus(e); }}
-        {...rest}
-        style={[{
-          backgroundColor: colors.surface2,
-          color: colors.onSurface,
-          borderRadius: radius.sm,
-          paddingHorizontal: spacing.md,
-          paddingVertical: 12,
-          borderWidth: 1,
-          borderColor: colors.border,
-          fontFamily: font.text,
-          fontSize: 15,
-        }, style]}
-      />
+      <View style={{ position: 'relative' }}>
+        <TextInput
+          ref={ref}
+          testID={testID}
+          accessibilityLabel={label || rest.placeholder}
+          placeholderTextColor={colors.muted}
+          onFocus={(e) => { focusToInput(ref.current); if (onFocus) onFocus(e); }}
+          secureTextEntry={isPassword ? !passwordVisible : secureTextEntry}
+          {...rest}
+          style={[{
+            backgroundColor: colors.surface2,
+            color: colors.onSurface,
+            borderRadius: radius.sm,
+            paddingHorizontal: spacing.md,
+            paddingVertical: 12,
+            borderWidth: 1,
+            borderColor: colors.border,
+            fontFamily: font.text,
+            fontSize: 15,
+          }, style, isPassword && { paddingRight: 52 }]}
+        />
+        {isPassword && (
+          <Pressable
+            testID={testID ? `${testID}-visibility-toggle` : undefined}
+            accessibilityRole="button"
+            accessibilityLabel={t(passwordVisible ? 'auth.password.hide' : 'auth.password.show')}
+            onPress={() => setPasswordVisible((visible) => !visible)}
+            style={({ pressed }) => ({
+              position: 'absolute',
+              right: 4,
+              top: 0,
+              bottom: 0,
+              width: 44,
+              minHeight: 44,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.65 : 1,
+            })}
+          >
+            <Ionicons
+              name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color={colors.muted}
+            />
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }

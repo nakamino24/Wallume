@@ -32,8 +32,19 @@ export default function ForgotPassword() {
       const result = await api.requestPasswordReset({ email: normalized, locale });
       beginPasswordRecovery(normalized, result.request_id);
       router.push('/(auth)/verify-reset-code');
-    } catch {
-      setError(t('auth.reset.error.request'));
+    } catch (requestError: any) {
+      const status = requestError?.status;
+      const message = String(requestError?.detail || requestError?.message || '').toLowerCase();
+      if (status === 429) setError(t('auth.reset.error.rateLimited'));
+      else if (status === 404) setError(t('auth.reset.error.unavailable'));
+      else if (status >= 500) setError(t('auth.reset.error.server'));
+      else if (
+        requestError instanceof TypeError
+        || message.includes('network')
+        || message.includes('fetch')
+        || message.includes('connection')
+      ) setError(t('auth.reset.error.network'));
+      else setError(t('auth.reset.error.request'));
     } finally {
       setLoading(false);
     }

@@ -110,3 +110,25 @@ def test_production_rejects_unsafe_password_reset_configuration(override, messag
 
 def test_production_accepts_safe_password_reset_configuration():
     production_with_password_reset().validate_production_safety()
+
+
+@pytest.mark.parametrize(
+    "sender",
+    [
+        "onboarding@resend.dev",
+        "Wallume <onboarding@resend.dev>",
+        "Wallume <NO-REPLY@RESEND.DEV>",
+    ],
+)
+def test_production_rejects_resend_test_domain_for_password_recovery(sender):
+    with pytest.raises(RuntimeError, match="Resend test domain"):
+        production_with_password_reset(password_reset_from_email=sender).validate_production_safety()
+
+
+def test_development_allows_resend_test_domain_for_local_testing():
+    settings = production_with_password_reset(
+        environment="development",
+        railway_environment_name="",
+        password_reset_from_email="onboarding@resend.dev",
+    )
+    settings.validate_production_safety()

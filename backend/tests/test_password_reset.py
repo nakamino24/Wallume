@@ -78,6 +78,21 @@ class FakeUsers:
         return True
 
 
+class FakeUserDirectory:
+    def __init__(self, users: list[dict]) -> None:
+        self.users = {user["user_id"]: copy.deepcopy(user) for user in users}
+
+    async def find_by_email(self, email: str) -> dict | None:
+        for user in self.users.values():
+            if user["email"].lower() == email:
+                return copy.deepcopy(user)
+        return None
+
+    async def find_by_user_id(self, user_id: str) -> dict | None:
+        user = self.users.get(user_id)
+        return copy.deepcopy(user) if user else None
+
+
 class FakeSessions:
     def __init__(self) -> None:
         self.deleted_user_ids: list[str] = []
@@ -243,6 +258,36 @@ class PasswordResetServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(mailer.deliveries[0]["code"], repr(challenge))
         self.assertEqual(len(challenge["code_hash"]), 64)
         self.assertIsNone(challenge["reset_token_hash"])
+
+    async def test_two_users_receive_only_their_own_challenge_code(self):
+        owner = email_user(
+            user_id="user_owner",
+            email="owner@wallume.app",
+        )
+        member = email_user(
+            user_id="user_member",
+            email="member@wallume.app",
+        )
+        service, mailer = self.make_service(owner)
+        service.users = FakeUserDirectory([owner, member])
+
+        owner_response = await service.request(" OWNER@WALLUME.APP ", "en")
+        member_response = await service.request(" MEMBER@WALLUME.APP ", "id")
+
+        self.assertEqual(
+            [delivery["email"] for delivery in mailer.deliveries],
+            [owner["email"], member["email"]],
+        )
+        self.assertEqual(
+            service.challenges.docs[owner_response["request_id"]]["user_id"],
+            owner["user_id"],
+        )
+        self.assertEqual(
+            service.challenges.docs[member_response["request_id"]]["user_id"],
+            member["user_id"],
+        )
+        self.assertEqual(mailer.deliveries[0]["locale"], "en")
+        self.assertEqual(mailer.deliveries[1]["locale"], "id")
 
     async def test_http_request_defers_account_work_until_after_public_response(self):
         service, mailer = self.make_service()

@@ -130,7 +130,7 @@ class PasswordResetService:
         })
         try:
             await self._mailer().send_password_reset_code(
-                email, code, self.config.password_reset_otp_minutes, locale
+                user["email"], code, self.config.password_reset_otp_minutes, locale
             )
         except Exception:
             await self.challenges.invalidate(request_id, now_utc())

@@ -83,6 +83,11 @@ class Settings(BaseSettings):
                     raise RuntimeError("PASSWORD_RESET_EMAIL_PROVIDER must be 'resend' in production.")
                 if not (self.password_reset_from_email or "").strip():
                     raise RuntimeError("PASSWORD_RESET_FROM_EMAIL is required when password recovery is enabled.")
+                if "@resend.dev" in (self.password_reset_from_email or "").strip().lower():
+                    raise RuntimeError(
+                        "Refusing to enable production password recovery with the Resend test domain. "
+                        "Configure a verified sender domain first."
+                    )
                 if not (self.resend_api_key or "").strip():
                     raise RuntimeError("RESEND_API_KEY is required when password recovery is enabled.")
                 if not (1 <= self.password_reset_otp_minutes <= 60):

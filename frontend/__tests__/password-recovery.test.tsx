@@ -75,6 +75,23 @@ describe('password recovery', () => {
     });
   });
 
+  it.each([
+    ['rate limit', { status: 429, detail: 'raw rate-limit detail' }, 'Too many requests. Please wait a few minutes and try again.'],
+    ['server failure', { status: 500, detail: 'raw server detail' }, 'Wallume is temporarily unavailable. Please try again.'],
+    ['network failure', new TypeError('Network request failed with private transport detail'), 'Could not reach Wallume. Check your connection and try again.'],
+    ['missing route', { status: 404, detail: 'raw route detail' }, 'Password recovery is temporarily unavailable.'],
+  ])('classifies a %s without exposing backend detail', async (_case, rejection, expected) => {
+    const ForgotPassword = require('@/app/(auth)/forgot-password').default;
+    mockRequest.mockRejectedValueOnce(rejection);
+    const screen = render(<ForgotPassword />);
+
+    fireEvent.changeText(screen.getByTestId('forgot-password-email'), 'user@example.com');
+    fireEvent.press(screen.getByTestId('forgot-password-submit'));
+
+    await waitFor(() => expect(screen.getByText(expected)).toBeTruthy());
+    expect(screen.queryByText(/raw|private transport detail/i)).toBeNull();
+  });
+
   it('requires six digits and shows a safe error for an invalid code', async () => {
     beginPasswordRecovery('user@example.com', 'request_1');
     const VerifyResetCode = require('@/app/(auth)/verify-reset-code').default;
@@ -109,7 +126,7 @@ describe('password recovery', () => {
     expect(JSON.stringify(mockPush.mock.calls)).not.toContain('opaque_token');
   });
 
-  it('blocks mismatched passwords and confirms a valid reset', async () => {
+  it('blocks mismatched passwords and shows success feedback before returning to login', async () => {
     storePasswordResetToken('opaque_token');
     const ResetPassword = require('@/app/(auth)/reset-password').default;
     const screen = render(<ResetPassword />);
@@ -129,9 +146,38 @@ describe('password recovery', () => {
         new_password: 'NewPassword456',
         confirm_password: 'NewPassword456',
       });
-      expect(mockReplace).toHaveBeenCalledWith('/(auth)/login');
+      expect(screen.getByText('Password updated')).toBeTruthy();
+      expect(screen.getByTestId('reset-password-success-icon')).toBeTruthy();
     });
     expect(getPasswordResetToken()).toBeNull();
+    expect(mockReplace).not.toHaveBeenCalledWith('/(auth)/login');
+
+    fireEvent.press(screen.getByTestId('reset-password-feedback-action'));
+    expect(mockReplace).toHaveBeenCalledWith('/(auth)/login');
+  });
+
+  it('shows failure feedback and preserves both passwords for retry', async () => {
+    storePasswordResetToken('opaque_token');
+    mockConfirm.mockRejectedValueOnce(new Error('private backend failure'));
+    const ResetPassword = require('@/app/(auth)/reset-password').default;
+    const screen = render(<ResetPassword />);
+
+    fireEvent.changeText(screen.getByTestId('reset-password-new'), 'NewPassword456');
+    fireEvent.changeText(screen.getByTestId('reset-password-confirm'), 'NewPassword456');
+    fireEvent.press(screen.getByTestId('reset-password-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Password update failed')).toBeTruthy();
+      expect(screen.getByTestId('reset-password-error-icon')).toBeTruthy();
+    });
+    expect(screen.queryByText(/private backend failure/i)).toBeNull();
+    expect(screen.getByTestId('reset-password-new').props.value).toBe('NewPassword456');
+    expect(screen.getByTestId('reset-password-confirm').props.value).toBe('NewPassword456');
+    expect(getPasswordResetToken()).toBe('opaque_token');
+
+    fireEvent.press(screen.getByTestId('reset-password-feedback-action'));
+    expect(screen.queryByText('Password update failed')).toBeNull();
+    expect(mockReplace).not.toHaveBeenCalledWith('/(auth)/login');
   });
 
   it('has complete English and Indonesian recovery copy', () => {

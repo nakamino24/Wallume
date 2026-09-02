@@ -68,7 +68,7 @@ export default function Transactions() {
             </View>
           ) : shown.length === 0 ? (
             <EmptyState testID="tx-empty" title={t('transactions.empty.title')} subtitle={t('transactions.empty.subtitle')} actionLabel={t('transactions.empty.action')} onAction={() => router.push('/transaction/new')} />
-          ) : dayGroups.map((group) => <TransactionDayGroup key={group.key} group={group} currency={cur} onRemove={remove} onOpen={(t) => router.push({ pathname: '/transaction/[id]', params: { id: t.id, wallet_id: t.wallet_id, to_wallet_id: t.to_wallet_id || '', type: t.type, amount: String(t.amount), category: t.category, note: t.note || '', date: (t.date || '').split('T')[0] } })} />)}
+          ) : dayGroups.map((group) => <TransactionDayGroup key={group.key} group={group} currency={cur} onRemove={remove} onOpen={(t) => router.push({ pathname: '/transaction/[id]', params: { id: t.id, wallet_id: t.wallet_id, to_wallet_id: t.to_wallet_id || '', type: t.type, amount: String(t.amount), converted_amount: String(t.converted_amount ?? t.amount), category: t.category, note: t.note || '', date: (t.date || '').split('T')[0] } })} />)}
         </ScrollView>
       </SafeAreaView>
     </Screen>
