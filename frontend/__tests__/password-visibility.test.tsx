@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { StyleSheet } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { Input } from '@/src/components/ui';
@@ -43,7 +44,9 @@ describe('password visibility', () => {
     expect(input().props.value).toBe('SecretPassword1');
     expect(toggle.props.accessibilityRole).toBe('button');
     expect(toggle.props.accessibilityLabel).toBe('Show password');
-    expect(toggle).toHaveStyle({ width: 44, minHeight: 44 });
+    expect(StyleSheet.flatten(toggle.props.style)).toEqual(
+      expect.objectContaining({ width: 44, minHeight: 44 }),
+    );
 
     fireEvent.press(toggle);
     expect(input().props.secureTextEntry).toBe(false);
