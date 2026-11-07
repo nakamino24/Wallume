@@ -22,6 +22,29 @@ from app.repositories.repos import TransactionRepository
 
 
 class MongoRuntimeTransactions(unittest.IsolatedAsyncioTestCase):
+    async def _retrying_txn(self, body, attempts: int = 8):
+        """Run `body(session)` with the same retry policy as the API layer.
+
+        Two concurrent transactions touching the same documents legitimately
+        raise transient `WriteConflict` (code 112); MongoDB's own contract is
+        that the caller retries. Production goes through
+        `app.api.transactions.run_in_txn`, which retries only errors carrying
+        the TransientTransactionError label. Calling the driver directly here
+        would test something the app never does — and would be flaky.
+        """
+        import random
+        from pymongo.errors import OperationFailure
+
+        for attempt in range(attempts):
+            try:
+                async with await self.client.start_session() as session:
+                    async with session.start_transaction():
+                        return await body(session)
+            except OperationFailure as exc:
+                if not exc.has_error_label("TransientTransactionError") or attempt == attempts - 1:
+                    raise
+                await asyncio.sleep(min(0.05 * (1.5 ** attempt), 0.3) + random.random() * 0.03)
+
     async def asyncSetUp(self):
         self.client = AsyncIOMotorClient(settings.mongo_url, serverSelectionTimeoutMS=10_000)
         hello = await self.client.admin.command("hello")
@@ -315,14 +338,15 @@ class MongoRuntimeTransactions(unittest.IsolatedAsyncioTestCase):
         await self._seed_wallets()
 
         async def create_once():
+            async def body(session):
+                await self.db.wallets.update_one({"id": "a"}, {"$inc": {"balance": -100_000}}, session=session)
+                await self.db.transactions.insert_one({"id": uuid.uuid4().hex, "user_id": "u", "client_mutation_id": "same", "amount": 100_000}, session=session)
+                result = {"transaction": "authoritative"}
+                await self.db.idempotency.insert_one({"user_id": "u", "client_mutation_id": "same", "fingerprint": "same", "result": result, "created_at": datetime.now(timezone.utc)}, session=session)
+                return result
+
             try:
-                async with await self.client.start_session() as session:
-                    async with session.start_transaction():
-                        await self.db.wallets.update_one({"id": "a"}, {"$inc": {"balance": -100_000}}, session=session)
-                        await self.db.transactions.insert_one({"id": uuid.uuid4().hex, "user_id": "u", "client_mutation_id": "same", "amount": 100_000}, session=session)
-                        result = {"transaction": "authoritative"}
-                        await self.db.idempotency.insert_one({"user_id": "u", "client_mutation_id": "same", "fingerprint": "same", "result": result, "created_at": datetime.now(timezone.utc)}, session=session)
-                        return result
+                return await self._retrying_txn(body)
             except DuplicateKeyError:
                 record = await self.db.idempotency.find_one({"user_id": "u", "client_mutation_id": "same"})
                 return record["result"]
@@ -334,13 +358,14 @@ class MongoRuntimeTransactions(unittest.IsolatedAsyncioTestCase):
 
     async def test_concurrent_duplicate_wallet_commits_one_wallet_and_result(self):
         async def create_once():
+            async def body(session):
+                await self.db.wallets.insert_one({"id": uuid.uuid4().hex, "user_id": "u", "name": "Wallet"}, session=session)
+                result = {"wallet": "authoritative"}
+                await self.db.idempotency.insert_one({"user_id": "u", "client_mutation_id": "wallet", "fingerprint": "same", "result": result, "created_at": datetime.now(timezone.utc)}, session=session)
+                return result
+
             try:
-                async with await self.client.start_session() as session:
-                    async with session.start_transaction():
-                        await self.db.wallets.insert_one({"id": uuid.uuid4().hex, "user_id": "u", "name": "Wallet"}, session=session)
-                        result = {"wallet": "authoritative"}
-                        await self.db.idempotency.insert_one({"user_id": "u", "client_mutation_id": "wallet", "fingerprint": "same", "result": result, "created_at": datetime.now(timezone.utc)}, session=session)
-                        return result
+                return await self._retrying_txn(body)
             except DuplicateKeyError:
                 return (await self.db.idempotency.find_one({"user_id": "u", "client_mutation_id": "wallet"}))["result"]
 
@@ -353,15 +378,16 @@ class MongoRuntimeTransactions(unittest.IsolatedAsyncioTestCase):
         await self._seed_wallets()
 
         async def transfer_once():
+            async def body(session):
+                await self.db.wallets.update_one({"id": "a"}, {"$inc": {"balance": -200_000}}, session=session)
+                await self.db.wallets.update_one({"id": "b"}, {"$inc": {"balance": 200_000}}, session=session)
+                await self.db.transactions.insert_one({"id": uuid.uuid4().hex, "user_id": "u", "client_mutation_id": "transfer-same", "amount": 200_000}, session=session)
+                result = {"transaction": "transfer-authoritative"}
+                await self.db.idempotency.insert_one({"user_id": "u", "client_mutation_id": "transfer-same", "fingerprint": "same", "result": result, "created_at": datetime.now(timezone.utc)}, session=session)
+                return result
+
             try:
-                async with await self.client.start_session() as session:
-                    async with session.start_transaction():
-                        await self.db.wallets.update_one({"id": "a"}, {"$inc": {"balance": -200_000}}, session=session)
-                        await self.db.wallets.update_one({"id": "b"}, {"$inc": {"balance": 200_000}}, session=session)
-                        await self.db.transactions.insert_one({"id": uuid.uuid4().hex, "user_id": "u", "client_mutation_id": "transfer-same", "amount": 200_000}, session=session)
-                        result = {"transaction": "transfer-authoritative"}
-                        await self.db.idempotency.insert_one({"user_id": "u", "client_mutation_id": "transfer-same", "fingerprint": "same", "result": result, "created_at": datetime.now(timezone.utc)}, session=session)
-                        return result
+                return await self._retrying_txn(body)
             except DuplicateKeyError:
                 return (await self.db.idempotency.find_one({"user_id": "u", "client_mutation_id": "transfer-same"}))["result"]
 

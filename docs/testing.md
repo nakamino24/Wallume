@@ -5,33 +5,77 @@
 ### Running Tests
 ```bash
 cd backend
-pytest tests/ -v
+pytest            # deterministic suite — no network, no database
 ```
 
-### Test Structure
-Tests are integration-level — they send real HTTP requests to a running server.
+The default run is fully self-contained: no Mongo, no live API. Tests that
+need infrastructure are skipped and say so.
 
-**Prerequisites**: Backend must be running on `localhost:8001`.
+### Two tiers
+
+| Tier | Command | Needs |
+|---|---|---|
+| Deterministic | `pytest` | nothing |
+| Integration | `MONGO_URL=... pytest --run-integration` | a MongoDB that supports transactions |
+
+Integration files are listed in `LIVE_SERVICE_TEST_FILES` in
+`tests/conftest.py` and auto-skipped without `--run-integration`.
+
+### Running integration tests
+
+Multi-document transactions require a replica set, so a standalone `mongod`
+is not enough. A one-node replica set in Docker is sufficient:
+
+```bash
+docker run -d --rm --name wallume-rs --hostname mongo \
+  --add-host mongo:127.0.0.1 -p 27019:27017 \
+  mongo:7 --replSet rs0 --bind_ip_all
+sleep 8
+docker exec wallume-rs mongosh --quiet \
+  --eval "rs.initiate({_id:'rs0',members:[{_id:0,host:'mongo:27017'}]}).ok"
+
+cd backend
+MONGO_URL='mongodb://localhost:27019/?directConnection=true' pytest --run-integration
+
+docker rm -f wallume-rs
+```
+
+What the integration tier actually verifies (and unit tests cannot):
+
+- concurrent duplicate creates commit **one** effect and **one** idempotency
+  record, and the transient `WriteConflict` is retried exactly as production
+  does (`run_in_txn`);
+- a failure injected mid-transaction rolls back the wallet, the transaction
+  row and the idempotency record together;
+- report aggregation is complete past 2000 rows and honours soft-delete;
+- **tenancy**: joining a household re-scopes the joiner's documents across
+  every scoped collection, and a personal household resolves to the owner's
+  own id so pre-household data stays visible.
 
 ### Test Files
 
 | File | Coverage |
 |---|---|
-| `tests/conftest.py` | Fixtures: `api_client`, `auth_user`, `auth_headers` |
-| `tests/test_backend_api.py` | Auth, Wallets, Transactions, Budgets, Goals, Plans, Debts, Investments, Assets, Analytics, Coach, Security (401 checks) |
-| `tests/test_wallet_patch.py` | PATCH wallet regression tests |
+| `tests/conftest.py` | Fixtures, integration gating, scope-cache isolation |
+| `tests/test_backend_api.py` | Live API: auth, wallets, transactions, budgets, goals, plans, debts, investments, assets, analytics, coach, security |
+| `tests/test_mongo_runtime_transactions.py` | Real Mongo: atomicity, rollback, concurrency, report aggregation |
+| `tests/test_tenancy*.py` | Household invariants (unit) + real-DB re-scoping (integration) |
+| `tests/test_split_transactions.py` | Split expenses: one debit, one row per part, group delete |
+| `tests/test_receipts.py` | Upload validation, size cap, ownership scoping |
+| `tests/test_telemetry.py` | Sentry optional + PII redaction |
 
-### Test Flow
-1. `auth_user` fixture signs up a fresh user with unique email.
-2. Tests use the returned JWT token for authenticated requests.
-3. Each test is self-contained (creates its own data).
+### Note on `pytest.ini`
+
+`asyncio_mode = auto` is required: the integration tests use async fixtures,
+and motor binds its executor to the event loop it is created in, so clients
+must be constructed inside the test's loop.
 
 ### Adding Tests
 ```python
-def test_my_feature(self, auth_headers):
-    r = requests.get(f"{BASE_URL}/api/resource", headers=auth_headers)
-    assert r.status_code == 200
-    assert r.json()["success"] is True
+def test_my_feature(monkeypatch):
+    # Stub get_current_user; include owner_id — production always sets it.
+    monkeypatch.setattr(api.auth_service, "get_current_user",
+                        AsyncMock(return_value={"user_id": "u1", "owner_id": "u1"}))
 ```
 
 ## Frontend (Jest)
@@ -45,7 +89,7 @@ npx jest
 ```
 
 ### Test Structure
-Unit tests with mocked dependencies (Expo Router, API client, Auth, Theme, Storage).
+Unit tests with mocked dependencies (Expo Router, API client, Auth, Theme, Storage, Sentry, notifications, image picker).
 
 ### Test Files
 

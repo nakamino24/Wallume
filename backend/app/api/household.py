@@ -1,19 +1,24 @@
-from __future__ import annotations
-
 from typing import Optional
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel, Field
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.services.auth_service import AuthService
 from app.services import tenancy_service as tenancy
 
 router = APIRouter(prefix="/household")
 auth_service = AuthService()
+# Same limiter pattern as auth: an invite code is a guessable secret, so
+# joining must be throttled or codes can be enumerated.
+limiter = Limiter(key_func=get_remote_address)
 
 
 class JoinRequest(BaseModel):
-    invite_code: str = Field(min_length=4, max_length=32)
+    # Minimum raised to match the 12-character codes now issued, so a client
+    # cannot burn attempts on obviously-too-short inputs.
+    invite_code: str = Field(min_length=6, max_length=32)
 
 
 class RenameRequest(BaseModel):
@@ -34,12 +39,10 @@ async def get_household(authorization: Optional[str] = Header(None)):
 
 
 @router.post("/join")
-async def join_household(payload: JoinRequest, authorization: Optional[str] = Header(None)):
+@limiter.limit("10/minute")
+async def join_household(payload: JoinRequest, request: Request, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    try:
-        detail = await tenancy.join_household(u["user_id"], payload.invite_code)
-    except HTTPException:
-        raise
+    detail = await tenancy.join_household(u["user_id"], payload.invite_code)
     return {"success": True, "data": {"household": detail}}
 
 

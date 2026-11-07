@@ -7,6 +7,7 @@ LIVE_SERVICE_TEST_FILES = {
     "test_backend_api.py",
     "test_mongo_runtime_transactions.py",
     "test_reports_explain.py",
+    "test_tenancy_integration.py",
     "test_transaction_merchant.py",
     "test_wallet_patch.py",
 }
@@ -43,6 +44,27 @@ def authed_user(user_id: str = "u1", **overrides) -> dict:
     user = {"user_id": user_id, "owner_id": user_id, "currency": "USD"}
     user.update(overrides)
     return user
+
+
+@pytest.fixture(autouse=True)
+def _clear_tenancy_scope_cache():
+    """Keep the process-wide scope cache from leaking between tests.
+
+    `resolve_scope` caches per user id for a short TTL. Without this, a test
+    that resolves a scope changes the behaviour of a later test — the classic
+    order-dependent failure.
+    """
+    try:
+        from app.services.tenancy_service import invalidate_scope_cache
+        invalidate_scope_cache()
+    except Exception:
+        pass
+    yield
+    try:
+        from app.services.tenancy_service import invalidate_scope_cache
+        invalidate_scope_cache()
+    except Exception:
+        pass
 
 
 @pytest.fixture(scope="session")
