@@ -296,6 +296,16 @@ export const api = {
     req('/household/members/remove', { method: 'POST', body: JSON.stringify({ user_id }) }),
   transferHouseholdOwnership: (user_id: string) =>
     req('/household/members/transfer-ownership', { method: 'POST', body: JSON.stringify({ user_id }) }),
+
+  // splits (whole-group editing)
+  transactionSplits: (tx_id: string) =>
+    req(`/transactions/${encodeURIComponent(tx_id)}/splits`),
+  updateTransactionSplits: (tx_id: string, parts: { category: string; amount: number }[], mutationId = generateMutationId()) =>
+    req(`/transactions/${encodeURIComponent(tx_id)}/splits`, {
+      method: 'PATCH',
+      body: JSON.stringify({ parts }),
+      headers: { 'X-Client-Mutation-Id': mutationId },
+    }),
 };
 
 export const BASE_URL = BASE;

@@ -424,6 +424,122 @@ async def import_transactions(
     return {"success": True, "data": result}
 
 
+@router.get("/{tx_id}/splits")
+async def get_transaction_splits(tx_id: str, authorization: Optional[str] = Header(None)):
+    """Every part of the split group a transaction belongs to.
+
+    The edit screen needs the whole group to let the user recategorize the
+    purchase as a unit; fetching one part at a time cannot show the others.
+    """
+    u = await auth_service.get_current_user(authorization)
+    tx = await txs.find_one({"id": tx_id, "user_id": u["owner_id"]})
+    if not tx:
+        raise HTTPException(404, "Not found")
+    if not tx.get("split_group_id"):
+        raise HTTPException(400, "Transaction is not part of a split")
+
+    parts = await txs.find_by_user(u["owner_id"], None, None, 500, None, None)
+    group = [p for p in parts if p.get("split_group_id") == tx["split_group_id"]]
+    # Deterministic order: the index recorded at create time.
+    group.sort(key=lambda p: p.get("split_index", 0))
+    return {"success": True, "data": {
+        "split_group_id": tx["split_group_id"],
+        "split_total": tx.get("split_total"),
+        "date": tx.get("date"),
+        "parts": [
+            {"id": p["id"], "category": p["category"], "amount": p["amount"], "note": p.get("note", "")}
+            for p in group
+        ],
+    }}
+
+
+@router.patch("/{tx_id}/splits")
+async def update_transaction_splits(
+    tx_id: str,
+    body: dict[str, Any],
+    authorization: Optional[str] = Header(None),
+    x_client_mutation_id: Optional[str] = Header(None, alias="X-Client-Mutation-Id"),
+):
+    """Recategorize a split as a unit.
+
+    Accepts a full replacement parts list. Constraints that keep this safe:
+    the part count must match the existing group, and the amounts must still
+    sum to `split_total`. Because the total is unchanged, the wallet is NOT
+    touched — this is relabeling money that has already moved, not moving it.
+    Changing the total requires deleting the split and re-entering it.
+    """
+    u = await auth_service.get_current_user(authorization)
+    db = await get_database()
+    fingerprint = _idempotency_fingerprint("PATCH /transactions/splits", tx_id, body)
+    found, result = await _find_idempotency_result(db, u["owner_id"], x_client_mutation_id, fingerprint)
+    if found:
+        return {"success": True, "data": result}
+
+    async def txn(session):
+        tx = await txs.find_one({"id": tx_id, "user_id": u["owner_id"]}, session)
+        if not tx:
+            raise HTTPException(404, "Not found")
+        group_id = tx.get("split_group_id")
+        if not group_id:
+            raise HTTPException(400, "Transaction is not part of a split")
+
+        parts = await txs.find_by_user(u["owner_id"], None, None, 500, None, None)
+        group = sorted(
+            [p for p in parts if p.get("split_group_id") == group_id],
+            key=lambda p: p.get("split_index", 0),
+        )
+        if not group:
+            raise HTTPException(404, "Split group not found")
+
+        incoming = body.get("parts") or []
+        if not isinstance(incoming, list) or len(incoming) != len(group):
+            raise HTTPException(400, f"Expected {len(group)} parts, got {len(incoming)}")
+
+        split_total = round(float(tx.get("split_total") or 0.0), 2)
+        parsed = []
+        for index, part in enumerate(incoming):
+            try:
+                amount = float(part.get("amount"))
+            except (TypeError, ValueError):
+                raise HTTPException(400, "Each part needs a numeric amount")
+            if not math.isfinite(amount) or amount <= 0:
+                raise HTTPException(400, "Each part amount must be greater than 0")
+            parsed.append({
+                "id": group[index]["id"],
+                "category": str(part.get("category") or group[index].get("category") or "Other").strip()[:80],
+                "amount": amount,
+                "note": str(part.get("note") or "").strip()[:500],
+            })
+        if round(sum(p["amount"] for p in parsed), 2) != split_total:
+            raise HTTPException(400, "Part amounts must still sum to the split total")
+
+        for part, current in zip(parsed, group):
+            await txs.update_one(
+                {"id": current["id"], "user_id": u["owner_id"]},
+                {"$set": {"category": part["category"], "amount": part["amount"], "note": part["note"]}},
+                session=session,
+            )
+
+        updated_group = await txs.find_by_user(u["owner_id"], None, None, 500, None, None)
+        final = sorted(
+            [p for p in updated_group if p.get("split_group_id") == group_id],
+            key=lambda p: p.get("split_index", 0),
+        )
+        return {"parts": [
+            {k: v for k, v in p.items() if k != "_id"} for p in final
+        ]}
+
+    try:
+        result = await run_in_txn(txn)
+    except DuplicateKeyError:
+        found, result = await _find_idempotency_result(db, u["owner_id"], x_client_mutation_id, fingerprint)
+        if found:
+            return {"success": True, "data": result}
+        raise
+
+    return {"success": True, "data": result}
+
+
 @router.patch("/{tx_id}")
 async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Optional[str] = Header(None), x_client_mutation_id: Optional[str] = Header(None, alias="X-Client-Mutation-Id")):
     client_mid = x_client_mutation_id or body.get("client_mutation_id")
