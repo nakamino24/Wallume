@@ -181,6 +181,13 @@ export function BudgetsSection({ budgets, currency, onAdd, onEdit, onReload }: a
           const overspent = Math.max(0, spent - amount);
           const statusLabel = over ? t('budgets.over') : t('budgets.remaining');
           const statusAmount = over ? overspent : remaining;
+          // Show the actual window when it is not a calendar month: a weekly
+          // or yearly budget measuring itself correctly would otherwise still
+          // read like a monthly one.
+          const periodLabel =
+            b.period && b.period !== 'monthly'
+              ? ` · ${t(`budget.period.${b.period}`)}`
+              : '';
           return (
             <Card key={b.id} testID={`budget-card-${b.id}`}
               onPress={() => onEdit(b)}
@@ -192,7 +199,16 @@ export function BudgetsSection({ budgets, currency, onAdd, onEdit, onReload }: a
                   </ProgressRing>
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Body numberOfLines={1} style={{ fontFamily: font.textBold, fontSize: 15 }}>{budgetCategoryLabel(b.category, translate)}</Body>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                    <Body numberOfLines={1} style={{ fontFamily: font.textBold, fontSize: 15 }}>
+                      {budgetCategoryLabel(b.category, translate)}
+                    </Body>
+                    {!!periodLabel && (
+                      <Body testID={`budget-period-${b.id}`} muted style={{ fontSize: 11 }} numberOfLines={1}>
+                        {periodLabel.replace(' · ', '')}
+                      </Body>
+                    )}
+                  </View>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 2, gap: 4 }}>
                     <MoneyValue value={spent} currency={currency} style={{ color: colors.muted, fontSize: 14, lineHeight: 18 }} />
                     <Body muted style={{ fontSize: 14, lineHeight: 18 }}> {t('budgets.of')} </Body>

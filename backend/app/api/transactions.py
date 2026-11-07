@@ -179,6 +179,19 @@ async def list_transactions(
 
     if items:
         await asyncio.gather(*(_convert_one(item) for item in items))
+
+    # Attach receipt counts so the list can show a paperclip indicator without
+    # a second request per row. One indexed query for the whole page.
+    receipt_counts: dict[str, int] = {}
+    if items:
+        from app.services.receipt_service import ReceiptRepository
+        grouped = await ReceiptRepository().for_transactions(
+            u["owner_id"], [item["id"] for item in items],
+        )
+        receipt_counts = {tx_id: len(rows) for tx_id, rows in grouped.items()}
+    for item in items:
+        item["receipt_count"] = receipt_counts.get(item["id"], 0)
+
     return {"success": True, "data": {"transactions": items, "total": total, "limit": limit, "offset": offset}}
 
 

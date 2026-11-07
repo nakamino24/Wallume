@@ -124,6 +124,65 @@ def test_grouping_by_transaction_does_one_query():
     assert coll.filter["user_id"] == "u1"
 
 
+def test_list_response_includes_receipt_count(monkeypatch):
+    """The transaction list needs a receipt indicator without N extra requests."""
+    import asyncio
+    from unittest.mock import AsyncMock
+
+    from app.api import transactions as tx_api
+
+    monkeypatch.setattr(
+        tx_api.auth_service, "get_current_user",
+        AsyncMock(return_value={"user_id": "u1", "owner_id": "u1", "currency": "IDR"}),
+    )
+    monkeypatch.setattr(
+        tx_api.txs, "find_by_user",
+        AsyncMock(return_value=[
+            {"id": "tx-1", "wallet_id": "w1", "amount": 100.0, "currency": "IDR"},
+            {"id": "tx-2", "wallet_id": "w1", "amount": 200.0, "currency": "IDR"},
+        ]),
+    )
+    monkeypatch.setattr(tx_api.txs, "count_by_user", AsyncMock(return_value=2))
+    monkeypatch.setattr(tx_api.wallets, "find_by_user", AsyncMock(return_value=[
+        {"id": "w1", "currency": "IDR"},
+    ]))
+    monkeypatch.setattr(tx_api.FxService, "convert", AsyncMock(return_value=100.0))
+
+    grouped = {"tx-1": [{"id": "r1"}], "tx-2": []}
+    with patch.object(rs.ReceiptRepository, "for_transactions",
+                      AsyncMock(return_value=grouped)):
+        response = asyncio.run(tx_api.list_transactions(authorization="Bearer token"))
+
+    items = {item["id"]: item for item in response["data"]["transactions"]}
+    assert items["tx-1"]["receipt_count"] == 1
+    assert items["tx-2"]["receipt_count"] == 0
+
+
+def test_list_response_defaults_receipt_count_to_zero(monkeypatch):
+    import asyncio
+    from unittest.mock import AsyncMock
+
+    from app.api import transactions as tx_api
+
+    monkeypatch.setattr(
+        tx_api.auth_service, "get_current_user",
+        AsyncMock(return_value={"user_id": "u1", "owner_id": "u1", "currency": "IDR"}),
+    )
+    monkeypatch.setattr(
+        tx_api.txs, "find_by_user",
+        AsyncMock(return_value=[{"id": "tx-1", "wallet_id": "w1", "amount": 100.0, "currency": "IDR"}]),
+    )
+    monkeypatch.setattr(tx_api.txs, "count_by_user", AsyncMock(return_value=1))
+    monkeypatch.setattr(tx_api.wallets, "find_by_user", AsyncMock(return_value=[
+        {"id": "w1", "currency": "IDR"},
+    ]))
+    monkeypatch.setattr(tx_api.FxService, "convert", AsyncMock(return_value=100.0))
+    monkeypatch.setattr(rs.ReceiptRepository, "for_transactions", AsyncMock(return_value={}))
+
+    response = asyncio.run(tx_api.list_transactions(authorization="Bearer token"))
+    assert response["data"]["transactions"][0]["receipt_count"] == 0
+
+
 def test_empty_transaction_list_short_circuits():
     import asyncio
     assert asyncio.run(rs.ReceiptRepository().for_transactions("u1", [])) == {}

@@ -156,6 +156,9 @@ async def household_detail(user_id: str) -> dict[str, Any]:
     if not household:
         raise HTTPException(404, "No household")
     roster = await members.for_household(household["id"])
+    # Members must be identified by name: rendering `user_8f3a2b...` in the UI
+    # makes a sharing feature unusable.
+    profiles = await _member_names([m["member_id"] for m in roster])
     return {
         "id": household["id"],
         "name": household.get("name", "Personal"),
@@ -166,12 +169,32 @@ async def household_detail(user_id: str) -> dict[str, Any]:
         "members": [
             {
                 "user_id": m["member_id"],
+                "name": profiles.get(m["member_id"], ""),
                 "role": m["role"],
                 "joined_at": m.get("joined_at"),
             }
             for m in roster
         ],
     }
+
+
+async def _member_names(user_ids: list[str]) -> dict[str, str]:
+    """Display name for each member, keyed by user_id. Missing -> empty."""
+    from app.database.mongo import get_database
+
+    if not user_ids:
+        return {}
+    db = await get_database()
+    cursor = db.users.find(
+        {"user_id": {"$in": user_ids}},
+        {"_id": 0, "user_id": 1, "name": 1, "email": 1},
+    )
+    out: dict[str, str] = {}
+    for doc in await cursor.to_list(len(user_ids)):
+        name = (doc.get("name") or "").strip()
+        email = (doc.get("email") or "").strip()
+        out[doc["user_id"]] = name or email.split("@")[0]
+    return out
 
 
 async def rename_household(user_id: str, name: str) -> dict[str, Any]:
@@ -272,6 +295,41 @@ async def remove_member(owner_user_id: str, member_user_id: str) -> dict[str, An
     # The removed member's scope reverted to personal.
     invalidate_scope_cache(member_user_id)
     return await household_detail(owner_user_id)
+
+
+async def transfer_ownership(owner_user_id: str, new_owner_user_id: str) -> dict[str, Any]:
+    """Hand the household over so the current owner can leave.
+
+    Without this an owner with other members is permanently trapped: the leave
+    guard forbids abandoning them, and there was no way to appoint someone
+    else. The scope id never changes — it remains the *original* owner's user
+    id, so every existing document stays where it is and no data moves.
+    """
+    owner_membership = await members.for_user(owner_user_id)
+    if not owner_membership or owner_membership["role"] != ROLE_OWNER:
+        raise HTTPException(403, "Only the household owner can transfer it")
+    if new_owner_user_id == owner_user_id:
+        raise HTTPException(400, "You already own this household")
+
+    target = await members.for_user(new_owner_user_id)
+    if not target or target["household_id"] != owner_membership["household_id"]:
+        raise HTTPException(404, "That user is not in your household")
+
+    # Idempotent swap: both rows change atomically in one round trip each.
+    # The household's id (the tenancy scope) is left untouched by design.
+    await members.update_one(
+        {"id": owner_membership["id"]}, {"$set": {"role": ROLE_MEMBER}},
+    )
+    await members.update_one(
+        {"id": target["id"]}, {"$set": {"role": ROLE_OWNER}},
+    )
+    await households.update_one(
+        {"id": owner_membership["household_id"]},
+        {"$set": {"owner_id": new_owner_user_id}},
+    )
+    invalidate_scope_cache(owner_user_id)
+    invalidate_scope_cache(new_owner_user_id)
+    return await household_detail(new_owner_user_id)
 
 
 # Documents that carry the tenancy scope. Kept explicit rather than derived so

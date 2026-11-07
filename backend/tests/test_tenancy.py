@@ -212,6 +212,154 @@ def test_only_the_owner_can_remove_members(monkeypatch):
     assert exc.value.status_code == 403
 
 
+# --- ownership transfer ----------------------------------------------------
+
+def _transfer_fixture(monkeypatch):
+    """owner + member in hh1 (scope stays user_owner)."""
+    async def for_user(uid):
+        if uid == "owner":
+            return {"id": "m1", "household_id": "user_owner", "role": tenancy.ROLE_OWNER}
+        if uid == "member":
+            return {"id": "m2", "household_id": "user_owner", "role": tenancy.ROLE_MEMBER}
+        return None
+
+    updated = []
+
+    async def capture_update(filter, update):
+        updated.append((filter, update))
+
+    monkeypatch.setattr(tenancy.members, "for_user", for_user)
+    monkeypatch.setattr(tenancy.members, "update_one", capture_update)
+    monkeypatch.setattr(tenancy.households, "update_one", capture_update)
+    monkeypatch.setattr(tenancy, "invalidate_scope_cache", lambda uid: None)
+    monkeypatch.setattr(tenancy, "household_detail", _async({"id": "user_owner"}))
+    return updated
+
+
+def test_transfer_hands_ownership_to_the_member(monkeypatch):
+    updated = _transfer_fixture(monkeypatch)
+    result = _run(tenancy.transfer_ownership("owner", "member"))
+
+    role_swaps = {f["id"]: u for f, u in updated if "role" in u.get("$set", {})}
+    assert role_swaps["m1"]["$set"]["role"] == tenancy.ROLE_MEMBER
+    assert role_swaps["m2"]["$set"]["role"] == tenancy.ROLE_OWNER
+    assert result["id"] == "user_owner"
+
+
+def test_transfer_does_not_change_the_tenancy_scope(monkeypatch):
+    """Every existing document is keyed by the original owner's id.
+
+    If the household id moved to the new owner, all shared data would become
+    invisible to everyone — the same class of bug as the personal-household
+    regression caught earlier.
+    """
+    updated = _transfer_fixture(monkeypatch)
+    _run(tenancy.transfer_ownership("owner", "member"))
+
+    household_update = next(u for f, u in updated if "owner_id" in u.get("$set", {}))
+    assert household_update["$set"]["owner_id"] == "member"
+    # And critically, nothing renames the household id itself.
+    assert all("$set" not in u or "id" not in u["$set"] for _, u in updated)
+
+
+def test_only_the_owner_can_transfer(monkeypatch):
+    monkeypatch.setattr(tenancy.members, "for_user", _async({"household_id": "hh1", "role": tenancy.ROLE_MEMBER}))
+    with pytest.raises(HTTPException) as exc:
+        _run(tenancy.transfer_ownership("member", "owner"))
+    assert exc.value.status_code == 403
+
+
+def test_cannot_transfer_to_someone_outside_the_household(monkeypatch):
+    async def for_user(uid):
+        if uid == "owner":
+            return {"id": "m1", "household_id": "user_owner", "role": tenancy.ROLE_OWNER}
+        return None
+
+    monkeypatch.setattr(tenancy.members, "for_user", for_user)
+    with pytest.raises(HTTPException) as exc:
+        _run(tenancy.transfer_ownership("owner", "stranger"))
+    assert exc.value.status_code == 404
+
+
+def test_cannot_transfer_to_yourself(monkeypatch):
+    monkeypatch.setattr(tenancy.members, "for_user", _async({"id": "m1", "household_id": "hh1", "role": tenancy.ROLE_OWNER}))
+    with pytest.raises(HTTPException) as exc:
+        _run(tenancy.transfer_ownership("u1", "u1"))
+    assert exc.value.status_code == 400
+
+
+def test_transfer_invalidates_both_scopes(monkeypatch):
+    """A cached scope pointing at the old owner would break the new owner."""
+    invalidated = []
+    _transfer_fixture(monkeypatch)
+    monkeypatch.setattr(tenancy, "invalidate_scope_cache", lambda uid: invalidated.append(uid))
+
+    _run(tenancy.transfer_ownership("owner", "member"))
+    assert "owner" in invalidated and "member" in invalidated
+
+
+# --- member names ----------------------------------------------------------
+
+def test_member_names_resolves_display_names(monkeypatch):
+    """Rendering raw user ids in the UI made sharing unusable."""
+    class _Cursor:
+        async def to_list(self, n):
+            return [
+                {"user_id": "u1", "name": "Alex", "email": "alex@wallume.app"},
+                {"user_id": "u2", "name": "", "email": "sam@wallume.app"},
+            ]
+
+    class _Coll:
+        def __init__(self):
+            self.query = None
+            self.projection = None
+
+        def find(self, query, projection):
+            self.query, self.projection = query, projection
+            return _Cursor()
+
+    coll = _Coll()
+
+    async def fake_db():
+        class _DB:
+            users = coll
+        return _DB()
+
+    import app.database.mongo as mongo_module
+    import app.services.tenancy_service as ts
+    monkeypatch.setattr(mongo_module, "get_database", fake_db)
+
+    names = _run(ts._member_names(["u1", "u2"]))
+    assert coll.query == {"user_id": {"$in": ["u1", "u2"]}}
+    assert names["u1"] == "Alex"
+    # Falls back to the email local part when name is empty.
+    assert names["u2"] == "sam"
+
+
+def test_member_names_handles_an_empty_roster():
+    import app.services.tenancy_service as ts
+    assert _run(ts._member_names([])) == {}
+
+
+def test_household_detail_includes_member_names(monkeypatch):
+    async def for_user(_uid):
+        return {"id": "m1", "household_id": "hh1", "role": tenancy.ROLE_OWNER}
+
+    async def roster(_hid):
+        return [{"member_id": "u1", "role": tenancy.ROLE_OWNER}]
+
+    async def household(_f):
+        return {"id": "hh1", "name": "Family", "invite_code": "ABC123"}
+
+    monkeypatch.setattr(tenancy.members, "for_user", for_user)
+    monkeypatch.setattr(tenancy.members, "for_household", roster)
+    monkeypatch.setattr(tenancy.households, "find_one", household)
+    monkeypatch.setattr(tenancy, "_member_names", _async({"u1": "Alex"}))
+
+    detail = _run(tenancy.household_detail("u1"))
+    assert detail["members"][0]["name"] == "Alex"
+
+
 def test_owner_cannot_remove_themselves(monkeypatch):
     monkeypatch.setattr(tenancy.members, "for_user", _async({"household_id": "hh1", "role": tenancy.ROLE_OWNER}))
     with pytest.raises(HTTPException) as exc:

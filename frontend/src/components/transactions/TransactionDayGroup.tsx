@@ -79,8 +79,34 @@ function TransactionRow({ transaction, currency, isLast, onOpen, onRemove }: { t
         <Ionicons name={transaction.type === 'transfer' ? 'swap-horizontal' : (CAT_ICON[transaction.category] || 'ellipsis-horizontal')} size={18} color={color} />
       </View>
       <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.sm }}>
-        <Body numberOfLines={1} style={{ fontFamily: font.textMedium }}>{systemCategoryLabel(transaction.category, t)}</Body>
-        <Body numberOfLines={1} muted style={{ fontSize: 12, marginTop: 1 }}>{transaction.note || time || transaction.wallet_name || t('transaction.fallback')}</Body>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+          <Body numberOfLines={1} style={{ fontFamily: font.textMedium, flexShrink: 1 }}>
+            {systemCategoryLabel(transaction.category, t)}
+          </Body>
+          {!!transaction.split_group_id && (
+            <View testID={`tx-split-badge-${transaction.id}`} style={{
+              paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.pill,
+              backgroundColor: colors.brandPrimary + '22',
+            }}>
+              <Body style={{ fontSize: 9, color: colors.brandPrimary, fontFamily: font.textBold }}>
+                {t('split.badge')}
+              </Body>
+            </View>
+          )}
+        </View>
+        <Body numberOfLines={1} muted style={{ fontSize: 12, marginTop: 1 }}>
+          {transaction.note || time || transaction.wallet_name || t('transaction.fallback')}
+        </Body>
+        {Boolean(transaction.receipt_count) && (
+          <View testID={`tx-receipts-${transaction.id}`} style={{
+            flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2,
+          }}>
+            <Ionicons name="document-attach-outline" size={11} color={colors.muted} />
+            <Body muted style={{ fontSize: 10 }}>
+              {t('transaction.receipts', { count: transaction.receipt_count })}
+            </Body>
+          </View>
+        )}
       </View>
       <View style={{ alignItems: 'flex-end', flexShrink: 0 }}>
         <MoneyValue

@@ -29,6 +29,10 @@ class RemoveMemberRequest(BaseModel):
     user_id: str
 
 
+class TransferOwnershipRequest(BaseModel):
+    user_id: str
+
+
 @router.get("")
 async def get_household(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
@@ -68,4 +72,16 @@ async def rotate_invite(authorization: Optional[str] = Header(None)):
 async def remove_member(payload: RemoveMemberRequest, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     detail = await tenancy.remove_member(u["user_id"], payload.user_id)
+    return {"success": True, "data": {"household": detail}}
+
+
+@router.post("/members/transfer-ownership")
+async def transfer_ownership(payload: TransferOwnershipRequest, authorization: Optional[str] = Header(None)):
+    """Owner hands the household to another member.
+
+    Without this the owner is permanently trapped: the leave guard forbids
+    abandoning members and there was no way to appoint a successor.
+    """
+    u = await auth_service.get_current_user(authorization)
+    detail = await tenancy.transfer_ownership(u["user_id"], payload.user_id)
     return {"success": True, "data": {"household": detail}}

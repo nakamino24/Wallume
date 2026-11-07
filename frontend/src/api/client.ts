@@ -294,6 +294,8 @@ export const api = {
   rotateHouseholdInvite: () => req('/household/rotate-invite', { method: 'POST' }),
   removeHouseholdMember: (user_id: string) =>
     req('/household/members/remove', { method: 'POST', body: JSON.stringify({ user_id }) }),
+  transferHouseholdOwnership: (user_id: string) =>
+    req('/household/members/transfer-ownership', { method: 'POST', body: JSON.stringify({ user_id }) }),
 };
 
 export const BASE_URL = BASE;
