@@ -2,6 +2,67 @@
 
 All notable changes to Wallume are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.7a] — preview
+
+### Added
+- **Split expenses** across categories: one transaction row per part sharing a
+  `split_group_id`, with a single wallet debit for the total. Budgets, reports
+  and the category breakdown work unchanged because each part is a flat row.
+- **Statement import**: `POST /transactions/import` with a dry-run preview and
+  dedupe on date + amount + merchant. CSV is parsed on-device, matching the
+  export screen's "nothing is uploaded" promise.
+- **Receipt attachments** on transactions, stored in GridFS. Allow-listed
+  content types, size cap enforced on bytes read, `nosniff` on the response,
+  ownership in every query filter. Purged with the transaction and the account.
+- **Household sharing** via a tenancy layer: `user_id` now means "tenancy
+  scope", resolved once per request into `owner_id`. A personal household's id
+  *is* the owner's user id, so pre-household accounts keep their data.
+- **Net-worth snapshots** (one point per user per day) and a trend chart.
+- **Recurring catch-up**: `POST /recurring/catch-up` posts every overdue
+  occurrence on its scheduled date, idempotently and with a bounded backfill.
+- **Budget threshold alerts** at 80% and 100%, re-armed per period.
+- **Error telemetry** (Sentry), optional and PII-scrubbed.
+- Build identity on the health endpoint (`version`, `commit`, `branch`,
+  `environment`) so a deploy can be verified.
+
+### Fixed
+- `DELETE /auth/me` called a nonexistent repository method, so account deletion
+  always 500'd after partially deleting data.
+- Four aggregation pipelines ignored `deleted_at`, so deleted transactions kept
+  inflating budgets, the analytics trend, the spending chart and coach context.
+- Budget `period` was ignored — weekly/yearly budgets measured a calendar month.
+- Bonds contributed zero to net worth (valued as quantity × price).
+- `FxService.convert` returned the unconverted amount on failure, so a network
+  blip silently misstated pooled totals. Now flagged via `fx_unconverted`.
+- Failed optimistic transaction mutations were discarded with no signal; a
+  retryable banner is now shown on Home and Transactions.
+- Google sign-in called a backend route that never existed; removed.
+- Coach had one hardcoded `'default'` session, so "clear" only wiped local state.
+- `debt.kind.credit_card` rendered as a raw i18n key.
+- `PATCH /auth/me` accepted an untyped dict, so a bad type could 500 mid-update.
+- Three profile/reports/recurring screens showed a permanent loading state on
+  network failure instead of an error with retry.
+
+### Changed
+- Version handling consolidated: one backend constant (`app/version.py`) and one
+  frontend source (`app.json`), with a test that fails if they diverge.
+- Backend and frontend version strings had drifted (`1.0.5c` vs `1.0.6c`), which
+  made it impossible to tell which build was deployed.
+- Removed dead code and unused dependencies (~680 lines, 8 packages), including
+  an Expo template `reset-project` script that deleted `app/`.
+
+### Security
+- Household invite codes are 12 characters and `/household/join` is rate limited,
+  so codes cannot be enumerated.
+- Sentry redacts auth headers, sensitive body keys and query strings.
+- Receipt uploads reject non-allow-listed types (SVG excluded — it can carry
+  script) and never trust `Content-Length`.
+
+### CI
+- Added a `backend-integration` job running against a real MongoDB replica set,
+  because atomicity, rollback, concurrency and tenancy re-scoping cannot be
+  verified with mocks.
+
 ## [Unreleased] — Pre-preview hardening
 
 ### Changed
