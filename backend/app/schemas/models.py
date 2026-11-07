@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from typing import Literal, Optional
 
 
@@ -72,6 +72,27 @@ class WalletCreate(BaseModel):
     client_mutation_id: Optional[str] = None
 
 # --- Transaction ---
+class TransactionSplitPart(BaseModel):
+    """One part of a split expense.
+
+    Splits are stored as *separate transaction rows* sharing a split_group_id
+    rather than as a nested array, so budgets, reports, the analytics
+    aggregation and the category breakdown all keep working unchanged — they
+    read `category` off a flat row.
+    """
+    category: str
+    amount: float
+    note: Optional[str] = ""
+
+    @field_validator("amount")
+    @classmethod
+    def _split_amount_positive(cls, v: float) -> float:
+        import math
+        if not math.isfinite(v) or v <= 0:
+            raise ValueError("split amount must be greater than 0")
+        return v
+
+
 class TransactionCreate(BaseModel):
     wallet_id: str
     to_wallet_id: Optional[str] = None
@@ -83,6 +104,10 @@ class TransactionCreate(BaseModel):
     date: Optional[str] = None
     currency: Optional[str] = None
     client_mutation_id: Optional[str] = None
+    # Optional split legs. When present they must sum to `amount`, and only
+    # expense transactions may be split (a transfer has two real wallets and
+    # income is rarely split across categories).
+    splits: Optional[list[TransactionSplitPart]] = None
 
     @field_validator("amount")
     @classmethod
@@ -100,6 +125,21 @@ class TransactionCreate(BaseModel):
         # Trim whitespace and cap length; None collapses to "" so list views
         # can always assume a string field on every stored transaction.
         return (v or "").strip()[:120]
+
+    @model_validator(mode="after")
+    def _validate_splits(self):
+        if not self.splits:
+            return self
+        if self.type != "expense":
+            raise ValueError("only expense transactions can be split")
+        if len(self.splits) < 2:
+            raise ValueError("a split needs at least two parts")
+        # Comparing with a tolerance would let the parts disagree with the
+        # wallet movement, which is exactly the drift splits must not create.
+        total = round(sum(part.amount for part in self.splits), 2)
+        if total != round(self.amount, 2):
+            raise ValueError("split amounts must sum to the transaction amount")
+        return self
 
 
 class TransactionImportRow(BaseModel):

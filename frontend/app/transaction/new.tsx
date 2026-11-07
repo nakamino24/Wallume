@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
@@ -11,6 +12,8 @@ import { useWallets } from '@/src/hooks/use-wallets';
 import { useTransactions } from '@/src/hooks/use-transactions';
 import { DateField } from '@/src/components/DateField';
 import { CategorySelector } from '@/src/components/CategorySelector';
+import { SplitEditor } from '@/src/components/SplitEditor';
+import { summarizeSplits, type SplitPart } from '@/src/lib/split';
 import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
 import { todayLocalISO } from '@/src/utils/dates';
@@ -37,6 +40,7 @@ export default function NewTransaction() {
   const [date, setDate] = useState(() => todayLocalISO());
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const [splits, setSplits] = useState<SplitPart[] | null>(null);
 
   // Auto-select first wallets when cache populates
   useEffect(() => {
@@ -71,6 +75,17 @@ export default function NewTransaction() {
     setCategory(newCat);
   };
 
+  const totalAmount = parseFloat(amount) || 0;
+
+  const toggleSplit = () => {
+    if (splits) { setSplits(null); return; }
+    // Seed two parts so the header/remaining maths has something to work with.
+    setSplits([
+      { key: 'sp0', category, amount: '' },
+      { key: 'sp1', category: 'Other', amount: '' },
+    ]);
+  };
+
 
   const submit = async () => {
     // Optimistic enqueue is synchronous, but a rapid double tap would still
@@ -83,6 +98,12 @@ export default function NewTransaction() {
     if (!amt || amt <= 0) errors.amount = t('transaction.validation.amount');
     if (!walletId) errors.wallet = t('transaction.validation.wallet');
     if (type === 'transfer' && (!toWalletId || toWalletId === walletId)) errors.toWallet = t('transaction.validation.toWallet');
+    if (type === 'transfer' && splits) errors.amount = t('split.notForTransfer');
+    if (splits && type !== 'transfer') {
+      const summary = summarizeSplits(splits, amt);
+      if (splits.length < 2) errors.amount = t('split.needsTwo');
+      else if (!summary.balanced) errors.amount = t('split.mustBalance');
+    }
     if (Object.keys(errors).length > 0) {
       setErr(Object.values(errors)[0]);
       return;
@@ -93,6 +114,9 @@ export default function NewTransaction() {
       to_wallet_id: type === 'transfer' ? toWalletId : undefined,
       type, amount: amt, category, merchant: merchant.trim(), note, date: date || todayLocalISO(), currency: user?.currency || 'USD',
       created_at: new Date().toISOString(),
+      ...(splits && type !== 'transfer'
+        ? { splits: splits.map((part) => ({ category: part.category, amount: parseFloat(part.amount) || 0 })) }
+        : {}),
     };
     create(optimisticTx);
 
@@ -170,8 +194,28 @@ export default function NewTransaction() {
             {/* Date */}
             <DateField testID="tx-date" label={t('transaction.date')} value={date} onChange={setDate} />
 
-            {/* Category */}
-            <CategorySelector type={type} value={category} onChange={handleManualCategoryChange} testID="tx" />
+            {/* Category — a split replaces the single category selector */}
+            {type !== 'transfer' && (
+              <TouchableOpacity
+                testID="tx-split-toggle"
+                accessibilityRole="button"
+                accessibilityState={{ selected: !!splits }}
+                accessibilityLabel={t('split.toggle')}
+                onPress={toggleSplit}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}
+              >
+                <Ionicons name={splits ? 'remove-circle-outline' : 'git-branch-outline'} size={16} color={colors.brandPrimary} />
+                <Body style={{ fontSize: 13, color: colors.brandPrimary, fontFamily: font.textBold }}>
+                  {splits ? t('split.remove') : t('split.toggle')}
+                </Body>
+              </TouchableOpacity>
+            )}
+
+            {splits && type !== 'transfer' ? (
+              <SplitEditor parts={splits} onChange={setSplits} total={totalAmount} currency={cur} />
+            ) : (
+              <CategorySelector type={type} value={category} onChange={handleManualCategoryChange} testID="tx" />
+            )}
 
             {/* Wallet */}
             <Label style={{ marginTop: spacing.md }}>{t(type === 'transfer' ? 'transaction.wallet.from' : 'transaction.wallet')}</Label>
