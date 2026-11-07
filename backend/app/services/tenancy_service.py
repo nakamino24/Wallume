@@ -24,6 +24,7 @@ money:
 from __future__ import annotations
 
 import secrets
+import time
 from typing import Any, Optional
 
 from fastapi import HTTPException
@@ -65,8 +66,10 @@ members = HouseholdMemberRepository()
 
 
 def _invite_code() -> str:
-    # Short, unambiguous, uppercase: readable over a message.
-    return secrets.token_hex(4).upper()
+    # 12 hex chars (48 bits). Short enough to paste in a message, long enough
+    # that guessing it is not practical. Combined with a rate limit on the
+    # join endpoint, brute force is not viable.
+    return secrets.token_hex(6).upper().replace("O", "0")[:12]
 
 
 async def ensure_personal_household(user: dict[str, Any]) -> str:
@@ -117,9 +120,32 @@ async def ensure_personal_household(user: dict[str, Any]) -> str:
     return user_id
 
 
+# Scope lookups are on the hot path: get_current_user resolves one for EVERY
+# authenticated request. Without a short cache that is an extra round trip per
+# request, which is a real latency cost for a field that changes only when a
+# user joins/leaves a household.
+_SCOPE_TTL_SECONDS = 60
+_scope_cache: dict[str, tuple[str, float]] = {}
+
+
+def invalidate_scope_cache(user_id: str | None = None) -> None:
+    """Drop cached scopes. Called whenever membership changes."""
+    if user_id is None:
+        _scope_cache.clear()
+    else:
+        _scope_cache.pop(user_id, None)
+
+
 async def resolve_scope(user: dict[str, Any]) -> str:
     """The id every financial document for this user is scoped by."""
-    return await ensure_personal_household(user)
+    user_id = user["user_id"]
+    cached = _scope_cache.get(user_id)
+    if cached and (time.time() - cached[1]) < _SCOPE_TTL_SECONDS:
+        return cached[0]
+
+    scope = await ensure_personal_household(user)
+    _scope_cache[user_id] = (scope, time.time())
+    return scope
 
 
 async def household_detail(user_id: str) -> dict[str, Any]:
@@ -206,6 +232,9 @@ async def join_household(user_id: str, invite_code: str) -> dict[str, Any]:
     # Points the member's own documents — and every future write — at the
     # household scope.
     await _rescore_owned_documents(user_id, target["id"])
+    # The joiner's scope just changed; a cached value would serve the old
+    # (personal) scope for up to TTL and show an empty shared ledger.
+    invalidate_scope_cache(user_id)
     return await household_detail(user_id)
 
 
@@ -224,6 +253,7 @@ async def leave_household(user_id: str) -> dict[str, Any]:
     # Leaving gives the member a fresh personal household; their previously
     # shared data stays with the household rather than being silently deleted.
     await ensure_personal_household({"user_id": user_id})
+    invalidate_scope_cache(user_id)
     return await household_detail(user_id)
 
 
@@ -239,6 +269,8 @@ async def remove_member(owner_user_id: str, member_user_id: str) -> dict[str, An
 
     await members.delete_one({"id": target["id"]}, hard=True)
     await ensure_personal_household({"user_id": member_user_id})
+    # The removed member's scope reverted to personal.
+    invalidate_scope_cache(member_user_id)
     return await household_detail(owner_user_id)
 
 
