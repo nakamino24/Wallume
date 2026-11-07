@@ -93,6 +93,32 @@ async function req(path: string, opts: RequestInit = {}) {
   return body;
 }
 
+/**
+ * Multipart upload. Deliberately separate from `req()` because setting
+ * Content-Type by hand would omit the multipart boundary and break parsing —
+ * the fetch implementation must set it.
+ */
+async function uploadMultipart(path: string, form: FormData) {
+  const token = await getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const url = `${BASE.replace(/\/$/, '')}/api${path}`;
+  const res = await fetch(url, { method: 'POST', body: form, headers });
+  if (!res.ok) {
+    let msg = `Upload failed (${res.status})`;
+    try {
+      const j = await res.json();
+      if (typeof j.detail === 'string') msg = j.detail;
+    } catch {}
+    const err: any = new Error(msg);
+    err.status = res.status;
+    throw err;
+  }
+  const body = await res.json();
+  if (body && typeof body === 'object' && 'success' in body && 'data' in body) return body.data;
+  return body;
+}
+
 export const api = {
   // auth
   signup: (body: { email: string; password: string; name: string }) =>
@@ -243,8 +269,31 @@ export const api = {
   coachSessions: () => req('/coach/sessions'),
   deleteCoachSession: (session_id: string) =>
     req(`/coach/sessions/${encodeURIComponent(session_id)}`, { method: 'DELETE' }),
-  // coach chat uses fetch directly for streaming
-  coachChatUrl: () => `${BASE}/api/coach/chat`,
+
+  // receipts
+  receipts: (transaction_id: string) =>
+    req(`/receipts?transaction_id=${encodeURIComponent(transaction_id)}`),
+  uploadReceipt: (transaction_id: string, file: { uri: string; name: string; type: string }) => {
+    const form = new FormData();
+    // React Native's FormData accepts this shape for a local file URI.
+    form.append('file', { uri: file.uri, name: file.name, type: file.type } as any);
+    return uploadMultipart(`/receipts?transaction_id=${encodeURIComponent(transaction_id)}`, form);
+  },
+  deleteReceipt: (receipt_id: string) =>
+    req(`/receipts/${encodeURIComponent(receipt_id)}`, { method: 'DELETE' }),
+  receiptFileUrl: (receipt_id: string) =>
+    `${BASE.replace(/\/$/, '')}/api/receipts/${encodeURIComponent(receipt_id)}/file`,
+
+  // household
+  household: () => req('/household'),
+  joinHousehold: (invite_code: string) =>
+    req('/household/join', { method: 'POST', body: JSON.stringify({ invite_code }) }),
+  leaveHousehold: () => req('/household/leave', { method: 'POST' }),
+  renameHousehold: (name: string) =>
+    req('/household', { method: 'PATCH', body: JSON.stringify({ name }) }),
+  rotateHouseholdInvite: () => req('/household/rotate-invite', { method: 'POST' }),
+  removeHouseholdMember: (user_id: string) =>
+    req('/household/members/remove', { method: 'POST', body: JSON.stringify({ user_id }) }),
 };
 
 export const BASE_URL = BASE;

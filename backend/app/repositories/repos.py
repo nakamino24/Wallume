@@ -398,12 +398,6 @@ class TransactionRepository(BaseRepository):
             ],
         }
 
-    async def find_month_txs(self, user_id: str, start_date: str) -> list[dict]:
-        q = self._active_filter({"user_id": user_id, "date": {"$gte": start_date}})
-        cursor = (await self._collection()).find(q, {"_id": 0, "type": 1, "amount": 1, "category": 1, "date": 1})
-        docs = await cursor.to_list(10000)
-        return self._compat_out(docs)
-
     async def count_by_category(self, user_id: str, category_label: str) -> int:
         """Number of transactions currently tagged with a given category label."""
         return await (await self._collection()).count_documents(

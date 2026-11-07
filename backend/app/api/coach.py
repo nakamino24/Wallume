@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Optional
 from fastapi import APIRouter, Header, HTTPException
@@ -34,7 +34,7 @@ async def coach_chat(payload: CoachChatRequest, authorization: Optional[str] = H
         raise HTTPException(500, "Groq API key not configured")
 
     await chat_repo.insert_one({
-        "id": new_id("msg"), "user_id": u["user_id"], "session_id": payload.session_id,
+        "id": new_id("msg"), "user_id": u["owner_id"], "session_id": payload.session_id,
         "role": "user", "text": payload.message, "created_at": now_utc(),
     })
 
@@ -85,7 +85,7 @@ async def coach_chat(payload: CoachChatRequest, authorization: Optional[str] = H
             yield f"data: {_json.dumps({'error': str(e)})}\n\n"
         try:
             await chat_repo.insert_one({
-                "id": new_id("msg"), "user_id": u["user_id"], "session_id": payload.session_id,
+                "id": new_id("msg"), "user_id": u["owner_id"], "session_id": payload.session_id,
                 "role": "assistant", "text": acc, "created_at": now_utc(),
             })
         except Exception:
@@ -102,7 +102,7 @@ async def coach_chat(payload: CoachChatRequest, authorization: Optional[str] = H
 @router.get("/history")
 async def coach_history(session_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    msgs = await chat_repo.history(u["user_id"], session_id)
+    msgs = await chat_repo.history(u["owner_id"], session_id)
     return {"success": True, "data": {"messages": msgs}}
 
 
@@ -114,12 +114,12 @@ async def coach_sessions(authorization: Optional[str] = Header(None)):
     had exactly one conversation forever and "clear" only wiped local state.
     """
     u = await auth_service.get_current_user(authorization)
-    sessions = await chat_repo.sessions(u["user_id"])
+    sessions = await chat_repo.sessions(u["owner_id"])
     return {"success": True, "data": {"sessions": sessions}}
 
 
 @router.delete("/sessions/{session_id}")
 async def delete_coach_session(session_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    deleted = await chat_repo.delete_session(u["user_id"], session_id)
+    deleted = await chat_repo.delete_session(u["owner_id"], session_id)
     return {"success": True, "data": {"deleted": deleted}}

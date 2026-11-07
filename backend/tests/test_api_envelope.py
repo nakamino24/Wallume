@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+﻿from unittest.mock import AsyncMock, patch
 
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
@@ -10,7 +10,7 @@ from app.security.auth import hash_password
 
 
 client = TestClient(app)
-USER = {"user_id": "user_contract", "email": "contract@wallume.app", "currency": "IDR"}
+USER = {"user_id": "user_contract", "owner_id": "user_contract", "email": "contract@wallume.app", "currency": "IDR"}
 
 
 def assert_success(response, data_key=None, status=200):

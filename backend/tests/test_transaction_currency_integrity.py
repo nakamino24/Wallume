@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 from unittest.mock import AsyncMock
 
 from app.api import transactions
@@ -8,7 +8,7 @@ def test_transaction_list_preserves_raw_amount_and_adds_home_currency_value(monk
     monkeypatch.setattr(
         transactions.auth_service,
         "get_current_user",
-        AsyncMock(return_value={"user_id": "user-1", "currency": "IDR"}),
+        AsyncMock(return_value={"user_id": "user-1", "owner_id": "user-1", "currency": "IDR"}),
     )
     monkeypatch.setattr(
         transactions.txs,

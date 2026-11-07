@@ -12,6 +12,7 @@ import { DateField } from '@/src/components/DateField';
 import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
 import { CategorySelector } from '@/src/components/CategorySelector';
+import { ReceiptAttachments } from '@/src/components/ReceiptAttachments';
 import { todayLocalISO } from '@/src/utils/dates';
 import { useTransactions } from '@/src/hooks/use-transactions';
 import { useI18n } from '@/src/lib/I18nProvider';
@@ -173,6 +174,10 @@ export default function EditTransaction() {
             )}
 
             <Input testID="edit-tx-note" label={t('transaction.note.label')} value={note} onChangeText={setNote} placeholder={t('transaction.note.placeholder')} />
+
+            {/* Receipts need a persisted id, so they attach here rather than on
+                the create form (which is optimistic and has a temporary id). */}
+            {params.id ? <ReceiptAttachments transactionId={params.id} /> : null}
 
             {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
 

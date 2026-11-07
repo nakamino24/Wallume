@@ -52,6 +52,14 @@ class AuthService:
             "created_at": now_utc(),
         }
         await self.users.insert_one(doc)
+        # Every account belongs to exactly one household, so tenancy scope is
+        # never missing later. Creating it here keeps that invariant total.
+        try:
+            from app.services.tenancy_service import ensure_personal_household
+            await ensure_personal_household(doc)
+        except Exception:
+            # Lazy repair in get_current_user covers a failure here.
+            pass
         return {"token": create_access_token(user_id, 0), "user": clean_user(doc)}
 
     async def login(self, email: str, password: str) -> dict:
@@ -64,6 +72,21 @@ class AuthService:
         }
 
     async def get_current_user(self, authorization: Optional[str]) -> dict:
+        user = await self._authenticate(authorization)
+        # Resolve the tenancy scope once, here, so every downstream endpoint
+        # keeps using `user["user_id"]` and needs no change. For a personal
+        # household the scope equals the user's own id, so this is
+        # behaviour-preserving for pre-household accounts.
+        from app.services.tenancy_service import resolve_scope
+        try:
+            user["owner_id"] = await resolve_scope(user)
+        except Exception:
+            # Never fail authentication because tenancy could not be resolved;
+            # fall back to the personal scope, which is always safe.
+            user["owner_id"] = user["user_id"]
+        return user
+
+    async def _authenticate(self, authorization: Optional[str]) -> dict:
         if not authorization or not authorization.startswith("Bearer "):
             raise HTTPException(401, "Missing bearer token")
         token = authorization.split(" ", 1)[1]
@@ -126,17 +149,34 @@ class AuthService:
     async def delete_account(self, authorization: Optional[str]) -> None:
         u = await self.get_current_user(authorization)
         uid = u["user_id"]
+        # Shared data belongs to the household, so deleting one member's
+        # account must not wipe a household other people still use.
+        from app.services.tenancy_service import purge_household_if_solo
+        purge_shared = await purge_household_if_solo(uid)
+        scope = u.get("owner_id", uid)
         collections = [
             "wallets", "transactions", "budgets", "goals", "plans",
             "debts", "investments", "assets", "chat_messages",
             "recurring", "user_sessions", "categories",
             # Per-user auxiliary records: without these the delete leaves
             # replayable idempotency results and reset challenges behind.
-            "idempotency", "password_reset_challenges",
+            "idempotency", "password_reset_challenges", "receipts",
         ]
+        # Receipt bytes live in GridFS, not a plain collection, so they need an
+        # explicit purge — otherwise account deletion leaves the user's images
+        # in the database forever.
+        try:
+            from app.services.receipt_service import delete_all_receipts
+            await delete_all_receipts(uid)
+        except Exception:
+            pass
         db: AsyncIOMotorDatabase = await get_database()
         for coll in collections:
             # Hard delete: an account deletion must not leave soft-deleted
             # shells behind, and these collections are purge-on-delete.
+            # Personal records are keyed by the user id; financial records are
+            # keyed by the tenancy scope.
             await db[coll].delete_many({"user_id": uid})
+            if scope != uid:
+                await db[coll].delete_many({"user_id": scope})
         await self.users.hard_delete(uid)

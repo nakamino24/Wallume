@@ -17,6 +17,7 @@ import { getNotifSettings, setNotifSettings, type NotifSettings } from '@/src/ut
 import { spacing, radius, font, CURRENCIES } from '@/src/theme/tokens';
 import { Screen, Card, H1, H2, Body, Label, Button, Chip } from '@/src/components/ui';
 import { AppVersion } from '@/src/components/AppVersion';
+import { HouseholdSection } from '@/src/components/HouseholdSection';
 import { WallumeMark } from '@/src/components/WallumeMark';
 import { refreshNetWorthWidget } from '@/src/widgets/refresh-widget';
 
@@ -220,6 +221,9 @@ export default function Profile() {
               <NotifRow label={t('notif.payday')} value={notif.paydayReminder} onChange={async (v) => { const n = { ...notif, paydayReminder: v }; setNotifState(n); await setNotifSettings(n); }} colors={colors} />
             </View>
           </Card>
+
+          {/* Household sharing */}
+          <HouseholdSection currentUserId={(user as any)?.user_id} />
 
           <Label style={{ marginTop: spacing.sm }}>{t('profile.dataAbout').toUpperCase()}</Label>
           <Card onPress={() => router.push('/reports')}>

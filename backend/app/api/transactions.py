@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import hashlib
@@ -47,17 +47,17 @@ async def _find_idempotency_result(db, user_id: str, mutation_id: Optional[str],
 async def run_in_txn(fn: Callable[[Any], Awaitable[Any]], attempts: int = 8) -> Any:
     """Run fn(session) inside a multi-document transaction.
 
-    RETRY POLICY — deliberately narrow:
+    RETRY POLICY â€” deliberately narrow:
     Only OperationFailure errors carrying MongoDB's
     ``TransientTransactionError`` label are retried (e.g. WriteConflict).
     That label is MongoDB's own explicit contract that aborting-and-retrying
     the whole transaction is safe: the txn aborted before any commit, so no
     partial state exists and fn(session) simply runs again from scratch.
-    Everything else — validation failures, not-found, duplicate keys,
-    network/auth faults — propagates immediately with no retry.
+    Everything else â€” validation failures, not-found, duplicate keys,
+    network/auth faults â€” propagates immediately with no retry.
 
-    BACKOFF: exponential with jitter — min(0.05 * 1.5^attempt, 0.3)s plus
-    up to 30ms random jitter — for up to `attempts` (default 8) total tries
+    BACKOFF: exponential with jitter â€” min(0.05 * 1.5^attempt, 0.3)s plus
+    up to 30ms random jitter â€” for up to `attempts` (default 8) total tries
     (~1.3s worst-case wait) before giving up with 409 Conflict so clients
     can retry explicitly. Concurrent PATCHes touching the same wallet or
     transaction documents legitimately race; without retries those surface
@@ -102,7 +102,7 @@ async def _apply_effect(user_id: str, wallet_id: str, to_wallet_id: Optional[str
     """Apply (or reverse) a transaction's wallet effect inside a session.
 
     `Decimal128` cannot be negated (`-Decimal128(...)` raises TypeError), so we
-    convert the amount to a Python Decimal first and negate that — the root-cause
+    convert the amount to a Python Decimal first and negate that â€” the root-cause
     bug that left transfer balances half-reverted or un-reverted.
     """
     source_wallet = await wallets.find_one({"id": wallet_id, "user_id": user_id}, session)
@@ -159,14 +159,14 @@ async def list_transactions(
     limit = max(1, min(limit, 500))
     offset = max(0, offset)
     items = await txs.find_by_user(
-        u["user_id"], type, wallet_id, limit, from_date, to_date,
+        u["owner_id"], type, wallet_id, limit, from_date, to_date,
         search=search, category=category, offset=offset,
     )
     total = await txs.count_by_user(
-        u["user_id"], type, wallet_id, from_date, to_date, search=search, category=category,
+        u["owner_id"], type, wallet_id, from_date, to_date, search=search, category=category,
     )
     home_currency = u.get("currency", "USD")
-    wallet_items = await wallets.find_by_user(u["user_id"])
+    wallet_items = await wallets.find_by_user(u["owner_id"])
     wallet_currencies = {wallet["id"]: wallet.get("currency") or home_currency for wallet in wallet_items}
 
     async def _convert_one(item: dict) -> None:
@@ -189,16 +189,16 @@ async def create_transaction(payload: TransactionCreate, authorization: Optional
     payload_data = payload.model_dump()
     fingerprint = _idempotency_fingerprint("POST /transactions", "", payload_data)
     db = await get_database()
-    found, result = await _find_idempotency_result(db, u["user_id"], client_mid, fingerprint)
+    found, result = await _find_idempotency_result(db, u["owner_id"], client_mid, fingerprint)
     if found:
         return {"success": True, "data": result}
     _require_positive_amount(payload.amount)
-    # Canonical-or-today. The fallback MUST itself be canonical — an empty
+    # Canonical-or-today. The fallback MUST itself be canonical â€” an empty
     # string date used to fall through to now_utc().isoformat() (full ISO) and
     # reintroduce the mixed-format ordering bug this module exists to prevent.
     tx_date = strict_canonical_date(payload.date) or now_utc().strftime("%Y-%m-%d")
     payload_fields = payload.model_dump(exclude={"splits"})
-    doc = {"id": new_id("tx"), "user_id": u["user_id"], **payload_fields,
+    doc = {"id": new_id("tx"), "user_id": u["owner_id"], **payload_fields,
            "date": tx_date, "created_at": now_utc()}
     # Ensure client_mutation_id from header is stored if provided there
     if client_mid and not doc.get("client_mutation_id"):
@@ -217,7 +217,7 @@ async def create_transaction(payload: TransactionCreate, authorization: Optional
         doc["split_total"] = round(payload.amount, 2)
 
     async def txn(session):
-        w = await wallets.find_one({"id": payload.wallet_id, "user_id": u["user_id"]}, session)
+        w = await wallets.find_one({"id": payload.wallet_id, "user_id": u["owner_id"]}, session)
         if not w:
             raise HTTPException(400, "Wallet not found")
         if payload.type == "transfer":
@@ -225,11 +225,11 @@ async def create_transaction(payload: TransactionCreate, authorization: Optional
                 raise HTTPException(400, "to_wallet_id required for transfer")
             if payload.to_wallet_id == payload.wallet_id:
                 raise HTTPException(400, "Cannot transfer to the same wallet")
-            dw = await wallets.find_one({"id": payload.to_wallet_id, "user_id": u["user_id"]}, session)
+            dw = await wallets.find_one({"id": payload.to_wallet_id, "user_id": u["owner_id"]}, session)
             if not dw:
                 raise HTTPException(400, "Destination wallet not found")
         wallet_amount, to_wallet_amount = await _apply_effect(
-            u["user_id"], payload.wallet_id, payload.to_wallet_id, payload.type,
+            u["owner_id"], payload.wallet_id, payload.to_wallet_id, payload.type,
             payload.amount, session, reverse=False, tx_currency=doc["currency"],
         )
 
@@ -260,7 +260,7 @@ async def create_transaction(payload: TransactionCreate, authorization: Optional
 
         if client_mid:
             await db.idempotency.insert_one({
-                "user_id": u["user_id"], "client_mutation_id": client_mid,
+                "user_id": u["owner_id"], "client_mutation_id": client_mid,
                 "operation": "POST /transactions", "resource_type": "transaction", "resource_id": doc["id"],
                 "fingerprint": fingerprint, "status": "completed", "result": result, "created_at": now_utc(),
             }, session=session)
@@ -269,7 +269,7 @@ async def create_transaction(payload: TransactionCreate, authorization: Optional
     try:
         result = await run_in_txn(txn)
     except DuplicateKeyError:
-        found, result = await _find_idempotency_result(db, u["user_id"], client_mid, fingerprint)
+        found, result = await _find_idempotency_result(db, u["owner_id"], client_mid, fingerprint)
         if found:
             return {"success": True, "data": result}
         raise HTTPException(409, "Duplicate transaction")
@@ -300,7 +300,7 @@ async def import_transactions(
     if len(payload.rows) > 1000:
         raise HTTPException(400, "Too many rows (max 1000 per import)")
 
-    wallet = await wallets.find_one({"id": payload.wallet_id, "user_id": u["user_id"]})
+    wallet = await wallets.find_one({"id": payload.wallet_id, "user_id": u["owner_id"]})
     if not wallet:
         raise HTTPException(400, "Wallet not found")
 
@@ -310,7 +310,7 @@ async def import_transactions(
     )
     db = await get_database()
     if not payload.dry_run:
-        found, result = await _find_idempotency_result(db, u["user_id"], client_mid, fingerprint)
+        found, result = await _find_idempotency_result(db, u["owner_id"], client_mid, fingerprint)
         if found:
             return {"success": True, "data": result}
 
@@ -343,7 +343,7 @@ async def import_transactions(
     if cleaned:
         dates = sorted({c["date"] for c in cleaned})
         existing = await txs.find_by_user(
-            u["user_id"], None, payload.wallet_id, 5000, dates[0], dates[-1],
+            u["owner_id"], None, payload.wallet_id, 5000, dates[0], dates[-1],
         )
         def _key(date: str, amount: float, merchant: str) -> tuple:
             return (date, round(float(amount), 2), (merchant or "").strip().lower())
@@ -373,7 +373,7 @@ async def import_transactions(
             for c in accepted:
                 doc = {
                     "id": new_id("tx"),
-                    "user_id": u["user_id"],
+                    "user_id": u["owner_id"],
                     "wallet_id": payload.wallet_id,
                     "to_wallet_id": None,
                     "type": c["type"],
@@ -386,7 +386,7 @@ async def import_transactions(
                     "created_at": now_utc(),
                 }
                 wallet_amount, _ = await _apply_effect(
-                    u["user_id"], payload.wallet_id, None, c["type"],
+                    u["owner_id"], payload.wallet_id, None, c["type"],
                     c["amount"], session, reverse=False, tx_currency=currency,
                 )
                 doc["wallet_amount"] = float(wallet_amount)
@@ -401,7 +401,7 @@ async def import_transactions(
             }
             if client_mid:
                 await db.idempotency.insert_one({
-                    "user_id": u["user_id"], "client_mutation_id": client_mid,
+                    "user_id": u["owner_id"], "client_mutation_id": client_mid,
                     "operation": "POST /transactions/import", "resource_type": "transaction",
                     "resource_id": payload.wallet_id,
                     "fingerprint": fingerprint, "status": "completed", "result": result,
@@ -417,12 +417,12 @@ async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Op
     u = await auth_service.get_current_user(authorization)
     db = await get_database()
     fingerprint = _idempotency_fingerprint("PATCH /transactions", tx_id, body)
-    found, result = await _find_idempotency_result(db, u["user_id"], client_mid, fingerprint)
+    found, result = await _find_idempotency_result(db, u["owner_id"], client_mid, fingerprint)
     if found:
         return {"success": True, "data": result}
 
     async def txn(session):
-        tx = await txs.find_one({"id": tx_id, "user_id": u["user_id"]}, session)
+        tx = await txs.find_one({"id": tx_id, "user_id": u["owner_id"]}, session)
         if not tx:
             raise HTTPException(404, "Not found")
 
@@ -454,15 +454,15 @@ async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Op
                 raise HTTPException(400, "to_wallet_id required for transfer")
             if merged["to_wallet_id"] == merged["wallet_id"]:
                 raise HTTPException(400, "Cannot transfer to the same wallet")
-            dw = await wallets.find_one({"id": merged["to_wallet_id"], "user_id": u["user_id"]}, session)
+            dw = await wallets.find_one({"id": merged["to_wallet_id"], "user_id": u["owner_id"]}, session)
             if not dw:
                 raise HTTPException(400, "Destination wallet not found")
 
         # Both wallets referenced by the EFFECTIVE state must exist and
         # belong to the user: adjust_balance() is a silent no-op on a
         # missing wallet, so an unvalidated edit would move the record but
-        # never the money — permanent balance drift.
-        sw = await wallets.find_one({"id": merged["wallet_id"], "user_id": u["user_id"]}, session)
+        # never the money â€” permanent balance drift.
+        sw = await wallets.find_one({"id": merged["wallet_id"], "user_id": u["owner_id"]}, session)
         if not sw:
             raise HTTPException(400, "Wallet not found")
         merged["currency"] = allowed.get("currency") or tx.get("currency") or u.get("currency", "USD")
@@ -471,12 +471,12 @@ async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Op
         # The resource, balances, and replay record must commit together.
         old_currency = tx.get("currency") or u.get("currency", "USD")
         if not tx.get("currency"):
-            old_wallet = await wallets.find_one({"id": tx["wallet_id"], "user_id": u["user_id"]}, session)
+            old_wallet = await wallets.find_one({"id": tx["wallet_id"], "user_id": u["owner_id"]}, session)
             old_currency = (old_wallet or {}).get("currency") or u.get("currency", "USD")
 
         # Reverse+apply is only needed when the money-relevant projection of
         # the transaction changed. Metadata-only edits (merchant/note/date/
-        # category) must not touch wallet documents at all — it's wasted work
+        # category) must not touch wallet documents at all â€” it's wasted work
         # and needlessly serializes concurrent edits on the same wallet.
         # Currency is money-relevant because it changes wallet_amount.
         money_unchanged = (
@@ -487,16 +487,16 @@ async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Op
             and old_currency == merged["currency"]
         )
         if not money_unchanged:
-            # Atomic: fully reverse the OLD effect, then apply the NEW effect —
+            # Atomic: fully reverse the OLD effect, then apply the NEW effect â€”
             # both in one transaction, or nothing persists.
             await _apply_effect(
-                u["user_id"], tx["wallet_id"], tx.get("to_wallet_id"), tx["type"],
+                u["owner_id"], tx["wallet_id"], tx.get("to_wallet_id"), tx["type"],
                 tx["amount"], session, reverse=True, tx_currency=old_currency,
                 wallet_amount=tx.get("wallet_amount"),
                 to_wallet_amount=tx.get("to_wallet_amount"),
             )
             wallet_amount, to_wallet_amount = await _apply_effect(
-                u["user_id"], merged["wallet_id"], merged.get("to_wallet_id"), merged["type"],
+                u["owner_id"], merged["wallet_id"], merged.get("to_wallet_id"), merged["type"],
                 merged["amount"], session, reverse=False, tx_currency=merged["currency"],
             )
             allowed["wallet_amount"] = float(wallet_amount)
@@ -507,11 +507,11 @@ async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Op
             else:
                 allowed["to_wallet_amount"] = float(to_wallet_amount)
 
-        await txs.update_one({"id": tx_id, "user_id": u["user_id"]}, {"$set": allowed}, session=session)
-        updated = await txs.find_one({"id": tx_id, "user_id": u["user_id"]}, session)
+        await txs.update_one({"id": tx_id, "user_id": u["owner_id"]}, {"$set": allowed}, session=session)
+        updated = await txs.find_one({"id": tx_id, "user_id": u["owner_id"]}, session)
         if client_mid:
             await db.idempotency.insert_one({
-                "user_id": u["user_id"], "client_mutation_id": client_mid,
+                "user_id": u["owner_id"], "client_mutation_id": client_mid,
                 "operation": "PATCH /transactions", "resource_type": "transaction", "resource_id": tx_id,
                 "fingerprint": fingerprint, "status": "completed", "result": {"transaction": updated}, "created_at": now_utc(),
             }, session=session)
@@ -520,7 +520,7 @@ async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Op
     try:
         updated = await run_in_txn(txn)
     except DuplicateKeyError:
-        found, result = await _find_idempotency_result(db, u["user_id"], client_mid, fingerprint)
+        found, result = await _find_idempotency_result(db, u["owner_id"], client_mid, fingerprint)
         if found:
             return {"success": True, "data": result}
         raise
@@ -534,12 +534,12 @@ async def delete_transaction(tx_id: str, authorization: Optional[str] = Header(N
 
     db = await get_database()
     fingerprint = _idempotency_fingerprint("DELETE /transactions", tx_id, {})
-    found, result = await _find_idempotency_result(db, u["user_id"], x_client_mutation_id, fingerprint)
+    found, result = await _find_idempotency_result(db, u["owner_id"], x_client_mutation_id, fingerprint)
     if found:
         return {"success": True, "data": result}
 
     async def txn(session):
-        tx = await txs.find_one({"id": tx_id, "user_id": u["user_id"]}, session)
+        tx = await txs.find_one({"id": tx_id, "user_id": u["owner_id"]}, session)
         if not tx:
             raise HTTPException(404, "Not found")
 
@@ -548,7 +548,7 @@ async def delete_transaction(tx_id: str, authorization: Optional[str] = Header(N
         # active record (404) and never double-reverses.
         tx_currency = tx.get("currency")
         if not tx_currency:
-            source_wallet = await wallets.find_one({"id": tx["wallet_id"], "user_id": u["user_id"]}, session)
+            source_wallet = await wallets.find_one({"id": tx["wallet_id"], "user_id": u["owner_id"]}, session)
             tx_currency = (source_wallet or {}).get("currency") or u.get("currency", "USD")
 
         group_id = tx.get("split_group_id")
@@ -557,39 +557,47 @@ async def delete_transaction(tx_id: str, authorization: Optional[str] = Header(N
             # original total exactly once. Reversing per-part would subtract
             # each part's share and drift the wallet, and leaving siblings
             # behind would keep spending attributed to a deleted purchase.
-            parts = await txs.find_by_user(u["user_id"], None, None, 500, None, None)
+            parts = await txs.find_by_user(u["owner_id"], None, None, 500, None, None)
             group_parts = [p for p in parts if p.get("split_group_id") == group_id]
             # Re-use the amounts actually applied at insert time; recomputing
             # from today's FX rate would leave cross-currency splits drifted.
             applied = sum(float(p.get("wallet_amount") or 0.0) for p in group_parts)
             await _apply_effect(
-                u["user_id"], tx["wallet_id"], None, tx["type"],
+                u["owner_id"], tx["wallet_id"], None, tx["type"],
                 tx.get("split_total") or tx["amount"], session, reverse=True, tx_currency=tx_currency,
                 wallet_amount=applied if group_parts else None,
             )
             await txs.delete_many(
-                {"split_group_id": group_id, "user_id": u["user_id"]}, session=session,
+                {"split_group_id": group_id, "user_id": u["owner_id"]}, session=session,
             )
         else:
             await _apply_effect(
-                u["user_id"], tx["wallet_id"], tx.get("to_wallet_id"), tx["type"],
+                u["owner_id"], tx["wallet_id"], tx.get("to_wallet_id"), tx["type"],
                 tx["amount"], session, reverse=True, tx_currency=tx_currency,
                 wallet_amount=tx.get("wallet_amount"),
                 to_wallet_amount=tx.get("to_wallet_amount"),
             )
-            await txs.delete_one({"id": tx_id, "user_id": u["user_id"]}, session=session)
+            await txs.delete_one({"id": tx_id, "user_id": u["owner_id"]}, session=session)
 
         if x_client_mutation_id:
             await db.idempotency.insert_one({
-                "user_id": u["user_id"], "client_mutation_id": x_client_mutation_id,
+                "user_id": u["owner_id"], "client_mutation_id": x_client_mutation_id,
                 "operation": "DELETE /transactions", "resource_type": "transaction", "resource_id": tx_id,
                 "fingerprint": fingerprint, "status": "completed", "result": None, "created_at": now_utc(),
             }, session=session)
 
     try:
         await run_in_txn(txn)
+        # Receipts live in GridFS, outside the Mongo session, so they are
+        # cleaned up after commit. Leaving them would orphan blobs forever
+        # while the owning transaction no longer exists.
+        try:
+            from app.services.receipt_service import delete_receipts_for_transaction
+            await delete_receipts_for_transaction(u["owner_id"], tx_id)
+        except Exception:
+            pass
     except DuplicateKeyError:
-        found, result = await _find_idempotency_result(db, u["user_id"], x_client_mutation_id, fingerprint)
+        found, result = await _find_idempotency_result(db, u["owner_id"], x_client_mutation_id, fingerprint)
         if found:
             return {"success": True, "data": result}
         raise

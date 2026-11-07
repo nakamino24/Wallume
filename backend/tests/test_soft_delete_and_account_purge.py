@@ -51,7 +51,7 @@ class _FakeUserRepo:
 class _FakeAuthService(auth_module.AuthService):
     def __init__(self, user_repo):
         self.users = user_repo
-        self._user = {"user_id": "user_1"}
+        self._user = {"user_id": "user_1", "owner_id": "user_1"}
 
     async def get_current_user(self, authorization):
         return self._user
@@ -64,6 +64,14 @@ def _run_delete_account(monkeypatch):
     async def fake_get_database():
         return db
 
+    # delete_account now asks the tenancy service whether the household is
+    # solo (and purges its shared data if so). That path is covered by the
+    # tenancy tests; stub it here so this test stays about the purge list.
+    async def solo_household(_uid):
+        return False
+
+    from app.services import tenancy_service
+    monkeypatch.setattr(tenancy_service, "purge_household_if_solo", solo_household)
     monkeypatch.setattr(auth_module, "get_database", fake_get_database)
     service = _FakeAuthService(user_repo)
     import asyncio

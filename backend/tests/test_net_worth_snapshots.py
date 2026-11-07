@@ -1,4 +1,4 @@
-"""Net-worth snapshots.
+﻿"""Net-worth snapshots.
 
 Wallet balances only hold their *current* value, so a trend is impossible
 without recording points as they happen. These tests pin the upsert key (one
@@ -88,7 +88,7 @@ def test_history_clamps_the_result_window():
 
 def _service():
     svc = AnalyticsService()
-    svc.auth.get_current_user = AsyncMock(return_value={"user_id": "u1", "currency": "IDR"})
+    svc.auth.get_current_user = AsyncMock(return_value={"user_id": "u1", "owner_id": "u1", "currency": "IDR"})
     return svc
 
 

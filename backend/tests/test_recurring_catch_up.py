@@ -1,4 +1,4 @@
-"""Recurring catch-up: the "app runs itself" path.
+﻿"""Recurring catch-up: the "app runs itself" path.
 
 Confirmed properties:
 - every missed occurrence is posted, one per period, using the *scheduled*
@@ -42,7 +42,7 @@ class _FakeDB:
 def _setup(monkeypatch, items, today="2026-08-24"):
     monkeypatch.setattr(res, "now_utc", lambda: datetime(2026, 8, 24, 12, 0, tzinfo=timezone.utc))
     monkeypatch.setattr("app.database.mongo.get_database", AsyncMock(return_value=_FakeDB()))
-    monkeypatch.setattr(res.auth_service, "get_current_user", AsyncMock(return_value={"user_id": "u1"}))
+    monkeypatch.setattr(res.auth_service, "get_current_user", AsyncMock(return_value={"user_id": "u1", "owner_id": "u1"}))
     monkeypatch.setattr(res.recurring_repo, "find_by_user", AsyncMock(return_value=items))
     monkeypatch.setattr(res.recurring_repo, "update_one", AsyncMock())
     monkeypatch.setattr(res.wallets_repo, "find_one", AsyncMock(return_value={"id": "w1"}))

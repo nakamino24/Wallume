@@ -84,7 +84,11 @@ async def me(authorization: Optional[str] = Header(None)):
 
 
 @router.patch("/me")
-async def update_me(body: dict[str, Any], authorization: Optional[str] = Header(None)):
+async def update_me(payload: UserUpdateRequest, authorization: Optional[str] = Header(None)):
+    # Validated rather than a raw dict: an untyped body let a client send any
+    # key (silently ignored) or a bad type (500 mid-update). The service still
+    # applies its own whitelist.
+    body = payload.model_dump(exclude_unset=True, exclude_none=True)
     updated = await auth_service.update_profile(authorization, body)
     return {"success": True, "data": {"user": updated}}
 

@@ -285,14 +285,3 @@ export function Input(props: TextInputProps & { label?: string; testID?: string 
     </View>
   );
 }
-
-export function IconBadge({ children, color, size = 40 }: { children: React.ReactNode; color?: string; size?: number }) {
-  const { colors } = useTheme();
-  return (
-    <View style={{
-      width: size, height: size, borderRadius: size / 2,
-      alignItems: 'center', justifyContent: 'center',
-      backgroundColor: (color || colors.brandSoft),
-    }}>{children}</View>
-  );
-}
