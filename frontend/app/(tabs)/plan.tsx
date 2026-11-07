@@ -88,7 +88,7 @@ export default function PlanScreen() {
             <BudgetsSection budgets={budgets} currency={cur} onAdd={() => router.push('/budget/new')}
               onEdit={(b: any) => router.push({
                 pathname: '/budget/new',
-                params: { id: b.id, category: b.category, amount: String(b.amount) },
+                params: { id: b.id, category: b.category, amount: String(b.amount), period: b.period || 'monthly' },
               })}
               onReload={load} />
           )}

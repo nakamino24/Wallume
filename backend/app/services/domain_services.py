@@ -6,6 +6,7 @@ import httpx
 from app.repositories.repos import (
     WalletRepository, DebtRepository, InvestmentRepository,
     AssetRepository, TransactionRepository, ChatMessageRepository,
+    NetWorthSnapshotRepository,
 )
 from app.services.auth_service import AuthService
 from app.utils.helpers import now_utc
@@ -62,6 +63,38 @@ class FxService:
         return items
 
 
+def _num(value) -> float:
+    """Tolerant numeric coercion for money values coming out of Mongo."""
+    try:
+        return float(value) if value is not None else 0.0
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def investment_value(item: dict) -> float:
+    """Current holding value, in the investment's own currency.
+
+    Mirrors `computeInvestmentMetrics` on the client so the portfolio screen
+    and the net-worth figure can never disagree. Bond and cash holdings do not
+    follow a quantity × price model:
+
+    - bond: worth `current_value`, falling back to what was actually paid
+      (`purchase_price`). The old code multiplied quantity (usually 0) by
+      `current_price`, so every bond silently contributed nothing to net worth.
+    - cash: worth its `current_price` (the cash balance itself).
+
+    Everything else uses quantity × current price.
+    """
+    kind = item.get("kind")
+    if kind == "bond":
+        if item.get("current_value") is not None:
+            return _num(item.get("current_value"))
+        return _num(item.get("purchase_price"))
+    if kind == "cash":
+        return _num(item.get("current_price"))
+    return _num(item.get("quantity")) * _num(item.get("current_price"))
+
+
 class AnalyticsService:
     def __init__(self) -> None:
         self.auth = AuthService()
@@ -70,6 +103,7 @@ class AnalyticsService:
         self.investments = InvestmentRepository()
         self.assets = AssetRepository()
         self.transactions = TransactionRepository()
+        self.snapshots = NetWorthSnapshotRepository()
 
     async def summary(self, authorization: Optional[str]) -> dict:
         u = await self.auth.get_current_user(authorization)
@@ -87,13 +121,27 @@ class AnalyticsService:
         # Parallelize FX conversions — sequential 20×8s on cold cache is slow.
         wallet_vals = await asyncio.gather(*[FxService.convert(float(w.get("balance", 0.0)), w.get("currency", home_ccy), home_ccy) for w in wallets])
         debt_vals = await asyncio.gather(*[FxService.convert(float(d.get("remaining", 0.0)), d.get("currency", home_ccy), home_ccy) for d in debts_list])
-        inv_vals = await asyncio.gather(*[FxService.convert(float(i.get("quantity", 0.0)) * float(i.get("current_price", 0.0)), i.get("currency", home_ccy), home_ccy) for i in investments])
+        inv_vals = await asyncio.gather(*[FxService.convert(investment_value(i), i.get("currency", home_ccy), home_ccy) for i in investments])
         asset_vals = await asyncio.gather(*[FxService.convert(float(a.get("value", 0.0)), a.get("currency", home_ccy), home_ccy) for a in assets_list])
         wallet_total = sum(wallet_vals)
         debt_total = sum(debt_vals)
         inv_total = sum(inv_vals)
         asset_total = sum(asset_vals)
         net_worth = wallet_total + inv_total + asset_total - debt_total
+
+        # Record today's point so the trend chart has history to draw. Upserted
+        # per day, so opening the dashboard repeatedly is cheap. A failure here
+        # must never break the dashboard itself.
+        try:
+            await self.snapshots.record(uid, now_utc().strftime("%Y-%m-%d"), {
+                "net_worth": round(net_worth, 2),
+                "wallet_total": round(wallet_total, 2),
+                "debt_total": round(debt_total, 2),
+                "investment_total": round(inv_total, 2),
+                "asset_total": round(asset_total, 2),
+            })
+        except Exception:
+            pass
 
         month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         six_months_ago = month_start - timedelta(days=180)
@@ -236,6 +284,27 @@ class AnalyticsService:
         ]
         rows = await self.transactions.aggregate(pipeline)
         return [{"category": r["_id"], "amount": round(r["total"], 2)} for r in rows]
+
+
+    async def net_worth_history(self, authorization: Optional[str], days: int = 90) -> dict:
+        """Recorded net-worth points for the trend chart.
+
+        History begins the first time the dashboard is opened, because wallet
+        balances carry no past. Days is clamped so a client cannot ask for an
+        unbounded scan.
+        """
+        u = await self.auth.get_current_user(authorization)
+        days = max(7, min(int(days), 3650))
+        since = (now_utc() - timedelta(days=days)).strftime("%Y-%m-%d")
+        rows = await self.snapshots.history(u["user_id"], since)
+        return {
+            "currency": u.get("currency", "USD"),
+            "days": days,
+            "points": [
+                {"date": r.get("date"), "net_worth": r.get("net_worth", 0.0)}
+                for r in rows
+            ],
+        }
 
 
 class DebtService:

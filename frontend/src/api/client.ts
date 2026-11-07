@@ -160,6 +160,11 @@ export const api = {
     const b = { ...body, client_mutation_id: body.client_mutation_id || mid };
     return req('/transactions', { method: 'POST', body: JSON.stringify(b), headers: { 'X-Client-Mutation-Id': mid } });
   },
+  importTransactions: (body: any, mutationId = generateMutationId()) => {
+    const mid = mutationId;
+    const b = { ...body, client_mutation_id: body.client_mutation_id || mid };
+    return req('/transactions/import', { method: 'POST', body: JSON.stringify(b), headers: { 'X-Client-Mutation-Id': mid } });
+  },
   updateTransaction: (id: string, body: any, mutationId = generateMutationId()) => {
     const mid = mutationId;
     const b = { ...body, client_mutation_id: body.client_mutation_id || mid };
@@ -222,6 +227,7 @@ export const api = {
     const mid = generateMutationId();
     return req(`/recurring/${id}/mark-paid`, { method: 'POST', headers: { 'X-Client-Mutation-Id': mid } });
   },
+  catchUpRecurring: () => req('/recurring/catch-up', { method: 'POST' }),
 
   categories: () => req('/categories'),
   createCategory: (body: any) => req('/categories', { method: 'POST', body: JSON.stringify(body) }),
@@ -231,6 +237,7 @@ export const api = {
     req(`/categories/${id}?reassign_to=${encodeURIComponent(reassignTo)}`, { method: 'DELETE' }),
 
   summary: () => req('/analytics/summary'),
+  netWorthHistory: (days = 90) => req(`/analytics/net-worth-history?days=${days}`),
 
   coachHistory: (session_id: string) => req(`/coach/history?session_id=${session_id}`),
   // coach chat uses fetch directly for streaming
