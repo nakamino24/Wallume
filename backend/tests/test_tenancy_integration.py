@@ -145,3 +145,70 @@ async def test_owner_with_members_cannot_leave(db):
     with pytest.raises(HTTPException) as exc:
         await tenancy.leave_household(owner)
     assert exc.value.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_transfer_swaps_roles_and_preserves_the_scope(db):
+    """The real-database proof of ownership transfer.
+
+    Verifies the two properties unit tests cannot fully establish: that the
+    role swap persists across both membership rows and the household, and that
+    the tenancy scope is untouched — so every document created while sharing
+    stays put and remains visible to the new owner.
+    """
+    from app.services import tenancy_service as tenancy
+
+    owner = "user_owner"
+    joiner = "user_joiner"
+
+    owner_scope = await tenancy.resolve_scope({"user_id": owner})
+    household = await db.households.find_one({"owner_id": owner})
+    await tenancy.join_household(joiner, household["invite_code"])
+
+    # Data created by each member while sharing. The joiner's scope is now the
+    # household id, so new writes land there — resolve AFTER the join.
+    joiner_scope_now = await tenancy.resolve_scope({"user_id": joiner})
+    await db.wallets.insert_many([
+        {"id": "wal_owner", "user_id": owner_scope, "balance": 100},
+        {"id": "wal_joiner", "user_id": joiner_scope_now, "balance": 200},
+    ])
+
+    detail = await tenancy.transfer_ownership(owner, joiner)
+
+    assert detail["id"] == household["id"], "household id must not move"
+    roles = {m["user_id"]: m["role"] for m in detail["members"]}
+    assert roles[joiner] == "owner"
+    assert roles[owner] == "member"
+
+    persisted = await db.households.find_one({"id": household["id"]})
+    assert persisted["owner_id"] == joiner
+
+    # Both wallets are still scoped to the unchanged household id and remain
+    # visible under the new owner's scope resolution.
+    new_scope = await tenancy.resolve_scope({"user_id": joiner})
+    assert new_scope == household["id"]
+    for wallet_id in ("wal_owner", "wal_joiner"):
+        doc = await db.wallets.find_one({"id": wallet_id, "user_id": new_scope})
+        assert doc is not None, f"{wallet_id} became invisible after transfer"
+
+
+@pytest.mark.asyncio
+async def test_former_owner_can_leave_after_transferring(db):
+    """The whole point of transfer: it must unlock the leave path."""
+    from app.services import tenancy_service as tenancy
+
+    owner = "user_owner"
+    joiner = "user_joiner"
+    await tenancy.resolve_scope({"user_id": owner})
+    await tenancy.resolve_scope({"user_id": joiner})
+    household = await db.households.find_one({"owner_id": owner})
+    await tenancy.join_household(joiner, household["invite_code"])
+
+    await tenancy.transfer_ownership(owner, joiner)
+    detail = await tenancy.leave_household(owner)
+
+    # The departed owner is now in their own household; the joiner still runs
+    # the original one.
+    assert detail["id"] == owner
+    remaining = await db.household_members.find_one({"member_id": joiner})
+    assert remaining["household_id"] == household["id"]
