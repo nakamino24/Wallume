@@ -179,12 +179,18 @@ export const api = {
 
   budgets: () => req('/budgets'),
   createBudget: (body: any) => req('/budgets', { method: 'POST', body: JSON.stringify(body) }),
+  updateBudget: (id: string, body: any) => req(`/budgets/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteBudget: (id: string) => req(`/budgets/${id}`, { method: 'DELETE' }),
 
   goals: () => req('/goals'),
   createGoal: (body: any) => req('/goals', { method: 'POST', body: JSON.stringify(body) }),
-  contributeGoal: (id: string, amount: number) =>
-    req(`/goals/${id}/contribute`, { method: 'POST', body: JSON.stringify({ amount }) }),
+  updateGoal: (id: string, body: any) => req(`/goals/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  contributeGoal: (id: string, amount: number) => {
+    const mid = generateMutationId();
+    return req(`/goals/${id}/contribute`, {
+      method: 'POST', body: JSON.stringify({ amount }), headers: { 'X-Client-Mutation-Id': mid },
+    });
+  },
   deleteGoal: (id: string) => req(`/goals/${id}`, { method: 'DELETE' }),
 
   plans: () => req('/plans'),
@@ -205,13 +211,17 @@ export const api = {
 
   assets: () => req('/assets'),
   createAsset: (body: any) => req('/assets', { method: 'POST', body: JSON.stringify(body) }),
+  updateAsset: (id: string, body: any) => req(`/assets/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteAsset: (id: string) => req(`/assets/${id}`, { method: 'DELETE' }),
 
   recurring: () => req('/recurring'),
   createRecurring: (body: any) => req('/recurring', { method: 'POST', body: JSON.stringify(body) }),
   updateRecurring: (id: string, body: any) => req(`/recurring/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteRecurring: (id: string) => req(`/recurring/${id}`, { method: 'DELETE' }),
-  markRecurringPaid: (id: string) => req(`/recurring/${id}/mark-paid`, { method: 'POST' }),
+  markRecurringPaid: (id: string) => {
+    const mid = generateMutationId();
+    return req(`/recurring/${id}/mark-paid`, { method: 'POST', headers: { 'X-Client-Mutation-Id': mid } });
+  },
 
   categories: () => req('/categories'),
   createCategory: (body: any) => req('/categories', { method: 'POST', body: JSON.stringify(body) }),

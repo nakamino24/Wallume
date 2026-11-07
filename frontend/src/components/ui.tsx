@@ -14,12 +14,13 @@ export function Screen({ children, style }: { children: React.ReactNode; style?:
   return <AppBackground><View style={[{ flex: 1 }, style]}>{children}</View></AppBackground>;
 }
 
-export function Card({ children, style, onPress, testID, accessibilityLabel }: {
-  children: React.ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; testID?: string; accessibilityLabel?: string;
+export function Card({ children, style, onPress, onLongPress, testID, accessibilityLabel }: {
+  children: React.ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; onLongPress?: () => void; testID?: string; accessibilityLabel?: string;
 }) {
   const { colors } = useTheme();
+  const interactive = !!(onPress || onLongPress);
   const inner = (
-    <View testID={onPress ? undefined : testID} style={[{
+    <View testID={interactive ? undefined : testID} style={[{
       backgroundColor: colors.surface2,
       borderRadius: radius.md,
       padding: spacing.lg,
@@ -27,7 +28,7 @@ export function Card({ children, style, onPress, testID, accessibilityLabel }: {
       borderColor: colors.border,
     }, style]}>{children}</View>
   );
-  if (onPress) return <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] })}>{inner}</Pressable>;
+  if (interactive) return <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} onLongPress={onLongPress} style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] })}>{inner}</Pressable>;
   return inner;
 }
 

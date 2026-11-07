@@ -5,6 +5,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { File, Paths } from 'expo-file-system';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
@@ -166,6 +167,48 @@ export default function ExportReport() {
     }
   };
 
+  const exportCsv = async () => {
+    try {
+      setGenerating(true);
+      const [txRes, walletRes] = await Promise.all([
+        api.transactions(undefined, 2000, undefined, period.fromDate, period.toDate),
+        api.wallets(),
+      ]);
+      const txs = txRes.transactions || [];
+      const walletNames = new Map((walletRes.wallets || []).map((w: any) => [w.id, w.name]));
+      const cell = (value: any) => {
+        const text = value === null || value === undefined ? '' : String(value);
+        return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+      };
+      const header = ['date', 'type', 'amount', 'currency', 'category', 'merchant', 'wallet', 'note'];
+      const rows = txs.map((tx: any) => [
+        (tx.date || '').split('T')[0],
+        tx.type,
+        tx.amount,
+        tx.currency || cur,
+        systemCategoryLabel(tx.category, t),
+        tx.merchant || '',
+        walletNames.get(tx.wallet_id) || '',
+        tx.note || '',
+      ].map(cell).join(','));
+      const csv = [header.join(','), ...rows].join('\r\n') + '\r\n';
+
+      const file = new File(Paths.cache, `wallume-transactions-${period.fromDate}-${period.toDate}.csv`);
+      if (file.exists) file.delete();
+      file.create();
+      file.write(csv);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(file.uri, { mimeType: 'text/csv', dialogTitle: t('export.csvTitle') });
+      } else {
+        Alert.alert(t('export.ready'), t('export.savedTo', { path: file.uri }));
+      }
+    } catch {
+      Alert.alert(t('export.error'), t('export.tryAgain'));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <Screen>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
@@ -237,6 +280,15 @@ export default function ExportReport() {
             loading={generating}
             disabled={loading || !reportSummary}
             style={{ marginTop: spacing.xl, opacity: loading || !reportSummary ? 0.5 : 1 }}
+          />
+          <Button
+            testID="export-csv-btn"
+            variant="secondary"
+            label={t('export.shareCsv')}
+            onPress={exportCsv}
+            loading={generating}
+            disabled={loading || !reportSummary}
+            style={{ marginTop: spacing.md, opacity: loading || !reportSummary ? 0.5 : 1 }}
           />
           <Body muted style={{ fontSize: 11, marginTop: spacing.md, textAlign: 'center' }}>
             {t('export.previewPrivacy')}

@@ -85,7 +85,12 @@ export default function PlanScreen() {
             </Card>
           )}
           {loaded && !loadError && section === 'budgets' && (
-            <BudgetsSection budgets={budgets} currency={cur} onAdd={() => router.push('/budget/new')} onReload={load} />
+            <BudgetsSection budgets={budgets} currency={cur} onAdd={() => router.push('/budget/new')}
+              onEdit={(b: any) => router.push({
+                pathname: '/budget/new',
+                params: { id: b.id, category: b.category, amount: String(b.amount) },
+              })}
+              onReload={load} />
           )}
           {loaded && !loadError && section === 'goals' && (
             <GoalsSection goals={goals} currency={cur} onAdd={() => router.push('/goal/new')} onOpen={(id: string) => router.push({ pathname: '/goal/[id]', params: { id } })} onReload={load} />
@@ -114,7 +119,7 @@ export function budgetCategoryLabel(raw: string, translate = t): string {
 }
 
 /* --------------------- BUDGETS --------------------- */
-export function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
+export function BudgetsSection({ budgets, currency, onAdd, onEdit, onReload }: any) {
   const { colors } = useTheme();
   const { t: translate } = useI18n();
   return (
@@ -143,7 +148,9 @@ export function BudgetsSection({ budgets, currency, onAdd, onReload }: any) {
           const statusLabel = over ? t('budgets.over') : t('budgets.remaining');
           const statusAmount = over ? overspent : remaining;
           return (
-            <Card key={b.id} testID={`budget-card-${b.id}`} onPress={() => confirmDialog(t('budget.delete.title'), async () => { await api.deleteBudget(b.id); onReload(); })}>
+            <Card key={b.id} testID={`budget-card-${b.id}`}
+              onPress={() => onEdit(b)}
+              onLongPress={() => confirmDialog(t('budget.delete.title'), async () => { await api.deleteBudget(b.id); onReload(); })}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
                 <View style={{ flexShrink: 0 }}>
                   <ProgressRing progress={ringProgress} color={color} size={54} stroke={7}>

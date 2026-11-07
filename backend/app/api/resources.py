@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import math
 from typing import Any, Optional
 from fastapi import APIRouter, Header, HTTPException
+from pymongo.errors import DuplicateKeyError
 from app.schemas.models import BudgetCreate, GoalCreate, GoalContribute, PlanCreate, CategoryCreate, CategoryUpdate
 from app.schemas.models import DebtCreate, InvestmentCreate, AssetCreate, RecurringCreate
 from app.repositories.repos import (
@@ -59,6 +61,29 @@ async def create_budget(payload: BudgetCreate, authorization: Optional[str] = He
     return {"success": True, "data": {"budget": {k: v for k, v in doc.items() if k != "_id"}}}
 
 
+@budgets_router.patch("/{budget_id}")
+async def update_budget(budget_id: str, body: dict[str, Any], authorization: Optional[str] = Header(None)):
+    u = await auth_service.get_current_user(authorization)
+    allowed_keys = {"category", "amount", "period", "icon", "color"}
+    allowed = {k: v for k, v in body.items() if k in allowed_keys}
+    if "amount" in allowed:
+        try:
+            amount = float(allowed["amount"])
+        except (TypeError, ValueError):
+            raise HTTPException(400, "amount must be a number")
+        if not math.isfinite(amount) or amount <= 0:
+            raise HTTPException(400, "amount must be greater than 0")
+        allowed["amount"] = amount
+    if "period" in allowed and allowed["period"] not in {"weekly", "monthly", "yearly"}:
+        raise HTTPException(400, "Invalid period")
+    if allowed:
+        await budgets_repo.update_one({"id": budget_id, "user_id": u["user_id"]}, {"$set": allowed})
+    b = await budgets_repo.find_one({"id": budget_id, "user_id": u["user_id"]})
+    if not b:
+        raise HTTPException(404, "Not found")
+    return {"success": True, "data": {"budget": b}}
+
+
 @budgets_router.delete("/{budget_id}")
 async def delete_budget(budget_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
@@ -88,12 +113,70 @@ async def create_goal(payload: GoalCreate, authorization: Optional[str] = Header
     return {"success": True, "data": {"goal": {k: v for k, v in doc.items() if k != "_id"}}}
 
 
-@goals_router.post("/{goal_id}/contribute")
-async def contribute_goal(goal_id: str, body: GoalContribute, authorization: Optional[str] = Header(None)):
+@goals_router.patch("/{goal_id}")
+async def update_goal(goal_id: str, body: dict[str, Any], authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    await goals_repo.update_one({"id": goal_id, "user_id": u["user_id"]}, {"$inc": {"saved_amount": body.amount}})
+    allowed_keys = {"name", "target_amount", "saved_amount", "target_date", "icon", "color", "kind"}
+    allowed = {k: v for k, v in body.items() if k in allowed_keys}
+    for money_key in ("target_amount", "saved_amount"):
+        if money_key in allowed:
+            try:
+                value = float(allowed[money_key])
+            except (TypeError, ValueError):
+                raise HTTPException(400, f"{money_key} must be a number")
+            if not math.isfinite(value) or value < 0:
+                raise HTTPException(400, f"{money_key} must be zero or greater")
+            allowed[money_key] = value
+    if allowed:
+        await goals_repo.update_one({"id": goal_id, "user_id": u["user_id"]}, {"$set": allowed})
     g = await goals_repo.find_one({"id": goal_id, "user_id": u["user_id"]})
+    if not g:
+        raise HTTPException(404, "Not found")
     return {"success": True, "data": {"goal": g}}
+
+
+@goals_router.post("/{goal_id}/contribute")
+async def contribute_goal(
+    goal_id: str,
+    body: GoalContribute,
+    authorization: Optional[str] = Header(None),
+    x_client_mutation_id: Optional[str] = Header(None, alias="X-Client-Mutation-Id"),
+):
+    u = await auth_service.get_current_user(authorization)
+    # A double-tapped "add contribution" used to credit the goal twice; $inc is
+    # not naturally idempotent, so replay through the shared idempotency store.
+    from app.api.transactions import _find_idempotency_result, _idempotency_fingerprint
+    from app.database.mongo import get_database
+
+    fingerprint = _idempotency_fingerprint(
+        "POST /goals/contribute", goal_id, {"amount": body.amount},
+    )
+    db = await get_database()
+    found, result = await _find_idempotency_result(db, u["user_id"], x_client_mutation_id, fingerprint)
+    if found:
+        return {"success": True, "data": result}
+
+    amount = float(body.amount)
+    if not math.isfinite(amount) or amount <= 0:
+        raise HTTPException(400, "amount must be greater than 0")
+    existing = await goals_repo.find_one({"id": goal_id, "user_id": u["user_id"]})
+    if not existing:
+        raise HTTPException(404, "Not found")
+    await goals_repo.update_one({"id": goal_id, "user_id": u["user_id"]}, {"$inc": {"saved_amount": amount}})
+    g = await goals_repo.find_one({"id": goal_id, "user_id": u["user_id"]})
+    payload = {"goal": g}
+    if x_client_mutation_id:
+        try:
+            await db.idempotency.insert_one({
+                "user_id": u["user_id"], "client_mutation_id": x_client_mutation_id,
+                "operation": "POST /goals/contribute", "resource_type": "goal", "resource_id": goal_id,
+                "fingerprint": fingerprint, "status": "completed", "result": payload, "created_at": now_utc(),
+            })
+        except DuplicateKeyError:
+            found, result = await _find_idempotency_result(db, u["user_id"], x_client_mutation_id, fingerprint)
+            if found:
+                return {"success": True, "data": result}
+    return {"success": True, "data": payload}
 
 
 @goals_router.delete("/{goal_id}")
@@ -295,6 +378,27 @@ async def create_asset(payload: AssetCreate, authorization: Optional[str] = Head
     return {"success": True, "data": {"asset": {k: v for k, v in doc.items() if k != "_id"}}}
 
 
+@assets_router.patch("/{asset_id}")
+async def update_asset(asset_id: str, body: dict[str, Any], authorization: Optional[str] = Header(None)):
+    u = await auth_service.get_current_user(authorization)
+    allowed_keys = {"name", "value", "kind"}
+    allowed = {k: v for k, v in body.items() if k in allowed_keys}
+    if "value" in allowed:
+        try:
+            value = float(allowed["value"])
+        except (TypeError, ValueError):
+            raise HTTPException(400, "value must be a number")
+        if not math.isfinite(value) or value < 0:
+            raise HTTPException(400, "value must be zero or greater")
+        allowed["value"] = value
+    if allowed:
+        await assets_repo.update_one({"id": asset_id, "user_id": u["user_id"]}, {"$set": allowed})
+    a = await assets_repo.find_one({"id": asset_id, "user_id": u["user_id"]})
+    if not a:
+        raise HTTPException(404, "Not found")
+    return {"success": True, "data": {"asset": a}}
+
+
 @assets_router.delete("/{asset_id}")
 async def delete_asset(asset_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
@@ -352,11 +456,28 @@ async def delete_recurring(rec_id: str, authorization: Optional[str] = Header(No
 
 
 @recurring_router.post("/{rec_id}/mark-paid")
-async def mark_recurring_paid(rec_id: str, authorization: Optional[str] = Header(None)):
+async def mark_recurring_paid(
+    rec_id: str,
+    authorization: Optional[str] = Header(None),
+    x_client_mutation_id: Optional[str] = Header(None, alias="X-Client-Mutation-Id"),
+):
     u = await auth_service.get_current_user(authorization)
+    # Each call logs one transaction and debits a wallet, so a retried request
+    # (or a double tap) used to charge twice. Replay is now idempotent.
+    from app.api.transactions import _find_idempotency_result, _idempotency_fingerprint
+    from app.database.mongo import get_database
+
+    fingerprint = _idempotency_fingerprint("POST /recurring/mark-paid", rec_id, {})
+    db = await get_database()
+    found, result = await _find_idempotency_result(db, u["user_id"], x_client_mutation_id, fingerprint)
+    if found:
+        return {"success": True, "data": result}
+
     r = await recurring_repo.find_one({"id": rec_id, "user_id": u["user_id"]})
     if not r:
         raise HTTPException(404, "Not found")
+    if r.get("active") is False:
+        raise HTTPException(400, "Recurring item is paused")
     wallet = await wallets_repo.find_one({"id": r["wallet_id"], "user_id": u["user_id"]})
     if not wallet:
         raise HTTPException(400, "Wallet not found")
@@ -381,6 +502,17 @@ async def mark_recurring_paid(rec_id: str, authorization: Optional[str] = Header
             await tx_repo.insert_one(tx_doc, session)
             await wallets_repo.adjust_balance(r["wallet_id"], u["user_id"], delta, session)
             await recurring_repo.update_one({"id": rec_id, "user_id": u["user_id"]}, {"$set": {"next_date": next_date}}, session=session)
+            if x_client_mutation_id:
+                # The replay record must commit with the money so a retry can
+                # never observe a charged wallet without a replayable receipt.
+                await db.idempotency.insert_one({
+                    "user_id": u["user_id"], "client_mutation_id": x_client_mutation_id,
+                    "operation": "POST /recurring/mark-paid", "resource_type": "recurring", "resource_id": rec_id,
+                    "fingerprint": fingerprint, "status": "completed",
+                    "result": {"recurring": {k: v for k, v in r.items() if k != "_id"},
+                               "transaction": {k: v for k, v in tx_doc.items() if k != "_id"}},
+                    "created_at": now_utc(),
+                }, session=session)
     updated = await recurring_repo.find_one({"id": rec_id, "user_id": u["user_id"]})
     return {"success": True, "data": {"recurring": updated, "transaction": tx_doc}}
 
