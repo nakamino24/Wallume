@@ -89,6 +89,10 @@ export default function Transactions() {
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.lg }}>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('navigation.back')} hitSlop={10} onPress={() => router.back()}><Ionicons name="chevron-back" size={24} color={colors.onSurface} /></TouchableOpacity>
           <H2 style={{ marginLeft: spacing.md, flex: 1 }}>{t('transactions.heading')}</H2>
+          <TouchableOpacity testID="tx-import-btn" accessibilityRole="button" accessibilityLabel={t('import.title')} onPress={() => router.push('/transaction/import')}
+            style={{ width: 42, height: 42, borderRadius: radius.pill, backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm }}>
+            <Ionicons name="cloud-upload-outline" size={20} color={colors.onSurface} />
+          </TouchableOpacity>
           <TouchableOpacity testID="tx-add-fab" accessibilityRole="button" accessibilityLabel={t('transactions.empty.action')} onPress={() => router.push('/transaction/new')}
             style={{ width: 42, height: 42, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="add" size={20} color={colors.onBrand} />

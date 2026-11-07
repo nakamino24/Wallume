@@ -101,6 +101,27 @@ class TransactionCreate(BaseModel):
         # can always assume a string field on every stored transaction.
         return (v or "").strip()[:120]
 
+
+class TransactionImportRow(BaseModel):
+    """One row of an imported statement. Amount is always positive; `type`
+    carries the direction. Transfers are intentionally unsupported — a bank
+    statement cannot tell us which of our wallets was the other leg."""
+    date: Optional[str] = None
+    amount: float
+    type: Literal["income", "expense"] = "expense"
+    category: Optional[str] = None
+    merchant: Optional[str] = ""
+    note: Optional[str] = ""
+
+
+class TransactionImportRequest(BaseModel):
+    wallet_id: str
+    rows: list[TransactionImportRow]
+    # Preview mode: validate, dedupe and return what *would* happen without
+    # writing anything.
+    dry_run: bool = False
+    client_mutation_id: Optional[str] = None
+
 # --- Budget ---
 class BudgetCreate(BaseModel):
     category: str

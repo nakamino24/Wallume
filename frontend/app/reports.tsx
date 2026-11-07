@@ -13,6 +13,7 @@ import { Screen, Card, H2, Body, Label } from '@/src/components/ui';
 import { MoneyValue } from '@/src/components/MoneyValue';
 import { useReportPeriod } from '@/src/hooks/use-report-period';
 import { ReportPeriodPicker } from '@/src/components/ReportPeriodPicker';
+import { NetWorthTrend, type NetWorthPoint } from '@/src/components/NetWorthTrend';
 import { useI18n } from '@/src/lib/I18nProvider';
 import { systemCategoryLabel } from '@/src/lib/categories';
 
@@ -30,6 +31,7 @@ export default function Reports() {
   const fromDate = selectedPeriod.fromDate;
   const toDate = selectedPeriod.toDate;
   const [summary, setSummary] = useState<ReportSummary | null>(null);
+  const [netWorthPoints, setNetWorthPoints] = useState<NetWorthPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +46,14 @@ export default function Reports() {
     setError(null);
     try {
       setSummary(await api.reports.getSummary({ from_date: fromDate, to_date: toDate }));
+      // The trend is independent of the selected report period and must never
+      // break the report if it is unavailable.
+      try {
+        const history: any = await api.netWorthHistory(90);
+        setNetWorthPoints(history?.points || []);
+      } catch {
+        setNetWorthPoints([]);
+      }
     } catch (e: any) {
       console.error('[Reports] failed to load:', e?.message || e);
       setError(t('reports.loadError'));
@@ -122,6 +132,12 @@ export default function Reports() {
                     <Body numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ color: colors.onInverse, fontFamily: font.textBold, fontSize: 16, marginTop: 2 }}>{String(summary?.transaction_count ?? 0)}</Body>
                   </View>
                 </View>
+              </Card>
+
+              {/* Net worth trend — recorded points, independent of period */}
+              <Card testID="reports-networth-trend">
+                <Label>{t('reports.netWorthTrend')}</Label>
+                <NetWorthTrend points={netWorthPoints} currency={cur} />
               </Card>
 
               {/* Category breakdown */}

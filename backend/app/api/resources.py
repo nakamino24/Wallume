@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from datetime import timedelta
 from typing import Any, Optional
 from fastapi import APIRouter, Header, HTTPException
 from pymongo.errors import DuplicateKeyError
@@ -24,30 +25,71 @@ budgets_repo = BudgetRepository()
 tx_repo = TransactionRepository()
 
 
+def _budget_window(period: Optional[str], now) -> tuple[str, str]:
+    """Return the canonical [start, end) date window for a budget period.
+
+    `period` is stored on the budget but was previously ignored: spend was
+    always measured from the 1st of the calendar month, so a weekly budget
+    reported a whole month of spending and a yearly budget only one month.
+    """
+    period = period if period in {"weekly", "monthly", "yearly"} else "monthly"
+    if period == "weekly":
+        start = (now - timedelta(days=now.weekday())).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+        end = start + timedelta(days=7)
+    elif period == "yearly":
+        start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        end = start.replace(year=start.year + 1)
+    else:
+        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        # 32 days always lands in the next month, then snap back to its 1st.
+        end = (start + timedelta(days=32)).replace(day=1)
+    return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
+
+
 @budgets_router.get("")
 async def list_budgets(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     home_ccy = u.get("currency", "USD")
     items = await budgets_repo.find_by_user(u["user_id"])
-    month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    month_key = month_start.strftime("%Y-%m-%d")
-    pipeline = [
-        {"$match": {
-            "user_id": u["user_id"],
-            "type": "expense",
-            # Aggregations bypass BaseRepository's soft-delete filter, so
-            # deleted transactions must be excluded explicitly or the budget
-            # "spent" total keeps counting money the user removed.
-            "deleted_at": None,
-            # Compare the date-prefix (YYYY-MM-DD) so both full-ISO and
-            # date-only stored transaction dates are matched correctly.
-            "$expr": {"$gte": [{"$substr": ["$date", 0, 10]}, month_key]},
-        }},
-        {"$group": {"_id": "$category", "total": {"$sum": {"$toDouble": "$amount"}}}},
-    ]
-    spent = {r["_id"]: round(r["total"], 2) for r in await tx_repo.aggregate(pipeline)}
+    now = now_utc()
+
+    # Budgets can mix periods, so each distinct period needs its own window.
+    # In the common all-monthly case this is a single aggregation.
+    periods = {b.get("period") or "monthly" for b in items}
+    spent_by_period: dict[str, dict] = {}
+    windows: dict[str, tuple[str, str]] = {}
+    for period in periods:
+        start, end = _budget_window(period, now)
+        windows[period] = (start, end)
+        pipeline = [
+            {"$match": {
+                "user_id": u["user_id"],
+                "type": "expense",
+                # Aggregations bypass BaseRepository's soft-delete filter, so
+                # deleted transactions must be excluded explicitly or the budget
+                # "spent" total keeps counting money the user removed.
+                "deleted_at": None,
+                # Compare the date-prefix (YYYY-MM-DD) so both full-ISO and
+                # date-only stored transaction dates are matched correctly.
+                "$expr": {"$and": [
+                    {"$gte": [{"$substr": ["$date", 0, 10]}, start]},
+                    {"$lt": [{"$substr": ["$date", 0, 10]}, end]},
+                ]},
+            }},
+            {"$group": {"_id": "$category", "total": {"$sum": {"$toDouble": "$amount"}}}},
+        ]
+        spent_by_period[period] = {
+            r["_id"]: round(r["total"], 2) for r in await tx_repo.aggregate(pipeline)
+        }
+
     for b in items:
-        b["spent"] = spent.get(b["category"], 0.0)
+        period = b.get("period") or "monthly"
+        b["spent"] = spent_by_period.get(period, {}).get(b["category"], 0.0)
+        start, end = windows.get(period, _budget_window(period, now))
+        b["period_start"] = start
+        b["period_end"] = end
     await FxService.convert_items(items, home_ccy, ["amount", "spent"])
     return {"success": True, "data": {"budgets": items}}
 
@@ -321,7 +363,13 @@ investments_repo = InvestmentRepository()
 async def list_investments(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     items = await investments_repo.find_by_user(u["user_id"])
-    await FxService.convert_items(items, u.get("currency", "USD"), ["avg_cost", "current_price"])
+    # Bond and cash holdings are valued from these fields, so they need the
+    # same home-currency conversion as quantity × price holdings — otherwise
+    # the portfolio total silently mixes currencies.
+    await FxService.convert_items(
+        items, u.get("currency", "USD"),
+        ["avg_cost", "current_price", "face_value", "purchase_price", "current_value"],
+    )
     return {"success": True, "data": {"investments": items}}
 
 
@@ -455,6 +503,34 @@ async def delete_recurring(rec_id: str, authorization: Optional[str] = Header(No
     return {"success": True, "data": None}
 
 
+async def _apply_recurring_occurrence(u: dict, r: dict, occurrence_date: str, session) -> tuple[dict, str]:
+    """Materialise one occurrence of a recurring item inside a session.
+
+    The transaction date is the *scheduled* occurrence date, not today, so a
+    catch-up of missed bills lands on the days they were due instead of
+    bunching a month of charges onto the current day.
+
+    Returns the created transaction document and the advanced next_date.
+    """
+    tx_doc = {
+        "id": new_id("tx"), "user_id": u["user_id"], "wallet_id": r["wallet_id"],
+        "to_wallet_id": None, "type": r["type"], "amount": r["amount"], "category": r["category"],
+        # Canonical YYYY-MM-DD — full-ISO dates here were the original source of
+        # the mixed-format ordering bug (migrated 2026-08-22); never regress it.
+        "note": r.get("note") or f"{r['name']} (recurring)",
+        "date": to_canonical_date(occurrence_date),
+        "created_at": now_utc(),
+    }
+    next_date = advance_date(r["next_date"], r["frequency"])
+    delta = r["amount"] if r["type"] == "income" else -r["amount"]
+    await tx_repo.insert_one(tx_doc, session)
+    await wallets_repo.adjust_balance(r["wallet_id"], u["user_id"], delta, session)
+    await recurring_repo.update_one(
+        {"id": r["id"], "user_id": u["user_id"]}, {"$set": {"next_date": next_date}}, session=session,
+    )
+    return tx_doc, next_date
+
+
 @recurring_router.post("/{rec_id}/mark-paid")
 async def mark_recurring_paid(
     rec_id: str,
@@ -481,27 +557,14 @@ async def mark_recurring_paid(
     wallet = await wallets_repo.find_one({"id": r["wallet_id"], "user_id": u["user_id"]})
     if not wallet:
         raise HTTPException(400, "Wallet not found")
-    tx_doc = {
-        "id": new_id("tx"), "user_id": u["user_id"], "wallet_id": r["wallet_id"],
-        "to_wallet_id": None, "type": r["type"], "amount": r["amount"], "category": r["category"],
-        # Canonical YYYY-MM-DD — full-ISO dates here were the original source of
-        # the mixed-format ordering bug (migrated 2026-08-22); never regress it.
-        "note": r.get("note") or f"{r['name']} (recurring)",
-        "date": to_canonical_date(now_utc().isoformat()),
-        "created_at": now_utc(),
-    }
-    next_date = advance_date(r["next_date"], r["frequency"])
-    delta = r["amount"] if r["type"] == "income" else -r["amount"]
     # Atomic: transaction + balance + next_date update together, or nothing.
     # Previously 3 separate writes could leave a ghost tx with no balance change
     # or a double-charge on retry if the last update failed.
-    from app.database.mongo import get_database
-    db = await get_database()
     async with await db.client.start_session() as session:
         async with session.start_transaction():
-            await tx_repo.insert_one(tx_doc, session)
-            await wallets_repo.adjust_balance(r["wallet_id"], u["user_id"], delta, session)
-            await recurring_repo.update_one({"id": rec_id, "user_id": u["user_id"]}, {"$set": {"next_date": next_date}}, session=session)
+            tx_doc, next_date = await _apply_recurring_occurrence(
+                u, r, now_utc().isoformat(), session,
+            )
             if x_client_mutation_id:
                 # The replay record must commit with the money so a retry can
                 # never observe a charged wallet without a replayable receipt.
@@ -515,6 +578,68 @@ async def mark_recurring_paid(
                 }, session=session)
     updated = await recurring_repo.find_one({"id": rec_id, "user_id": u["user_id"]})
     return {"success": True, "data": {"recurring": updated, "transaction": tx_doc}}
+
+
+@recurring_router.post("/catch-up")
+async def catch_up_recurring(
+    authorization: Optional[str] = Header(None),
+    max_per_item: int = 12,
+):
+    """Post every recurring item that is due today or overdue.
+
+    This is what makes the app self-running: without it a bill is only logged
+    when the user remembers to tap "mark as paid".
+
+    Safety properties:
+    - Idempotent by construction. Each occurrence advances `next_date` inside
+      the same transaction that inserts the ledger row, so a re-run (or a
+      retried HTTP call) sees nothing due and posts nothing.
+    - Bounded. `max_per_item` caps backfill so a stale item created years ago
+      cannot suddenly drain the wallet. The cap is clamped below.
+    - Paused items and items whose wallet has vanished are skipped, not failed.
+    """
+    from app.database.mongo import get_database
+
+    u = await auth_service.get_current_user(authorization)
+    max_per_item = max(1, min(max_per_item, 60))
+    today = to_canonical_date(now_utc().isoformat())
+    items = await recurring_repo.find_by_user(u["user_id"])
+    db = await get_database()
+
+    posted: list[dict] = []
+    skipped: list[dict] = []
+
+    for original in items:
+        if original.get("active") is False:
+            continue
+        r = original
+        scheduled = to_canonical_date(r.get("next_date") or "")
+        if not scheduled or scheduled > today:
+            continue
+        wallet = await wallets_repo.find_one({"id": r["wallet_id"], "user_id": u["user_id"]})
+        if not wallet:
+            skipped.append({"id": r["id"], "reason": "wallet_not_found"})
+            continue
+
+        posted_for_item = 0
+        while scheduled and scheduled <= today and posted_for_item < max_per_item:
+            try:
+                async with await db.client.start_session() as session:
+                    async with session.start_transaction():
+                        tx_doc, next_date = await _apply_recurring_occurrence(
+                            u, r, scheduled, session,
+                        )
+            except HTTPException:
+                raise
+            except Exception as cause:  # pragma: no cover - defensive
+                skipped.append({"id": r["id"], "reason": f"post_failed: {cause}"})
+                break
+            posted.append(tx_doc)
+            posted_for_item += 1
+            r = {**r, "next_date": next_date}
+            scheduled = to_canonical_date(next_date)
+
+    return {"success": True, "data": {"posted": posted, "count": len(posted), "skipped": skipped}}
 
 
 # --- Custom Categories ---

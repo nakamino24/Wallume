@@ -45,6 +45,8 @@ async def create_indexes() -> None:
     await db.transactions.create_index([("user_id", 1), ("id", 1)])
     await db.transactions.create_index([("user_id", 1), ("wallet_id", 1)])
     await db.transactions.create_index([("user_id", 1), ("to_wallet_id", 1)])
+    # Exactly one net-worth point per user per day; the dashboard upserts here.
+    await db.net_worth_snapshots.create_index([("user_id", 1), ("date", 1)], unique=True)
     await _ensure_obsolete_transaction_mutation_index_removed(db)
     # Dedicated idempotency collection for PATCH/DELETE which need to store
     # multiple sequential mutation IDs per resource (a single client_mutation_id

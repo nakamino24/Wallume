@@ -25,6 +25,9 @@ export default function BudgetForm() {
   const lockedCategory = isEdit ? params.category : undefined;
   const [category, setCategory] = useState(params.category || 'Food');
   const [amount, setAmount] = useState(params.amount || '');
+  const [period, setPeriod] = useState<'weekly' | 'monthly' | 'yearly'>(
+    (params.period as any) || 'monthly',
+  );
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
 
@@ -35,9 +38,11 @@ export default function BudgetForm() {
     setLoading(true);
     try {
       if (isEdit) {
-        await api.updateBudget(params.id, { amount: amt });
+        // The period window is what the backend measures spend against, so it
+        // must be editable alongside the amount.
+        await api.updateBudget(params.id, { amount: amt, period });
       } else {
-        await api.createBudget({ category, amount: amt, period: 'monthly' });
+        await api.createBudget({ category, amount: amt, period });
       }
       router.back();
     } catch { setErr(t('common.error')); }
@@ -52,7 +57,13 @@ export default function BudgetForm() {
           <Chip key={c} testID={`budget-cat-${c}`} label={systemCategoryLabel(c, t)} active={category === c} onPress={() => setCategory(c)} />
         ))}
       </ScrollView>
-      <MoneyInput testID="budget-amount" label={t('budget.monthlyLimit')} value={amount} onChange={setAmount} placeholder="500" />
+      <Label>{t('budget.period')}</Label>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md, alignItems: 'center' }}>
+        {(['weekly', 'monthly', 'yearly'] as const).map((p) => (
+          <Chip key={p} testID={`budget-period-${p}`} label={t(`budget.period.${p}`)} active={period === p} onPress={() => setPeriod(p)} />
+        ))}
+      </ScrollView>
+      <MoneyInput testID="budget-amount" label={t('budget.limit')} value={amount} onChange={setAmount} placeholder="500" />
       {!!err && <Body style={{ color: colors.error }}>{err}</Body>}
       <Button
         testID="budget-save"
