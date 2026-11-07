@@ -10,7 +10,7 @@ class TestWalletPatch:
     def test_patch_updates_balance(self, auth_headers):
         r = requests.get(f"{BASE_URL}/api/wallets", headers=auth_headers)
         assert r.status_code == 200
-        wallets = r.json()["wallets"]
+        wallets = r.json()["data"]["wallets"]
         assert len(wallets) >= 1
         w = next((x for x in wallets if x["name"] == "Main Bank"), wallets[0])
 
@@ -20,25 +20,25 @@ class TestWalletPatch:
                            headers=auth_headers,
                            json={"name": w["name"], "type": w["type"], "balance": new_balance})
         assert r.status_code == 200, r.text
-        updated = r.json()["wallet"]
+        updated = r.json()["data"]["wallet"]
         assert updated["balance"] == new_balance
         assert "_id" not in updated
 
         # GET verify persisted
         r = requests.get(f"{BASE_URL}/api/wallets", headers=auth_headers)
-        got = next(x for x in r.json()["wallets"] if x["id"] == w["id"])
+        got = next(x for x in r.json()["data"]["wallets"] if x["id"] == w["id"])
         assert got["balance"] == new_balance
 
     def test_patch_updates_name_and_type(self, auth_headers):
         r = requests.get(f"{BASE_URL}/api/wallets", headers=auth_headers)
-        wallets = r.json()["wallets"]
+        wallets = r.json()["data"]["wallets"]
         w = next((x for x in wallets if x["name"] == "Cash"), wallets[0])
 
         r = requests.patch(f"{BASE_URL}/api/wallets/{w['id']}",
                            headers=auth_headers,
                            json={"name": "TEST_Renamed", "type": "e_wallet", "balance": w["balance"]})
         assert r.status_code == 200, r.text
-        updated = r.json()["wallet"]
+        updated = r.json()["data"]["wallet"]
         assert updated["name"] == "TEST_Renamed"
         assert updated["type"] == "e_wallet"
 

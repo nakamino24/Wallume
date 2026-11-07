@@ -431,6 +431,7 @@ export default function Home() {
                         amount: String(t.amount),
                         converted_amount: String(t.converted_amount ?? t.amount),
                         category: t.category,
+                        merchant: t.merchant || '',
                         note: t.note || '',
                         date: (t.date || '').split('T')[0],
                       },

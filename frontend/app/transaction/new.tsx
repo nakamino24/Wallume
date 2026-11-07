@@ -15,6 +15,7 @@ import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
 import { todayLocalISO } from '@/src/utils/dates';
 import { useI18n } from '@/src/lib/I18nProvider';
+import { findMatch, loadStore, normalize, saveStore } from '@/src/utils/merchant-engine';
 
 export default function NewTransaction() {
   const { colors } = useTheme();
@@ -25,7 +26,9 @@ export default function NewTransaction() {
   const params = useLocalSearchParams<{ type?: string }>();
   const [type, setType] = useState<'income' | 'expense' | 'transfer'>((params.type as any) || 'expense');
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('Food');
+  const [merchant, setMerchant] = useState('');
+  const [category, setCategory] = useState('Bills');
+  const [hasManuallySelectedCategory, setHasManuallySelectedCategory] = useState(false);
   const [note, setNote] = useState('');
   const { wallets, loading: walletsLoading, error: walletsError, refresh: refreshWallets } = useWallets();
   const { create } = useTransactions();
@@ -44,8 +47,30 @@ export default function NewTransaction() {
   }, [wallets, walletId, toWalletId]);
 
   useEffect(() => {
-    setCategory(getOptions(type === 'transfer' ? 'expense' : type)[0]);
-  }, [type]);
+    if (!hasManuallySelectedCategory) {
+      setCategory(getOptions(type === 'transfer' ? 'expense' : type)[0]);
+    }
+  }, [type, getOptions, hasManuallySelectedCategory]);
+
+  // Debounced auto-categorization
+  useEffect(() => {
+    if (!merchant.trim() || hasManuallySelectedCategory) return;
+    
+    const handler = setTimeout(async () => {
+      const store = await loadStore();
+      const match = findMatch(merchant, store);
+      if (match && match !== category) {
+        setCategory(match);
+      }
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [merchant, hasManuallySelectedCategory, category]);
+
+  const handleManualCategoryChange = (newCat: string) => {
+    setHasManuallySelectedCategory(true);
+    setCategory(newCat);
+  };
+
 
   const submit = async () => {
     setErr('');
@@ -61,10 +86,29 @@ export default function NewTransaction() {
     const optimisticTx = {
       wallet_id: walletId,
       to_wallet_id: type === 'transfer' ? toWalletId : undefined,
-      type, amount: amt, category, note, date: date || todayLocalISO(), currency: user?.currency || 'USD',
+      type, amount: amt, category, merchant: merchant.trim(), note, date: date || todayLocalISO(), currency: user?.currency || 'USD',
       created_at: new Date().toISOString(),
     };
     create(optimisticTx);
+
+    // Learn the merchant → category association so future entries with the
+    // same merchant auto-categorize. Fire-and-forget: a storage hiccup must
+    // never block the optimistic save.
+    if (merchant.trim()) {
+      void (async () => {
+        try {
+          const store = await loadStore();
+          const normalized = normalize(merchant);
+          const mapping = store[normalized] || { category, match_count: 0, last_used: Date.now(), is_seeded: false };
+          mapping.category = category;
+          mapping.match_count += 1;
+          mapping.last_used = Date.now();
+          store[normalized] = mapping;
+          await saveStore(store);
+        } catch {}
+      })();
+    }
+
     router.back();
   };
 
@@ -113,11 +157,16 @@ export default function NewTransaction() {
               />
             </View>
 
+            {/* Merchant */}
+            <View style={{ alignSelf: 'stretch', marginBottom: spacing.xl }}>
+              <Input testID="tx-merchant" label="Merchant (optional)" value={merchant} onChangeText={setMerchant} placeholder="e.g. Starbucks, Grab" />
+            </View>
+
             {/* Date */}
             <DateField testID="tx-date" label={t('transaction.date')} value={date} onChange={setDate} />
 
             {/* Category */}
-            <CategorySelector type={type} value={category} onChange={setCategory} testID="tx" />
+            <CategorySelector type={type} value={category} onChange={handleManualCategoryChange} testID="tx" />
 
             {/* Wallet */}
             <Label style={{ marginTop: spacing.md }}>{t(type === 'transfer' ? 'transaction.wallet.from' : 'transaction.wallet')}</Label>

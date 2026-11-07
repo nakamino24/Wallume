@@ -12,31 +12,27 @@ class TestHealth:
     def test_root(self, api_client):
         r = api_client.get(f"{BASE_URL}/api/")
         assert r.status_code == 200
-        assert r.json().get("status") == "ok"
+        assert r.json()["data"]["status"] == "ok"
 
 
 # ----------------- Auth -----------------
 class TestAuth:
-    def test_signup_seeds_and_returns_jwt(self, auth_user, auth_headers):
+    def test_signup_returns_jwt_and_clean_collections(self, auth_user, auth_headers):
         # Verify JWT present
         assert auth_user["token"]
-        # verify seed data (2 wallets + 4 budgets)
+        # Fresh accounts start empty — seeding is the client's job (onboarding).
         r = requests.get(f"{BASE_URL}/api/wallets", headers=auth_headers)
         assert r.status_code == 200
-        wallets = r.json()["wallets"]
-        assert len(wallets) == 2, f"expected 2 seeded wallets, got {len(wallets)}"
-        names = {w["name"] for w in wallets}
-        assert {"Cash", "Main Bank"}.issubset(names)
+        wallets = r.json()["data"]["wallets"]
+        assert wallets == []
         # no _id leak
         assert all("_id" not in w for w in wallets)
 
         r = requests.get(f"{BASE_URL}/api/budgets", headers=auth_headers)
         assert r.status_code == 200
-        budgets = r.json()["budgets"]
-        assert len(budgets) == 4, f"expected 4 seeded budgets, got {len(budgets)}"
+        budgets = r.json()["data"]["budgets"]
+        assert budgets == []
         assert all("_id" not in b for b in budgets)
-        # spent field computed
-        assert all("spent" in b for b in budgets)
 
     def test_signup_duplicate_email(self, api_client, auth_user):
         r = api_client.post(f"{BASE_URL}/api/auth/signup",
@@ -47,7 +43,7 @@ class TestAuth:
         r = api_client.post(f"{BASE_URL}/api/auth/login",
                             json={"email": auth_user["email"], "password": auth_user["password"]})
         assert r.status_code == 200
-        d = r.json()
+        d = r.json()["data"]
         assert "token" in d and "user" in d
         assert d["user"]["email"] == auth_user["email"]
         assert "password_hash" not in d["user"]
@@ -60,7 +56,7 @@ class TestAuth:
     def test_me_with_token(self, auth_headers, auth_user):
         r = requests.get(f"{BASE_URL}/api/auth/me", headers=auth_headers)
         assert r.status_code == 200
-        assert r.json()["user"]["email"] == auth_user["email"]
+        assert r.json()["data"]["user"]["email"] == auth_user["email"]
 
     def test_me_without_token_401(self):
         r = requests.get(f"{BASE_URL}/api/auth/me")
@@ -70,15 +66,25 @@ class TestAuth:
         r = requests.patch(f"{BASE_URL}/api/auth/me", headers=auth_headers,
                            json={"name": "Alex Updated", "currency": "EUR", "theme": "light"})
         assert r.status_code == 200
-        u = r.json()["user"]
+        u = r.json()["data"]["user"]
         assert u["name"] == "Alex Updated"
         assert u["currency"] == "EUR"
         assert u["theme"] == "light"
 
-    def test_logout(self, auth_headers):
-        r = requests.post(f"{BASE_URL}/api/auth/logout", headers=auth_headers)
+    def test_logout(self, api_client, auth_user):
+        # Log in with a THROWAWAY session and log THAT out. Logging out the
+        # shared session-scoped token would blacklist it for every subsequent
+        # test in the suite (401 cascade).
+        r = api_client.post(f"{BASE_URL}/api/auth/login",
+                            json={"email": auth_user["email"], "password": auth_user["password"]})
         assert r.status_code == 200
-        assert r.json().get("ok") is True
+        throwaway = {"Authorization": f"Bearer {r.json()['data']['token']}"}
+        rd = requests.post(f"{BASE_URL}/api/auth/logout", headers=throwaway)
+        assert rd.status_code == 200
+        assert rd.json().get("success") is True
+        # The discarded token must now be rejected.
+        ra = requests.get(f"{BASE_URL}/api/auth/me", headers=throwaway)
+        assert ra.status_code == 401
 
 
 # ----------------- Wallets -----------------
@@ -87,12 +93,12 @@ class TestWallets:
         payload = {"name": "TEST_CC", "type": "credit_card", "balance": 100.0, "currency": "USD"}
         r = requests.post(f"{BASE_URL}/api/wallets", headers=auth_headers, json=payload)
         assert r.status_code == 200
-        w = r.json()["wallet"]
+        w = r.json()["data"]["wallet"]
         assert w["name"] == "TEST_CC" and w["type"] == "credit_card"
         assert "_id" not in w
         # Verify via GET
         r2 = requests.get(f"{BASE_URL}/api/wallets", headers=auth_headers)
-        assert any(x["id"] == w["id"] for x in r2.json()["wallets"])
+        assert any(x["id"] == w["id"] for x in r2.json()["data"]["wallets"])
 
     def test_wallet_types_supported(self, auth_headers):
         for t in ("cash", "bank", "credit_card", "e_wallet", "savings", "investment"):
@@ -100,38 +106,50 @@ class TestWallets:
                               json={"name": f"TEST_{t}", "type": t, "balance": 0})
             assert r.status_code == 200, f"type {t} failed: {r.text}"
             # cleanup
-            wid = r.json()["wallet"]["id"]
+            wid = r.json()["data"]["wallet"]["id"]
             requests.delete(f"{BASE_URL}/api/wallets/{wid}", headers=auth_headers)
 
     def test_delete_wallet_removes_transactions(self, auth_headers):
         # create wallet
         r = requests.post(f"{BASE_URL}/api/wallets", headers=auth_headers,
                           json={"name": "TEST_DEL", "type": "cash", "balance": 500})
-        wid = r.json()["wallet"]["id"]
+        wid = r.json()["data"]["wallet"]["id"]
         # add tx
         rtx = requests.post(f"{BASE_URL}/api/transactions", headers=auth_headers,
                             json={"wallet_id": wid, "type": "expense", "amount": 10, "category": "Food"})
         assert rtx.status_code == 200
-        tx_id = rtx.json()["transaction"]["id"]
+        tx_id = rtx.json()["data"]["transaction"]["id"]
         # delete wallet
         rd = requests.delete(f"{BASE_URL}/api/wallets/{wid}", headers=auth_headers)
         assert rd.status_code == 200
         # verify wallet gone
         wr = requests.get(f"{BASE_URL}/api/wallets", headers=auth_headers)
-        assert not any(w["id"] == wid for w in wr.json()["wallets"])
+        assert not any(w["id"] == wid for w in wr.json()["data"]["wallets"])
         # verify transaction gone
         tr = requests.get(f"{BASE_URL}/api/transactions", headers=auth_headers)
-        assert not any(t["id"] == tx_id for t in tr.json()["transactions"])
+        assert not any(t["id"] == tx_id for t in tr.json()["data"]["transactions"])
 
 
 # ----------------- Transactions -----------------
 class TestTransactions:
+    @pytest.fixture(scope="class", autouse=True)
+    def wallets_pair(self, auth_headers):
+        """Two dedicated wallets — 'Cash' and 'Main Bank' — for the
+        balance-diff assertions below. Signup does not seed any."""
+        created = []
+        for name in ("Cash", "Main Bank"):
+            r = requests.post(f"{BASE_URL}/api/wallets", headers=auth_headers,
+                              json={"name": name, "type": "cash", "balance": 1000})
+            assert r.status_code == 200, r.text
+            created.append(r.json()["data"]["wallet"])
+        yield created
+
     def _get_wallet(self, auth_headers, name="Cash"):
         r = requests.get(f"{BASE_URL}/api/wallets", headers=auth_headers)
-        for w in r.json()["wallets"]:
+        for w in r.json()["data"]["wallets"]:
             if w["name"] == name:
                 return w
-        return r.json()["wallets"][0]
+        return r.json()["data"]["wallets"][0]
 
     def test_income_adds_balance(self, auth_headers):
         w = self._get_wallet(auth_headers, "Cash")
@@ -176,7 +194,7 @@ class TestTransactions:
     def test_filter_by_type(self, auth_headers):
         r = requests.get(f"{BASE_URL}/api/transactions?type=expense", headers=auth_headers)
         assert r.status_code == 200
-        txs = r.json()["transactions"]
+        txs = r.json()["data"]["transactions"]
         assert all(t["type"] == "expense" for t in txs)
 
     def test_delete_reverses_balance(self, auth_headers):
@@ -185,7 +203,7 @@ class TestTransactions:
         r = requests.post(f"{BASE_URL}/api/transactions", headers=auth_headers,
                           json={"wallet_id": w["id"], "type": "expense",
                                 "amount": 30, "category": "Test"})
-        tx_id = r.json()["transaction"]["id"]
+        tx_id = r.json()["data"]["transaction"]["id"]
         rd = requests.delete(f"{BASE_URL}/api/transactions/{tx_id}", headers=auth_headers)
         assert rd.status_code == 200
         wafter = self._get_wallet(auth_headers, "Cash")
@@ -198,16 +216,16 @@ class TestBudgets:
         r = requests.post(f"{BASE_URL}/api/budgets", headers=auth_headers,
                           json={"category": "TestCatBudget", "amount": 500, "period": "monthly"})
         assert r.status_code == 200
-        bid = r.json()["budget"]["id"]
+        bid = r.json()["data"]["budget"]["id"]
         # create a same-month expense in that category
         wr = requests.get(f"{BASE_URL}/api/wallets", headers=auth_headers)
-        w = wr.json()["wallets"][0]
+        w = wr.json()["data"]["wallets"][0]
         requests.post(f"{BASE_URL}/api/transactions", headers=auth_headers,
                       json={"wallet_id": w["id"], "type": "expense",
                             "amount": 42.5, "category": "TestCatBudget"})
         gb = requests.get(f"{BASE_URL}/api/budgets", headers=auth_headers)
         assert gb.status_code == 200
-        target = next(b for b in gb.json()["budgets"] if b["id"] == bid)
+        target = next(b for b in gb.json()["data"]["budgets"] if b["id"] == bid)
         assert target["spent"] >= 42.5
 
 
@@ -218,12 +236,12 @@ class TestGoals:
                           json={"name": "Emergency Fund", "target_amount": 5000,
                                 "saved_amount": 100, "kind": "emergency"})
         assert r.status_code == 200
-        g = r.json()["goal"]
+        g = r.json()["data"]["goal"]
         assert g["kind"] == "emergency"
         rc = requests.post(f"{BASE_URL}/api/goals/{g['id']}/contribute",
                            headers=auth_headers, json={"amount": 250})
         assert rc.status_code == 200
-        assert rc.json()["goal"]["saved_amount"] == 350
+        assert rc.json()["data"]["goal"]["saved_amount"] == 350
 
     def test_goal_kinds(self, auth_headers):
         for kind in ("general", "emergency", "car", "vacation", "education", "gadget", "business"):
@@ -241,19 +259,19 @@ class TestPlans:
             r = requests.post(f"{BASE_URL}/api/plans", headers=auth_headers,
                               json={"kind": kind, "name": f"My {kind}", "total_budget": 10000})
             assert r.status_code == 200, r.text
-            p = r.json()["plan"]
+            p = r.json()["data"]["plan"]
             assert len(p["items"]) == count, f"{kind} expected {count} items got {len(p['items'])}"
 
     def test_patch_items(self, auth_headers):
         r = requests.post(f"{BASE_URL}/api/plans", headers=auth_headers,
                           json={"kind": "car", "name": "Car plan", "total_budget": 20000})
-        p = r.json()["plan"]
+        p = r.json()["data"]["plan"]
         items = p["items"]
         items[0]["done"] = True
         items[0]["paid"] = 1500.0
         rp = requests.patch(f"{BASE_URL}/api/plans/{p['id']}", headers=auth_headers, json={"items": items})
         assert rp.status_code == 200
-        updated = rp.json()["plan"]
+        updated = rp.json()["data"]["plan"]
         assert updated["items"][0]["done"] is True
         assert updated["items"][0]["paid"] == 1500.0
 
@@ -266,14 +284,14 @@ class TestPortfolio:
                                 "interest_rate": 5.5, "monthly_payment": 200, "kind": "loan"})
         assert r.status_code == 200
         g = requests.get(f"{BASE_URL}/api/debts", headers=auth_headers)
-        assert g.status_code == 200 and any(d["name"] == "Car Loan" for d in g.json()["debts"])
+        assert g.status_code == 200 and any(d["name"] == "Car Loan" for d in g.json()["data"]["debts"])
 
     def test_investment_crud(self, auth_headers):
         r = requests.post(f"{BASE_URL}/api/investments", headers=auth_headers,
                           json={"name": "AAPL", "ticker": "AAPL", "kind": "stock",
                                 "quantity": 5, "avg_cost": 100, "current_price": 200})
         assert r.status_code == 200
-        inv = r.json()["investment"]
+        inv = r.json()["data"]["investment"]
         assert inv["quantity"] * inv["current_price"] == 1000
 
     def test_asset_crud(self, auth_headers):
@@ -281,7 +299,7 @@ class TestPortfolio:
                           json={"name": "MacBook", "value": 1800, "kind": "gadget"})
         assert r.status_code == 200
         g = requests.get(f"{BASE_URL}/api/assets", headers=auth_headers)
-        assert any(a["name"] == "MacBook" for a in g.json()["assets"])
+        assert any(a["name"] == "MacBook" for a in g.json()["data"]["assets"])
 
 
 # ----------------- Analytics -----------------
@@ -289,13 +307,15 @@ class TestAnalytics:
     def test_summary_shape(self, auth_headers):
         r = requests.get(f"{BASE_URL}/api/analytics/summary", headers=auth_headers)
         assert r.status_code == 200
-        d = r.json()
+        d = r.json()["data"]
         for k in ("net_worth", "month_income", "month_expense", "cash_flow",
                   "saving_rate", "debt_ratio", "health_score",
                   "category_breakdown", "trend", "counts"):
             assert k in d, f"missing key {k}"
         assert 0 <= d["health_score"] <= 100
-        assert len(d["trend"]) == 6
+        # Trend covers at most the last 6 months of ACTUAL data; a fresh
+        # account may legitimately have fewer (even zero) entries.
+        assert isinstance(d["trend"], list) and len(d["trend"]) <= 6
         assert isinstance(d["category_breakdown"], list)
 
 
@@ -304,7 +324,7 @@ class TestCoach:
     def test_history_empty_initially(self, auth_headers):
         r = requests.get(f"{BASE_URL}/api/coach/history?session_id=test-sess-1", headers=auth_headers)
         assert r.status_code == 200
-        assert isinstance(r.json()["messages"], list)
+        assert isinstance(r.json()["data"]["messages"], list)
 
     def test_coach_chat_stream(self, auth_headers):
         """SSE stream should produce at least one delta and a [DONE]."""
@@ -337,7 +357,7 @@ class TestCoach:
     def test_history_after_chat(self, auth_headers):
         r = requests.get(f"{BASE_URL}/api/coach/history?session_id=test-sess-1", headers=auth_headers)
         assert r.status_code == 200
-        msgs = r.json()["messages"]
+        msgs = r.json()["data"]["messages"]
         assert len(msgs) >= 2  # user + assistant
         roles = {m["role"] for m in msgs}
         assert "user" in roles and "assistant" in roles
@@ -381,14 +401,14 @@ class TestCategories:
         r = requests.post(f"{BASE_URL}/api/wallets", headers=auth_headers,
                           json={"name": f"CAT_{time.time()}", "type": "cash", "balance": 100})
         assert r.status_code == 200
-        return r.json()["wallet"]["id"]
+        return r.json()["data"]["wallet"]["id"]
 
     def test_patch_renames_and_keeps_history(self, auth_headers):
         # create category
         r = requests.post(f"{BASE_URL}/api/categories", headers=auth_headers,
                           json={"label": "Coffee", "type": "expense"})
         assert r.status_code == 200
-        cat_id = r.json()["category"]["id"]
+        cat_id = r.json()["data"]["category"]["id"]
 
         # add a transaction tagged "Coffee"
         wid = self._make_wallet(auth_headers)
@@ -400,19 +420,19 @@ class TestCategories:
         rp = requests.patch(f"{BASE_URL}/api/categories/{cat_id}", headers=auth_headers,
                             json={"label": "Latte"})
         assert rp.status_code == 200
-        assert rp.json()["category"]["label"] == "Latte"
+        assert rp.json()["data"]["category"]["label"] == "Latte"
 
         # historical transaction now carries the new label
         rt = requests.get(f"{BASE_URL}/api/transactions", headers=auth_headers)
-        assert any(t["category"] == "Latte" for t in rt.json()["transactions"])
-        assert not any(t["category"] == "Coffee" for t in rt.json()["transactions"])
+        assert any(t["category"] == "Latte" for t in rt.json()["data"]["transactions"])
+        assert not any(t["category"] == "Coffee" for t in rt.json()["data"]["transactions"])
 
     def test_patch_duplicate_label_rejected(self, auth_headers):
         requests.post(f"{BASE_URL}/api/categories", headers=auth_headers,
                       json={"label": "Makanan", "type": "expense"})
         r2 = requests.post(f"{BASE_URL}/api/categories", headers=auth_headers,
                            json={"label": "Minuman", "type": "expense"})
-        cat_id = r2.json()["category"]["id"]
+        cat_id = r2.json()["data"]["category"]["id"]
         rp = requests.patch(f"{BASE_URL}/api/categories/{cat_id}", headers=auth_headers,
                             json={"label": "Makanan"})
         assert rp.status_code == 400  # duplicate for user+type
@@ -420,7 +440,7 @@ class TestCategories:
     def test_delete_in_use_returns_409(self, auth_headers):
         r = requests.post(f"{BASE_URL}/api/categories", headers=auth_headers,
                           json={"label": "Hobby", "type": "expense"})
-        cat_id = r.json()["category"]["id"]
+        cat_id = r.json()["data"]["category"]["id"]
         wid = self._make_wallet(auth_headers)
         requests.post(f"{BASE_URL}/api/transactions", headers=auth_headers,
                       json={"wallet_id": wid, "type": "expense", "amount": 5, "category": "Hobby"})
@@ -435,8 +455,8 @@ class TestCategories:
                           json={"label": "Games", "type": "expense"})
         b = requests.post(f"{BASE_URL}/api/categories", headers=auth_headers,
                           json={"label": "Board", "type": "expense"})
-        cat_id = a.json()["category"]["id"]
-        target_id = b.json()["category"]["id"]
+        cat_id = a.json()["data"]["category"]["id"]
+        target_id = b.json()["data"]["category"]["id"]
         wid = self._make_wallet(auth_headers)
         requests.post(f"{BASE_URL}/api/transactions", headers=auth_headers,
                       json={"wallet_id": wid, "type": "expense", "amount": 9, "category": "Games"})
@@ -444,13 +464,13 @@ class TestCategories:
                              headers=auth_headers)
         assert rd.status_code == 200
         rt = requests.get(f"{BASE_URL}/api/transactions", headers=auth_headers)
-        assert not any(t["category"] == "Games" for t in rt.json()["transactions"])
-        assert any(t["category"] == "Board" for t in rt.json()["transactions"])
+        assert not any(t["category"] == "Games" for t in rt.json()["data"]["transactions"])
+        assert any(t["category"] == "Board" for t in rt.json()["data"]["transactions"])
 
     def test_delete_unused_succeeds(self, auth_headers):
         r = requests.post(f"{BASE_URL}/api/categories", headers=auth_headers,
                           json={"label": "Unused", "type": "expense"})
-        cat_id = r.json()["category"]["id"]
+        cat_id = r.json()["data"]["category"]["id"]
         rd = requests.delete(f"{BASE_URL}/api/categories/{cat_id}", headers=auth_headers)
         assert rd.status_code == 200
 
