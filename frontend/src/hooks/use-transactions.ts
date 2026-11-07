@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { api, generateMutationId } from '@/src/api/client';
+import { captureError } from '@/src/lib/telemetry';
 
 type MutationType = 'create' | 'edit' | 'delete';
 type PendingMutation = {
@@ -76,6 +77,9 @@ function settleFailure(mutation: PendingMutation, cause: any) {
     ? [...store.failed, ...store.pending.filter((item) => item.logicalResourceId === mutation.logicalResourceId)]
     : [...store.failed, mutation];
   publish({ ...store, pending: removed, failed, error: cause?.message || 'Failed to save transaction' });
+  // Report it: a failed write is the highest-severity event in a ledger app,
+  // and the user-visible banner alone leaves the team blind to the rate.
+  captureError(cause, { area: 'transactions', mutation: mutation.type });
 }
 async function sendNext(logicalResourceId: string) {
   const mutation = store.pending.filter((item) => item.logicalResourceId === logicalResourceId && item.status === 'queued').sort((a, b) => a.sequence - b.sequence)[0];

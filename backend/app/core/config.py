@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     emergent_llm_key: str = ""
 
+    # Error telemetry. Empty DSN = disabled (local dev, tests, CI).
+    sentry_dsn: str = ""
+    sentry_release: str = ""
+
     # Rate limits
     login_rate_limit: str = "10/minute"
     signup_rate_limit: str = "5/minute"

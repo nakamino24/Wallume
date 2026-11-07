@@ -18,6 +18,10 @@ import { AppLockGate } from '@/src/auth/AppLockGate';
 import { AppErrorBoundary } from '@/src/components/ErrorBoundary';
 import { ToastProvider } from '@/src/components/Toast';
 import { I18nProvider, useI18n } from '@/src/lib/I18nProvider';
+import { initTelemetry } from '@/src/lib/telemetry';
+
+// Before any render, so an early crash is still reported.
+initTelemetry();
 
 if (__DEV__) {
   const originalWarn = console.warn;

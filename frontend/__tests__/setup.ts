@@ -69,6 +69,13 @@ jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: jest.fn(() => Promise.resolve({ canceled: true, assets: [] })),
 }));
 
+// Sentry ships untranspiled ESM and must never be exercised from tests.
+jest.mock('@sentry/react-native', () => ({
+  init: jest.fn(),
+  captureException: jest.fn(),
+  withScope: jest.fn((cb: any) => cb({ setTag: jest.fn() })),
+}));
+
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
   const Actual = jest.requireActual('react-native-safe-area-context');

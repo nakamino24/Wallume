@@ -35,8 +35,11 @@ class FxService:
                 if rates:
                     _fx_cache[base] = {"rates": rates, "fetched_at": now_utc()}
                     return rates
-        except Exception:
-            pass
+        except Exception as exc:
+            # Rates unavailable: report it (silent FX failures misstate money)
+            # and fall back to any cached rates.
+            from app.core.telemetry import capture_exception
+            capture_exception(exc, area="fx", operation="get_rates")
         # Note the fallback so responses can flag approximate values instead of
         # presenting them as authoritative.
         _fx_state["last_failure_at"] = now_utc()

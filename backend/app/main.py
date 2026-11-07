@@ -10,6 +10,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
+from app.core.telemetry import init_sentry
 from app.database.mongo import get_database, create_indexes, close_database
 from app.middleware.logging import RequestLoggingMiddleware
 from app.api.router import register_routers
@@ -33,6 +34,8 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings.validate_production_safety()
+    # Before the app is built, so import-time and startup failures are reported.
+    init_sentry(settings.sentry_dsn, settings.environment, settings.sentry_release or None)
     app = FastAPI(
         title="Wallume API",
         version="1.0.5c",

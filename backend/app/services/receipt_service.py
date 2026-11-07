@@ -134,7 +134,9 @@ async def load_receipt(user_id: str, receipt_id: str) -> tuple[dict[str, Any], b
     try:
         stream = await bucket.open_download_stream(gridfs_id if isinstance(gridfs_id, ObjectId) else ObjectId(str(gridfs_id)))
         data = await stream.read()
-    except Exception:
+    except Exception as exc:
+        from app.core.telemetry import capture_exception
+        capture_exception(exc, area="receipts", operation="load")
         raise ReceiptError("Receipt data is missing", 404)
 
     return meta, data

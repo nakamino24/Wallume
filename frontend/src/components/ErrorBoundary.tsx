@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { font, spacing, radius } from '@/src/theme/tokens';
 import { useI18n } from '@/src/lib/I18nProvider';
 import { useTheme } from '@/src/theme/ThemeProvider';
+import { captureError } from '@/src/lib/telemetry';
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };
@@ -17,6 +18,9 @@ export class AppErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.warn('[ErrorBoundary]', error.message, info.componentStack);
+    // The crash screen is now also the reporting point for unhandled render
+    // errors, so a user-visible crash is never invisible to the team.
+    captureError(error, { area: 'render', component: 'ErrorBoundary' });
   }
 
   render() {
