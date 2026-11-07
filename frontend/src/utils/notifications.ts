@@ -288,11 +288,3 @@ export async function checkBudgetAlerts(opts: {
     return [];
   }
 }
-
-export async function resetBudgetAlertState(): Promise<void> {
-  try {
-    await storage.removeItem(BUDGET_ALERT_KEY);
-  } catch {
-    // Ignore: best-effort.
-  }
-}

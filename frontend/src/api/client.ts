@@ -243,8 +243,6 @@ export const api = {
   coachSessions: () => req('/coach/sessions'),
   deleteCoachSession: (session_id: string) =>
     req(`/coach/sessions/${encodeURIComponent(session_id)}`, { method: 'DELETE' }),
-  // coach chat uses fetch directly for streaming
-  coachChatUrl: () => `${BASE}/api/coach/chat`,
 };
 
 export const BASE_URL = BASE;

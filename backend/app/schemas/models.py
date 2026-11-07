@@ -35,17 +35,13 @@ class PasswordResetConfirmRequest(BaseModel):
 class PasswordResetResendRequest(BaseModel):
     request_id: str = Field(min_length=16, max_length=200)
 
-class AuthResponse(BaseModel):
-    token: str
-    user: dict
-
 class UserUpdateRequest(BaseModel):
-    name: Optional[str] = None
-    currency: Optional[str] = None
-    theme: Optional[str] = None
-    picture: Optional[str] = None
-    payday_day: Optional[int] = None
-    work_week: Optional[int] = None
+    name: Optional[str] = Field(default=None, max_length=80)
+    currency: Optional[str] = Field(default=None, min_length=3, max_length=3)
+    theme: Optional[Literal["light", "dark"]] = None
+    picture: Optional[str] = Field(default=None, max_length=500)
+    payday_day: Optional[int] = Field(default=None, ge=1, le=31)
+    work_week: Optional[Literal[5, 6, 7]] = None
 
 # --- Category ---
 class CategoryCreate(BaseModel):
