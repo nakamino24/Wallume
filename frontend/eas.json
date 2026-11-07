@@ -4,20 +4,27 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://victorious-enthusiasm-production.up.railway.app",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
+        "SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD": "true"
+      }
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-      "EXPO_PUBLIC_BACKEND_URL": "https://victorious-enthusiasm-production.up.railway.app"
       }
     },
     "production": {
+      "extends": "base",
       "autoIncrement": true
     }
   },
