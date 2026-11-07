@@ -2,6 +2,9 @@ module.exports = {
   preset: 'jest-expo',
   testMatch: ['**/__tests__/**/*.test.{ts,tsx}'],
   setupFiles: ['./__tests__/setup.ts'],
+  // First-import cost of native modules (notifications, fonts) can exceed the
+  // 5s default. CI and the README both run with a 30s budget.
+  testTimeout: 30000,
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },

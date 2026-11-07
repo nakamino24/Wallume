@@ -7,6 +7,7 @@ from pymongo import ReturnDocument
 from app.repositories.base import BaseRepository
 from app.utils.compat import normalize_transaction_document, normalize_user_document
 from app.utils.email import normalize_email
+from app.utils.helpers import now_utc
 from app.utils.money import from_decimal128
 
 
@@ -46,6 +47,37 @@ class UserRepository(BaseRepository):
 
     async def hard_delete(self, user_id: str) -> None:
         await self.delete_one({"user_id": user_id}, hard=True)
+
+
+class NetWorthSnapshotRepository(BaseRepository):
+    """One row per user per calendar day.
+
+    Wallet balances are current-state only, so a net-worth trend has to be
+    recorded as it happens — it cannot be reconstructed later.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("net_worth_snapshots")
+
+    async def record(self, user_id: str, day: str, values: dict) -> None:
+        # Upsert keeps exactly one point per day no matter how often the
+        # dashboard is opened.
+        await (await self._collection()).update_one(
+            {"user_id": user_id, "date": day},
+            {"$set": {
+                "user_id": user_id,
+                "date": day,
+                **values,
+                "updated_at": now_utc(),
+            }},
+            upsert=True,
+        )
+
+    async def history(self, user_id: str, since: str, limit: int = 400) -> list[dict]:
+        cursor = (await self._collection()).find(
+            {"user_id": user_id, "date": {"$gte": since}}, {"_id": 0},
+        ).sort([("date", 1)]).limit(limit)
+        return await cursor.to_list(limit)
 
 
 class UserSessionRepository(BaseRepository):

@@ -23,6 +23,12 @@ async def analytics_summary(authorization: Optional[str] = Header(None)):
     return {"success": True, "data": result}
 
 
+@router.get("/net-worth-history")
+async def net_worth_history(days: int = 90, authorization: Optional[str] = Header(None)):
+    result = await svc.net_worth_history(authorization, days)
+    return {"success": True, "data": result}
+
+
 @router.get("/spending-chart")
 async def spending_chart(authorization: Optional[str] = Header(None)):
     """PNG pie chart of this month's expenses by category. Rendered server-side
