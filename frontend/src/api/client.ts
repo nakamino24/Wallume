@@ -283,6 +283,17 @@ export const api = {
     req(`/receipts/${encodeURIComponent(receipt_id)}`, { method: 'DELETE' }),
   receiptFileUrl: (receipt_id: string) =>
     `${BASE.replace(/\/$/, '')}/api/receipts/${encodeURIComponent(receipt_id)}/file`,
+
+  // household
+  household: () => req('/household'),
+  joinHousehold: (invite_code: string) =>
+    req('/household/join', { method: 'POST', body: JSON.stringify({ invite_code }) }),
+  leaveHousehold: () => req('/household/leave', { method: 'POST' }),
+  renameHousehold: (name: string) =>
+    req('/household', { method: 'PATCH', body: JSON.stringify({ name }) }),
+  rotateHouseholdInvite: () => req('/household/rotate-invite', { method: 'POST' }),
+  removeHouseholdMember: (user_id: string) =>
+    req('/household/members/remove', { method: 'POST', body: JSON.stringify({ user_id }) }),
 };
 
 export const BASE_URL = BASE;
