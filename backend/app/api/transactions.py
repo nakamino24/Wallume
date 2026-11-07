@@ -197,7 +197,8 @@ async def create_transaction(payload: TransactionCreate, authorization: Optional
     # string date used to fall through to now_utc().isoformat() (full ISO) and
     # reintroduce the mixed-format ordering bug this module exists to prevent.
     tx_date = strict_canonical_date(payload.date) or now_utc().strftime("%Y-%m-%d")
-    doc = {"id": new_id("tx"), "user_id": u["user_id"], **payload_data,
+    payload_fields = payload.model_dump(exclude={"splits"})
+    doc = {"id": new_id("tx"), "user_id": u["user_id"], **payload_fields,
            "date": tx_date, "created_at": now_utc()}
     # Ensure client_mutation_id from header is stored if provided there
     if client_mid and not doc.get("client_mutation_id"):
@@ -206,6 +207,14 @@ async def create_transaction(payload: TransactionCreate, authorization: Optional
         doc["idempotency_fingerprint"] = fingerprint
 
     doc["currency"] = payload.currency or u.get("currency", "USD")
+
+    # Split expenses become one row per part, all sharing a group id. The
+    # wallet effect is still applied ONCE for the total: the parts are a
+    # breakdown of a single debit, not separate withdrawals.
+    split_group_id = new_id("spl") if payload.splits else None
+    if split_group_id:
+        doc["split_group_id"] = split_group_id
+        doc["split_total"] = round(payload.amount, 2)
 
     async def txn(session):
         w = await wallets.find_one({"id": payload.wallet_id, "user_id": u["user_id"]}, session)
@@ -223,11 +232,32 @@ async def create_transaction(payload: TransactionCreate, authorization: Optional
             u["user_id"], payload.wallet_id, payload.to_wallet_id, payload.type,
             payload.amount, session, reverse=False, tx_currency=doc["currency"],
         )
-        doc["wallet_amount"] = float(wallet_amount)
-        if to_wallet_amount is not None:
-            doc["to_wallet_amount"] = float(to_wallet_amount)
-        await txs.insert_one(doc, session)
-        result = {"transaction": {k: v for k, v in doc.items() if k != "_id"}}
+
+        if payload.splits:
+            # Every part carries the wallet effect apportioned by its share so
+            # `wallet_amount` stays meaningful per row, but the sum equals the
+            # single debit applied above.
+            parts_out = []
+            for index, part in enumerate(payload.splits):
+                part_doc = {
+                    **doc,
+                    "id": new_id("tx"),
+                    "category": part.category,
+                    "amount": float(part.amount),
+                    "note": part.note or doc.get("note", ""),
+                    "split_index": index,
+                    "wallet_amount": float(wallet_amount) * (float(part.amount) / payload.amount),
+                }
+                await txs.insert_one(part_doc, session)
+                parts_out.append({k: v for k, v in part_doc.items() if k != "_id"})
+            result = {"transactions": parts_out, "transaction": parts_out[0], "split_group_id": split_group_id}
+        else:
+            doc["wallet_amount"] = float(wallet_amount)
+            if to_wallet_amount is not None:
+                doc["to_wallet_amount"] = float(to_wallet_amount)
+            await txs.insert_one(doc, session)
+            result = {"transaction": {k: v for k, v in doc.items() if k != "_id"}}
+
         if client_mid:
             await db.idempotency.insert_one({
                 "user_id": u["user_id"], "client_mutation_id": client_mid,
@@ -398,6 +428,12 @@ async def update_transaction(tx_id: str, body: dict[str, Any], authorization: Op
 
         allowed = {k: v for k, v in body.items()
                    if k in {"wallet_id", "to_wallet_id", "type", "amount", "category", "merchant", "note", "date", "currency"}}
+        # A split part is one leg of a single pooled debit. Editing its amount
+        # or category in isolation would desync the parts from split_total and
+        # from the wallet movement already applied, so those are read-only:
+        # delete the split and re-enter it instead.
+        if tx.get("split_group_id"):
+            allowed = {k: v for k, v in allowed.items() if k in {"merchant", "note", "date"}}
         # Validate only CHANGED fields: re-validating the stored amount
         # would make legacy bad-amount records impossible to edit at all.
         if "amount" in allowed:
@@ -514,13 +550,35 @@ async def delete_transaction(tx_id: str, authorization: Optional[str] = Header(N
         if not tx_currency:
             source_wallet = await wallets.find_one({"id": tx["wallet_id"], "user_id": u["user_id"]}, session)
             tx_currency = (source_wallet or {}).get("currency") or u.get("currency", "USD")
-        await _apply_effect(
-            u["user_id"], tx["wallet_id"], tx.get("to_wallet_id"), tx["type"],
-            tx["amount"], session, reverse=True, tx_currency=tx_currency,
-            wallet_amount=tx.get("wallet_amount"),
-            to_wallet_amount=tx.get("to_wallet_amount"),
-        )
-        await txs.delete_one({"id": tx_id, "user_id": u["user_id"]}, session=session)
+
+        group_id = tx.get("split_group_id")
+        if group_id:
+            # Deleting any part removes the whole split and reverses the
+            # original total exactly once. Reversing per-part would subtract
+            # each part's share and drift the wallet, and leaving siblings
+            # behind would keep spending attributed to a deleted purchase.
+            parts = await txs.find_by_user(u["user_id"], None, None, 500, None, None)
+            group_parts = [p for p in parts if p.get("split_group_id") == group_id]
+            # Re-use the amounts actually applied at insert time; recomputing
+            # from today's FX rate would leave cross-currency splits drifted.
+            applied = sum(float(p.get("wallet_amount") or 0.0) for p in group_parts)
+            await _apply_effect(
+                u["user_id"], tx["wallet_id"], None, tx["type"],
+                tx.get("split_total") or tx["amount"], session, reverse=True, tx_currency=tx_currency,
+                wallet_amount=applied if group_parts else None,
+            )
+            await txs.delete_many(
+                {"split_group_id": group_id, "user_id": u["user_id"]}, session=session,
+            )
+        else:
+            await _apply_effect(
+                u["user_id"], tx["wallet_id"], tx.get("to_wallet_id"), tx["type"],
+                tx["amount"], session, reverse=True, tx_currency=tx_currency,
+                wallet_amount=tx.get("wallet_amount"),
+                to_wallet_amount=tx.get("to_wallet_amount"),
+            )
+            await txs.delete_one({"id": tx_id, "user_id": u["user_id"]}, session=session)
+
         if x_client_mutation_id:
             await db.idempotency.insert_one({
                 "user_id": u["user_id"], "client_mutation_id": x_client_mutation_id,
