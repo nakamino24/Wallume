@@ -36,7 +36,7 @@ export default function NewTransaction() {
   const [toWalletId, setToWalletId] = useState('');
   const [date, setDate] = useState(() => todayLocalISO());
   const [err, setErr] = useState('');
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Auto-select first wallets when cache populates
   useEffect(() => {
@@ -73,6 +73,10 @@ export default function NewTransaction() {
 
 
   const submit = async () => {
+    // Optimistic enqueue is synchronous, but a rapid double tap would still
+    // enqueue two transactions; navigate-first means the guard also prevents
+    // a second push while the screen is animating away.
+    if (loading) return;
     setErr('');
     const errors: Record<string, string> = {};
     const amt = parseFloat(amount);
@@ -83,6 +87,7 @@ export default function NewTransaction() {
       setErr(Object.values(errors)[0]);
       return;
     }
+    setLoading(true);
     const optimisticTx = {
       wallet_id: walletId,
       to_wallet_id: type === 'transfer' ? toWalletId : undefined,

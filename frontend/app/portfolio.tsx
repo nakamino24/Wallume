@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,6 +50,12 @@ export default function Portfolio() {
   }, [t]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await load(); } finally { setRefreshing(false); }
+  }, [load]);
+
   const { totalValue, totalCost, totalPl, returnPct, byKind } = useMemo(() => {
     let val = 0, cost = 0;
     const kinds: Record<string, { value: number; cost: number; count: number }> = {};
@@ -75,7 +81,9 @@ export default function Portfolio() {
           <H2 style={{ marginLeft: spacing.md }}>{t('portfolio')}</H2>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.md, paddingBottom: 60 }}>
+        <ScrollView
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
+          contentContainerStyle={{ padding: spacing.xl, gap: spacing.md, paddingBottom: 60 }}>
           {loading ? <Card><Body>{t('common.loading')}</Body></Card> : error ? (
             <Card testID="portfolio-error"><Body style={{ color: colors.error }}>{error}</Body><Button label={t('common.retry')} onPress={load} style={{ marginTop: spacing.md }} /></Card>
           ) : <>

@@ -48,15 +48,17 @@ export default function EditTransaction() {
   const [toWalletId, setToWalletId] = useState(params.to_wallet_id || '');
   const [date, setDate] = useState(params.date || todayLocalISO());
   const [err, setErr] = useState('');
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { edit } = useTransactions();
 
   const submit = async () => {
+    if (loading) return;
     setErr('');
     const amt = parseFloat(amount);
     if (!amt || amt <= 0) { setErr(t('transaction.validation.amount')); return; }
     if (!walletId) { setErr(t('transaction.validation.wallet')); return; }
     if (type === 'transfer' && (!toWalletId || toWalletId === walletId)) { setErr(t('transaction.validation.toWallet')); return; }
+    setLoading(true);
     edit(params.id, {
         wallet_id: walletId,
         to_wallet_id: type === 'transfer' ? toWalletId : undefined,

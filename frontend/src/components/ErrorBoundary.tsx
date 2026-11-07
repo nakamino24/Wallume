@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { font, spacing, radius } from '@/src/theme/tokens';
 import { useI18n } from '@/src/lib/I18nProvider';
+import { useTheme } from '@/src/theme/ThemeProvider';
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };
@@ -28,17 +29,26 @@ export class AppErrorBoundary extends Component<Props, State> {
 
 function ErrorFallback({ onRetry }: { onRetry: () => void }) {
   const { t } = useI18n();
+  const { colors } = useTheme();
+  // The palette is theme-driven: the previous hardcoded dark colours left the
+  // crash screen unreadable for users on the light theme.
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <View style={styles.iconWrap}>
-        <Ionicons name="warning" size={40} color="#10B981" />
+        <Ionicons name="warning" size={40} color={colors.brandPrimary} />
       </View>
-      <Text style={styles.title}>{t('error.boundary.title')}</Text>
-      <Text style={styles.subtitle}>
+      <Text style={[styles.title, { color: colors.onSurface }]}>{t('error.boundary.title')}</Text>
+      <Text style={[styles.subtitle, { color: colors.muted }]}>
         {t('error.boundary.subtitle')}
       </Text>
-      <TouchableOpacity style={styles.button} onPress={onRetry} activeOpacity={0.85}>
-        <Text style={styles.buttonText}>{t('error.boundary.retry')}</Text>
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: colors.brandPrimary }]}
+        onPress={onRetry}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={t('error.boundary.retry')}
+      >
+        <Text style={[styles.buttonText, { color: colors.onBrand }]}>{t('error.boundary.retry')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -46,7 +56,7 @@ function ErrorFallback({ onRetry }: { onRetry: () => void }) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, backgroundColor: '#09090B',
+    flex: 1,
     alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
@@ -57,20 +67,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   title: {
-    fontFamily: font.displayBold, fontSize: 22, color: '#FAFAFA',
+    fontFamily: font.displayBold, fontSize: 22,
     marginBottom: spacing.sm,
   },
   subtitle: {
-    fontFamily: font.text, fontSize: 14, color: '#A1A1AA',
+    fontFamily: font.text, fontSize: 14,
     textAlign: 'center', lineHeight: 20,
     marginBottom: spacing.xl, maxWidth: 280,
   },
   button: {
-    backgroundColor: '#10B981',
     paddingVertical: 14, paddingHorizontal: spacing.xl,
     borderRadius: radius.md,
   },
   buttonText: {
-    fontFamily: font.textBold, fontSize: 15, color: '#000000',
+    fontFamily: font.textBold, fontSize: 15,
   },
 });

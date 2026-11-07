@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert, TextInput, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,13 +23,14 @@ export default function Transactions() {
   const { user } = useAuth();
   const router = useRouter();
   const { t } = useI18n();
-  const { transactions: recent, failed, retry, dismissFailed, remove: removeTransaction } = useTransactions();
+  const { transactions: recent, failed, refresh, retry, dismissFailed, remove: removeTransaction } = useTransactions();
   const { wallets } = useWallets();
 
   const [filter, setFilter] = useState<typeof TYPES[number]>('all');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [walletId, setWalletId] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   // Debounce keystrokes so a query fires after typing settles, not per letter.
   useEffect(() => {
@@ -52,6 +53,16 @@ export default function Transactions() {
   useFocusEffect(useCallback(() => {
     if (isFiltered) { void reload(); }
   }, [isFiltered, reload]));
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      if (isFiltered) await reload();
+      else await refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [isFiltered, reload, refresh]);
 
   const dayGroups = groupTransactionsByDate(shown);
   const cur = user?.currency || 'USD';
@@ -129,7 +140,9 @@ export default function Transactions() {
           )}
         </ScrollView>
 
-        <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: 60, gap: spacing.sm }}>
+        <ScrollView
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
+          contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: 60, gap: spacing.sm }}>
           {failed.length > 0 && (
             <ErrorBanner
               message={t('transactions.unsaved', { count: failed.length }) + ' — ' + t('common.error')}

@@ -24,12 +24,22 @@ export default function PlanDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [plan, setPlan] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [newItemLabel, setNewItemLabel] = useState('');
   const [newItemAmount, setNewItemAmount] = useState('');
 
   const load = useCallback(async () => {
-    const r = await api.plans();
-    setPlan((r.plans || []).find((p: any) => p.id === id));
+    setLoadError('');
+    try {
+      const r = await api.plans();
+      setPlan((r.plans || []).find((p: any) => p.id === id) || null);
+    } catch (cause: any) {
+      console.error('[PlanDetail] failed to load plan', cause);
+      setLoadError(t('data.loadError'));
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -42,7 +52,26 @@ export default function PlanDetail() {
     return { paid, allocated };
   }, [plan]);
 
-  if (!plan) return <Screen><SafeAreaView style={{ flex: 1, padding: spacing.xl }}><SkeletonCard /></SafeAreaView></Screen>;
+  if (loading) {
+    return <Screen><SafeAreaView style={{ flex: 1, padding: spacing.xl }}><SkeletonCard /></SafeAreaView></Screen>;
+  }
+  if (loadError) {
+    return (
+      <Screen><SafeAreaView style={{ flex: 1, padding: spacing.xl, gap: spacing.md }}>
+        <Body style={{ color: colors.error }}>{loadError}</Body>
+        <Button label={t('common.retry')} onPress={load} />
+        <Button variant="ghost" label={t('navigation.back')} onPress={() => router.back()} />
+      </SafeAreaView></Screen>
+    );
+  }
+  if (!plan) {
+    return (
+      <Screen><SafeAreaView style={{ flex: 1, padding: spacing.xl, gap: spacing.md }}>
+        <Body muted>{t('plan.notFound')}</Body>
+        <Button label={t('navigation.back')} onPress={() => router.back()} />
+      </SafeAreaView></Screen>
+    );
+  }
 
   const budget = cv(plan, 'total_budget');
   const progress = budget > 0 ? Math.min(1, totals.paid / budget) : 0;

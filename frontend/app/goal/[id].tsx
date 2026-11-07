@@ -21,15 +21,56 @@ export default function GoalDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [goal, setGoal] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [amt, setAmt] = useState('');
 
   const load = useCallback(async () => {
-    const r = await api.goals();
-    setGoal((r.goals || []).find((g: any) => g.id === id));
-  }, [id]);
+    setError('');
+    try {
+      const r = await api.goals();
+      setGoal((r.goals || []).find((g: any) => g.id === id) || null);
+    } catch (cause: any) {
+      console.error('[GoalDetail] failed to load goal', cause);
+      setError(t('data.loadError'));
+    } finally {
+      setLoading(false);
+    }
+  }, [id, t]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  if (!goal) return <Screen><SafeAreaView><Body style={{ padding: spacing.xl }}>{t('common.loading')}</Body></SafeAreaView></Screen>;
+  if (loading) {
+    return <Screen><SafeAreaView><Body style={{ padding: spacing.xl }}>{t('common.loading')}</Body></SafeAreaView></Screen>;
+  }
+  if (error) {
+    return (
+      <Screen><SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('navigation.back')} hitSlop={10} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={24} color={colors.onSurface} />
+          </TouchableOpacity>
+        </View>
+        <View style={{ padding: spacing.xl, gap: spacing.md }}>
+          <Body style={{ color: colors.error }}>{error}</Body>
+          <Button label={t('common.retry')} onPress={load} />
+        </View>
+      </SafeAreaView></Screen>
+    );
+  }
+  if (!goal) {
+    return (
+      <Screen><SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('navigation.back')} hitSlop={10} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={24} color={colors.onSurface} />
+          </TouchableOpacity>
+        </View>
+        <View style={{ padding: spacing.xl }}>
+          <Body muted>{t('goal.notFound')}</Body>
+        </View>
+      </SafeAreaView></Screen>
+    );
+  }
 
   const cur = user?.currency || 'USD';
   const saved = cv(goal, 'saved_amount');
@@ -40,9 +81,13 @@ export default function GoalDetail() {
   const contribute = async () => {
     const v = parseFloat(amt);
     if (!v || v <= 0) return;
-    await api.contributeGoal(goal.id, v);
-    setAmt('');
-    load();
+    try {
+      await api.contributeGoal(goal.id, v);
+      setAmt('');
+      load();
+    } catch {
+      Alert.alert(t('common.error'), t('goal.contributeFailed'));
+    }
   };
   const remove = () => {
     Alert.alert(t('goal.delete.title'), t('goal.delete.message'), [

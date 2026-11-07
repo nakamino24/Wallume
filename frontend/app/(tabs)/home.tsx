@@ -199,7 +199,7 @@ export default function Home() {
                 <Body muted style={{ fontSize: font.sizes.sm }}>{t('home.welcome')}</Body>
                 <H2 style={{ marginTop: 2 }}>{user?.name?.split(' ')[0] || 'there'}</H2>
             </View>
-            <TouchableOpacity testID="home-profile-btn" onPress={() => router.push('/profile')}>
+            <TouchableOpacity testID="home-profile-btn" accessibilityRole="button" accessibilityLabel={t('profile.dataAbout')} onPress={() => router.push('/profile')}>
               <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center' }}>
                 <Ionicons name="person" size={18} color={colors.onBrandSoft} />
               </View>
@@ -256,6 +256,9 @@ export default function Home() {
                 <Label style={{ color: colors.onInverse, opacity: 0.6 }}>{t('total.balance')}</Label>
                 <TouchableOpacity
                   testID="home-eye-toggle"
+                  accessibilityRole="button"
+                  accessibilityLabel={isBalanceVisible ? t('privacy.balancesVisible') : t('privacy.balancesHidden')}
+                  accessibilityState={{ selected: isBalanceVisible }}
                   onPress={toggleBalanceVisibility}
                   hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' }}
@@ -370,7 +373,7 @@ export default function Home() {
                   <Label>{t('health.score')}</Label>
                   <H2 style={{ marginTop: 4 }}>{healthLabel(derivedSummary.health_score ?? 0, t)}</H2>
                   <Body muted style={{ marginTop: 4 }}>
-                    Saving {derivedSummary.saving_rate ?? 0}% · Debt ratio {derivedSummary.debt_ratio ?? 0}%
+                    {t('health.savingRatio', { saving: derivedSummary.saving_rate ?? 0, debt: derivedSummary.debt_ratio ?? 0 })}
                   </Body>
                 </View>
               </View>
@@ -427,7 +430,7 @@ export default function Home() {
             contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: spacing.sm, paddingVertical: spacing.md }}
           >
             {(['all', 'income', 'expense', 'transfer'] as const).map((f) => (
-              <Chip key={f} testID={`home-filter-${f}`} label={f[0].toUpperCase() + f.slice(1)} active={filter === f} onPress={() => setFilter(f)} />
+              <Chip key={f} testID={`home-filter-${f}`} label={f === 'all' ? t('common.all') : t(`transactions.type.${f}`)} active={filter === f} onPress={() => setFilter(f)} />
             ))}
           </ScrollView>
 

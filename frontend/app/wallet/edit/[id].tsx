@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -30,17 +30,27 @@ export default function EditWallet() {
   const [balance, setBalance] = useState('');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [loadingWallet, setLoadingWallet] = useState(true);
 
   const load = useCallback(async () => {
-    const r = await api.wallets();
-    const w = (r.wallets || []).find((x: any) => x.id === id);
-    if (w) {
-      setWallet(w);
-      setName(w.name);
-      setType(w.type);
-      setBalance(String(w.balance ?? 0));
+    setLoadError('');
+    try {
+      const r = await api.wallets();
+      const w = (r.wallets || []).find((x: any) => x.id === id);
+      if (w) {
+        setWallet(w);
+        setName(w.name);
+        setType(w.type);
+        setBalance(String(w.balance ?? 0));
+      }
+    } catch (cause: any) {
+      console.error('[WalletEdit] failed to load wallet', cause);
+      setLoadError(t('data.loadError'));
+    } finally {
+      setLoadingWallet(false);
     }
-  }, [id]);
+  }, [id, t]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const submit = async () => {
@@ -71,7 +81,20 @@ export default function EditWallet() {
   };
 
   if (!wallet) {
-    return <FormLayout title={t('wallet.edit.title')}><Body style={{ padding: spacing.xl }}>{t('common.loading')}</Body></FormLayout>;
+    return (
+      <FormLayout title={t('wallet.edit.title')} onBack={() => router.back()}>
+        <View style={{ padding: spacing.xl, gap: spacing.md }}>
+          {loadError ? (
+            <>
+              <Body style={{ color: colors.error }}>{loadError}</Body>
+              <Button label={t('common.retry')} onPress={load} />
+            </>
+          ) : (
+            <Body>{loadingWallet ? t('common.loading') : t('wallet.notFound')}</Body>
+          )}
+        </View>
+      </FormLayout>
+    );
   }
 
   const cur = user?.currency || 'USD';
