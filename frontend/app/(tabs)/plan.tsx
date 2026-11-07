@@ -6,7 +6,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
-import { spacing, radius, font, cv } from '@/src/theme/tokens';
+import { spacing, radius, font, cv, formatMoney } from '@/src/theme/tokens';
 import { api } from '@/src/api/client';
 import { Screen, Card, H1, H2, Body, Label, ProgressRing, ProgressBar, EmptyState, Button } from '@/src/components/ui';
 import { computeInvestmentMetrics, kindLabel, quantitySummary } from '@/src/lib/investmentKinds';
@@ -19,6 +19,7 @@ import { t } from '@/src/lib/i18n';
 import { SkeletonCard } from '@/src/components/Skeleton';
 import { useI18n } from '@/src/lib/I18nProvider';
 import { systemCategoryLabel } from '@/src/lib/categories';
+import { getNotifSettings, checkBudgetAlerts, type BudgetAlert } from '@/src/utils/notifications';
 
 type Section = FinancialModuleKey;
 
@@ -39,6 +40,7 @@ export default function PlanScreen() {
   const [investments, setInvestments] = useState<any[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [budgetAlerts, setBudgetAlerts] = useState<BudgetAlert[]>([]);
 
   const load = useCallback(async () => {
     setLoadError(null);
@@ -52,13 +54,29 @@ export default function PlanScreen() {
       setDebts(d.debts || []);
       setAssets(a.assets || []);
       setInvestments(i.investments || []);
+
+      // Budget usage is not schedulable (it moves with every transaction), so
+      // thresholds are checked when the data is fresh. Fires at most once per
+      // budget/threshold per period.
+      try {
+        const settings = await getNotifSettings();
+        const fired = await checkBudgetAlerts({
+          budgets: b.budgets || [],
+          settings,
+          t: translate,
+          formatMoney: (amount) => formatMoney(amount, user?.currency || 'USD'),
+        });
+        setBudgetAlerts(fired);
+      } catch {
+        setBudgetAlerts([]);
+      }
     } catch (cause) {
       console.error('[Plan] failed to load financial modules', cause);
       setLoadError(translate('data.loadError'));
     } finally {
       setLoaded(true);
     }
-  }, [translate]);
+  }, [translate, user?.currency]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
   const onRefresh = useCallback(async () => { setRefreshing(true); await load(); setRefreshing(false); }, [load]);
 
@@ -84,6 +102,22 @@ export default function PlanScreen() {
               <Button testID="plan-retry" label={translate('common.retry')} onPress={load} style={{ marginTop: spacing.md, alignSelf: 'flex-start' }} />
             </Card>
           )}
+          {loaded && !loadError && budgetAlerts.length > 0 && (
+            <Card testID="budget-alert-banner" style={{ borderColor: colors.warning + '44', backgroundColor: colors.warning + '10' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <Ionicons name="alert-circle" size={18} color={colors.warning} />
+                <Body style={{ flex: 1, fontSize: 13, color: colors.warning }}>
+                  {budgetAlerts.length === 1
+                    ? translate(budgetAlerts[0].threshold >= 100 ? 'notif.budget.over.title' : 'notif.budget.near.title')
+                    : translate('notif.budget.many', { count: budgetAlerts.length })}
+                </Body>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={translate('common.dismiss')} hitSlop={8} onPress={() => setBudgetAlerts([])}>
+                  <Ionicons name="close" size={16} color={colors.warning} />
+                </TouchableOpacity>
+              </View>
+            </Card>
+          )}
+
           {loaded && !loadError && section === 'budgets' && (
             <BudgetsSection budgets={budgets} currency={cur} onAdd={() => router.push('/budget/new')}
               onEdit={(b: any) => router.push({
