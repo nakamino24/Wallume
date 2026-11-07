@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -13,8 +13,10 @@ import { FormLayout } from '@/src/components/FormLayout';
 import { MoneyInput } from '@/src/components/MoneyInput';
 import { CategorySelector } from '@/src/components/CategorySelector';
 import { ReceiptAttachments } from '@/src/components/ReceiptAttachments';
+import { SplitEditor } from '@/src/components/SplitEditor';
 import { todayLocalISO } from '@/src/utils/dates';
-import { useTransactions } from '@/src/hooks/use-transactions';
+import { useTransactions, invalidateTransactionsCache } from '@/src/hooks/use-transactions';
+import { api } from '@/src/api/client';
 import { useI18n } from '@/src/lib/I18nProvider';
 
 // Edit an existing transaction. The list screen (transactions.tsx) passes the
@@ -52,8 +54,60 @@ export default function EditTransaction() {
   const [loading, setLoading] = useState(false);
   const { edit } = useTransactions();
 
+  // Split awareness: the list passes one part's params, but the whole group
+  // must be editable as a unit. If the API confirms a group, the form switches
+  // to split mode â€” category/amount/wallet/type become read-only and a group
+  // editor takes over (the backend enforces the same rules).
+  const [splitInfo, setSplitInfo] = useState<{ total: number } | null>(null);
+  const [splitParts, setSplitParts] = useState<{ key: string; category: string; amount: string }[]>([]);
+  const [splitSaveErr, setSplitSaveErr] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result: any = await api.transactionSplits(params.id);
+        if (cancelled || !result?.parts?.length) return;
+        setSplitInfo({ total: Number(result.split_total) || 0 });
+        setSplitParts(result.parts.map((part: any, index: number) => ({
+          key: 'sp' + index,
+          category: part.category,
+          amount: String(part.amount),
+        })));
+      } catch {
+        // Not a split (or fetch failed) â€” normal single-transaction editing.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [params.id]);
+
+  const saveSplits = async () => {
+    if (!splitInfo) return;
+    setSplitSaveErr('');
+    const parts = splitParts.map((part) => ({
+      category: part.category,
+      amount: parseFloat(part.amount) || 0,
+    }));
+    if (parts.some((part) => !Number.isFinite(part.amount) || part.amount <= 0)) {
+      setSplitSaveErr(t('split.mustBalance'));
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.updateTransactionSplits(params.id, parts);
+      invalidateTransactionsCache();
+      router.back();
+    } catch (cause: any) {
+      setSplitSaveErr(cause?.message || t('common.error'));
+      setLoading(false);
+    }
+  };
+
   const submit = async () => {
     if (loading) return;
+    // Split parts are metadata-only editable; the group editor has its own
+    // save path. Skip the single-transaction PATCH entirely.
+    if (splitInfo) { await saveSplits(); return; }
     setErr('');
     const amt = parseFloat(amount);
     if (!amt || amt <= 0) { setErr(t('transaction.validation.amount')); return; }
@@ -73,7 +127,7 @@ export default function EditTransaction() {
   return (
     <FormLayout title={t('transaction.edit.title')} onBack={() => router.back()}>
       {/* Type selector */}
-            <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.md, padding: 4, marginBottom: spacing.xl }}>
+            {!splitInfo && <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.md, padding: 4, marginBottom: spacing.xl }}>
               {(['expense', 'income', 'transfer'] as const).map((txType) => (
                 <TouchableOpacity
                   key={txType}
@@ -99,7 +153,7 @@ export default function EditTransaction() {
                   }}>{t(`transaction.type.${txType}`)}</Body>
                 </TouchableOpacity>
               ))}
-            </View>
+            </View>}
 
             {/* Amount */}
             <View style={{ alignSelf: 'stretch', marginBottom: spacing.xl }}>
@@ -179,9 +233,19 @@ export default function EditTransaction() {
                 the create form (which is optimistic and has a temporary id). */}
             {params.id ? <ReceiptAttachments transactionId={params.id} /> : null}
 
+            {splitInfo ? (
+              <SplitEditor
+                parts={splitParts}
+                onChange={setSplitParts}
+                total={splitInfo.total}
+                currency={cur}
+              />
+            ) : null}
+
+            {!!splitSaveErr && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{splitSaveErr}</Body>}
             {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
 
-            <Button testID="edit-tx-save" label={t('transaction.saveChanges')} onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
+            <Button testID="edit-tx-save" label={splitInfo ? t('split.saveGroup') : t('transaction.saveChanges')} onPress={submit} loading={loading} style={{ marginTop: spacing.md }} />
     </FormLayout>
   );
 }
