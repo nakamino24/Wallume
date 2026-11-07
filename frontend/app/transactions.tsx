@@ -8,6 +8,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font, radius } from '@/src/theme/tokens';
 import { Screen, H2, Body, Chip, EmptyState } from '@/src/components/ui';
+import { ErrorBanner } from '@/src/components/ErrorBanner';
 import { useTransactions } from '@/src/hooks/use-transactions';
 import { groupTransactionsByDate, TransactionDayGroup } from '@/src/components/transactions/TransactionDayGroup';
 import { useI18n } from '@/src/lib/I18nProvider';
@@ -17,7 +18,7 @@ export default function Transactions() {
   const { user } = useAuth();
   const router = useRouter();
   const { t } = useI18n();
-  const { transactions: txs, loading, error, refresh, remove: removeTransaction } = useTransactions();
+  const { transactions: txs, loading, error, failed, refresh, retry, dismissFailed, remove: removeTransaction } = useTransactions();
   const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
 
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
@@ -55,6 +56,13 @@ export default function Transactions() {
         </ScrollView>
 
         <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: 60, gap: spacing.sm }}>
+          {failed.length > 0 && (
+            <ErrorBanner
+              message={t('transactions.unsaved', { count: failed.length }) + ' — ' + t('common.error')}
+              onRetry={() => failed.forEach((m) => retry(m.clientMutationId))}
+              onDismiss={() => failed.forEach((m) => dismissFailed(m.clientMutationId))}
+            />
+          )}
           {loading ? (
             <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
               <Body muted>{t('common.loading')}</Body>

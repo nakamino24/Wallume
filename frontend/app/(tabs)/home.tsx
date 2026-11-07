@@ -35,7 +35,7 @@ export default function Home() {
   const router = useRouter();
   const { locale, t } = useI18n();
   const [summary, setSummary] = useState<any>(null);
-  const { transactions: txs, remove: removeTransaction } = useTransactions();
+  const { transactions: txs, failed, retry, dismissFailed, remove: removeTransaction } = useTransactions();
   const { wallets } = useWallets();
   const [upcoming, setUpcoming] = useState<any[]>([]);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
@@ -53,10 +53,21 @@ export default function Home() {
       const updatedAt = Date.now();
 
       setSummary(nextSummary);
-      setUpcoming([]);
       setLastSyncedAt(updatedAt);
       setInitialLoading(false);
       refreshNetWorthWidget();
+      // Upcoming bills render directly under the hero. This was previously
+      // hardcoded to an empty array, so the section could never appear.
+      try {
+        const rec = await api.recurring();
+        const bills = (rec.recurring || [])
+          .filter((r: any) => r.active !== false && r.days_until !== null && r.days_until !== undefined)
+          .sort((a: any, b: any) => a.days_until - b.days_until)
+          .slice(0, 3);
+        setUpcoming(bills);
+      } catch {
+        setUpcoming([]);
+      }
     } catch (cause) {
       console.error('[Home] failed to load summary', cause);
       setLoadError(t('data.loadError'));
@@ -198,6 +209,19 @@ export default function Home() {
           {loadError && (
             <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
               <ErrorBanner message={loadError} onRetry={onRefresh} />
+            </View>
+          )}
+
+          {/* A failed optimistic save previously vanished with no signal: the
+              row disappeared and only the full Transactions list exposed the
+              error. Surface it here, where the save originated. */}
+          {failed.length > 0 && (
+            <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+              <ErrorBanner
+                message={t('transactions.unsaved', { count: failed.length })}
+                onRetry={() => failed.forEach((m) => retry(m.clientMutationId))}
+                onDismiss={() => failed.forEach((m) => dismissFailed(m.clientMutationId))}
+              />
             </View>
           )}
 
@@ -367,7 +391,11 @@ export default function Home() {
                   const overdue = r.days_until !== null && r.days_until < 0;
                   const dueSoon = r.days_until !== null && r.days_until >= 0 && r.days_until <= 3;
                   const dueColor = overdue ? colors.error : dueSoon ? colors.warning : colors.onSurface2;
-                  const dueText = overdue ? `${Math.abs(r.days_until)}d overdue` : r.days_until === 0 ? 'Due today' : `in ${r.days_until}d`;
+                  const dueText = overdue
+                    ? t('recurring.overdue', { days: Math.abs(r.days_until) })
+                    : r.days_until === 0
+                      ? t('recurring.dueToday')
+                      : t('recurring.dueIn', { days: r.days_until });
                   return (
                     <TouchableOpacity key={r.id} testID={`home-recurring-${r.id}`} onPress={() => router.push(`/recurring/${r.id}`)}
                       style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderBottomWidth: idx === upcoming.length - 1 ? 0 : 1, borderBottomColor: colors.border }}>

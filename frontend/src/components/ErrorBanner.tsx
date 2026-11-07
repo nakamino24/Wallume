@@ -6,7 +6,7 @@ import { spacing, radius, font } from '@/src/theme/tokens';
 import { Body } from '@/src/components/ui';
 import { useI18n } from '@/src/lib/I18nProvider';
 
-export function ErrorBanner({ message, onRetry }: { message?: string; onRetry?: () => void }) {
+export function ErrorBanner({ message, onRetry, onDismiss }: { message?: string; onRetry?: () => void; onDismiss?: () => void }) {
   const { colors } = useTheme();
   const { t } = useI18n();
   return (
@@ -23,8 +23,15 @@ export function ErrorBanner({ message, onRetry }: { message?: string; onRetry?: 
       </Body>
       {onRetry && (
         <TouchableOpacity testID="error-retry-btn" onPress={onRetry} activeOpacity={0.7}
+          accessibilityRole="button" accessibilityLabel={t('common.retry')}
           style={{ paddingVertical: 4, paddingHorizontal: 10, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.error }}>
           <Body style={{ fontSize: 12, color: colors.error, fontFamily: font.textMedium }}>{t('common.retry')}</Body>
+        </TouchableOpacity>
+      )}
+      {onDismiss && (
+        <TouchableOpacity testID="error-dismiss-btn" onPress={onDismiss} activeOpacity={0.7} hitSlop={8}
+          accessibilityRole="button" accessibilityLabel={t('common.dismiss')}>
+          <Ionicons name="close" size={16} color={colors.error} />
         </TouchableOpacity>
       )}
     </View>

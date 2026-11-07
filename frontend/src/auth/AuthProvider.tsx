@@ -24,7 +24,6 @@ type Ctx = {
   status: AuthStatus;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
-  loginWithEmergentToken: (session_token: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   updateProfile: (patch: Partial<User>) => Promise<void>;
@@ -104,15 +103,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     storage.setItem('mf.widget.currency', r.user.currency || 'USD');
   };
 
-  const loginWithEmergentToken = async (session_token: string) => {
-    clearTransactionsState();
-    const r = await api.emergentSession(session_token);
-    await setToken(r.token);
-    setUser(r.user);
-    setStatus('authenticated');
-    storage.setItem('mf.widget.currency', r.user.currency || 'USD');
-  };
-
   const logout = async () => {
     try { await api.logout(); } catch {}
     await setToken(null);
@@ -128,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthCtx.Provider value={{ user, loading, status, login, signup, loginWithEmergentToken, logout, refresh, updateProfile }}>
+    <AuthCtx.Provider value={{ user, loading, status, login, signup, logout, refresh, updateProfile }}>
       {children}
     </AuthCtx.Provider>
   );

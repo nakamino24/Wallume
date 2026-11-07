@@ -48,6 +48,7 @@ jest.mock('@/src/api/client', () => ({
       counts: { wallets: 2, debts: 0, investments: 0, assets: 0 },
     })),
     transactions: jest.fn(() => Promise.resolve({ transactions: [] })),
+    recurring: jest.fn(() => Promise.resolve({ recurring: [] })),
     wallets: jest.fn(() => Promise.resolve({
       wallets: [
         { id: 'wal1', name: 'Cash', balance: 250, currency: 'USD' },
@@ -93,7 +94,7 @@ jest.mock('react-native-safe-area-context', () => ({
 describe('Home Screen', () => {
   beforeEach(() => {
     mockRouterPush.mockReset();
-    mockUseTransactions.mockReturnValue({ transactions: [], loading: false, error: '', refresh: mockRefresh });
+    mockUseTransactions.mockReturnValue({ transactions: [], loading: false, error: '', failed: [], retry: jest.fn(), dismissFailed: jest.fn(), refresh: mockRefresh });
     mockUseWallets.mockReturnValue({
       wallets: [
         { id: 'wal1', name: 'Cash', balance: 250, currency: 'USD' },

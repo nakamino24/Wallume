@@ -129,7 +129,21 @@ export function useTransactions() {
     void sendNext(failed.logicalResourceId);
     return true;
   }, []);
-  return { transactions: deriveTransactions(state.serverSnapshot || [], state.pending), loading: state.loading, error: state.error, refresh, create, edit, remove, retry };
+  return {
+    transactions: deriveTransactions(state.serverSnapshot || [], state.pending),
+    loading: state.loading,
+    error: state.error,
+    failed: state.failed,
+    pending: state.pending,
+    refresh,
+    create,
+    edit,
+    remove,
+    retry,
+    dismissFailed: useCallback((clientMutationId: string) => {
+      publish({ ...store, failed: store.failed.filter((mutation) => mutation.clientMutationId !== clientMutationId) });
+    }, []),
+  };
 }
 
 export function invalidateTransactionsCache() { lastFetch = 0; void refreshStore().catch(() => undefined); }

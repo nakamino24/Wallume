@@ -15,7 +15,6 @@ jest.mock('@/src/auth/AuthProvider', () => ({
     login: mockLogin,
     signup: jest.fn(),
     logout: jest.fn(),
-    loginWithEmergentToken: jest.fn(),
   }),
 }));
 
@@ -54,8 +53,6 @@ jest.mock('expo-router', () => ({
 // Mock other dependencies
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: ({ children }: any) => children }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
-jest.mock('expo-linking', () => ({ createURL: jest.fn(() => 'wallume://') }));
-jest.mock('expo-web-browser', () => ({ openAuthSessionAsync: jest.fn(() => Promise.resolve({ type: 'cancel' })) }));
 jest.mock('@/src/hooks/use-icon-fonts', () => ({ useIconFonts: () => [true, null] }));
 
 describe('Auth Flow', () => {
@@ -72,7 +69,6 @@ describe('Auth Flow', () => {
     expect(getByTestId('login-email')).toBeTruthy();
     expect(getByTestId('login-password')).toBeTruthy();
     expect(getByTestId('login-submit')).toBeTruthy();
-    expect(getByTestId('login-google')).toBeTruthy();
     expect(getByTestId('login-goto-signup')).toBeTruthy();
     expect(getByTestId('login-forgot-password')).toBeTruthy();
     expect(getByText('Sign in to Wallume')).toBeTruthy();

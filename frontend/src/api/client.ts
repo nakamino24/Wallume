@@ -111,8 +111,6 @@ export const api = {
     confirm_password: string;
   }): Promise<PasswordResetConfirmResult> =>
     req('/auth/password-reset/confirm', { method: 'POST', body: JSON.stringify(body) }) as Promise<PasswordResetConfirmResult>,
-  emergentSession: (session_token: string) =>
-    req('/auth/emergent-session', { method: 'POST', body: JSON.stringify({ session_token }) }),
   me: () => req('/auth/me'),
   logout: () => req('/auth/logout', { method: 'POST' }),
   updateMe: (body: any) => req('/auth/me', { method: 'PATCH', body: JSON.stringify(body) }),

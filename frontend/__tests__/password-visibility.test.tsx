@@ -6,7 +6,7 @@ import { Input } from '@/src/components/ui';
 import { storePasswordResetToken } from '@/src/auth/password-recovery-state';
 
 jest.mock('@/src/auth/AuthProvider', () => ({
-  useAuth: () => ({ login: jest.fn(), signup: jest.fn(), loginWithEmergentToken: jest.fn() }),
+  useAuth: () => ({ login: jest.fn(), signup: jest.fn() }),
 }));
 
 jest.mock('@/src/theme/ThemeProvider', () => ({

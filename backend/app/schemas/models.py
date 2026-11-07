@@ -35,9 +35,6 @@ class PasswordResetConfirmRequest(BaseModel):
 class PasswordResetResendRequest(BaseModel):
     request_id: str = Field(min_length=16, max_length=200)
 
-class EmergentSessionRequest(BaseModel):
-    session_token: str
-
 class AuthResponse(BaseModel):
     token: str
     user: dict
