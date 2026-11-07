@@ -1,4 +1,4 @@
-"""Statement import: preview, dedupe, validation and atomic write.
+﻿"""Statement import: preview, dedupe, validation and atomic write.
 
 Import is a retained-user feature, so the dangerous parts are (a) importing the
 same statement twice and (b) writing half a statement with the balance applied.
@@ -50,7 +50,7 @@ class _FakeDB:
 
 def _setup(monkeypatch, existing=None):
     monkeypatch.setattr(api.auth_service, "get_current_user",
-                        AsyncMock(return_value={"user_id": "u1", "currency": "USD"}))
+                        AsyncMock(return_value={"user_id": "u1", "owner_id": "u1", "currency": "USD"}))
     monkeypatch.setattr(api.wallets, "find_one",
                         AsyncMock(return_value={"id": "w1", "currency": "USD"}))
     monkeypatch.setattr(api.wallets, "adjust_balance", AsyncMock())

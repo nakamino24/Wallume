@@ -50,6 +50,11 @@ async def create_indexes() -> None:
     await db.net_worth_snapshots.create_index([("user_id", 1), ("date", 1)], unique=True)
     # Receipts are always queried by owner + transaction.
     await db.receipts.create_index([("user_id", 1), ("transaction_id", 1)])
+    # Tenancy: one membership per user, unique invite codes.
+    await db.household_members.create_index("member_id", unique=True)
+    await db.household_members.create_index("household_id")
+    await db.households.create_index("owner_id")
+    await db.households.create_index("invite_code", unique=True)
     await _ensure_obsolete_transaction_mutation_index_removed(db)
     # Dedicated idempotency collection for PATCH/DELETE which need to store
     # multiple sequential mutation IDs per resource (a single client_mutation_id

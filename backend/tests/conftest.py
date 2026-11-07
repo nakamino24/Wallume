@@ -33,6 +33,18 @@ def pytest_collection_modifyitems(config, items):
 BASE_URL = "http://localhost:8001"
 
 
+def authed_user(user_id: str = "u1", **overrides) -> dict:
+    """A realistic `get_current_user` result.
+
+    Production always attaches `owner_id` (the tenancy scope resolved from the
+    user's household). Tests that stub `get_current_user` must include it too,
+    otherwise they exercise a shape the app never produces.
+    """
+    user = {"user_id": user_id, "owner_id": user_id, "currency": "USD"}
+    user.update(overrides)
+    return user
+
+
 @pytest.fixture(scope="session")
 def base_url():
     return BASE_URL

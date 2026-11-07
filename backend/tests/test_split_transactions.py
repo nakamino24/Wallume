@@ -1,4 +1,4 @@
-"""Split expenses.
+﻿"""Split expenses.
 
 Design: a split is stored as one transaction row per part, sharing a
 `split_group_id`, while the wallet is debited ONCE for the total. That keeps
@@ -117,7 +117,7 @@ def test_two_decimal_sums_are_not_rejected_by_float_noise():
 
 def _setup(monkeypatch):
     monkeypatch.setattr(api.auth_service, "get_current_user",
-                        AsyncMock(return_value={"user_id": "u1", "currency": "IDR"}))
+                        AsyncMock(return_value={"user_id": "u1", "owner_id": "u1", "currency": "IDR"}))
     monkeypatch.setattr(api.wallets, "find_one",
                         AsyncMock(return_value={"id": "w1", "currency": "IDR"}))
     adjust = AsyncMock()

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Optional
 
@@ -24,7 +24,7 @@ receipts = ReceiptRepository()
 @router.get("")
 async def list_receipts(transaction_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    items = await receipts.for_transaction(u["user_id"], transaction_id)
+    items = await receipts.for_transaction(u["owner_id"], transaction_id)
     return {"success": True, "data": {"receipts": items}}
 
 
@@ -37,11 +37,11 @@ async def upload_receipt(
     u = await auth_service.get_current_user(authorization)
     # The transaction must belong to the caller, otherwise a receipt could be
     # attached to someone else's ledger row.
-    tx = await txs.find_one({"id": transaction_id, "user_id": u["user_id"]})
+    tx = await txs.find_one({"id": transaction_id, "user_id": u["owner_id"]})
     if not tx:
         raise HTTPException(404, "Transaction not found")
     try:
-        meta = await save_receipt(u["user_id"], transaction_id, file)
+        meta = await save_receipt(u["owner_id"], transaction_id, file)
     except ReceiptError as exc:
         raise HTTPException(exc.status_code, exc.message)
     return {"success": True, "data": {"receipt": meta}}
@@ -51,7 +51,7 @@ async def upload_receipt(
 async def receipt_file(receipt_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     try:
-        meta, data = await load_receipt(u["user_id"], receipt_id)
+        meta, data = await load_receipt(u["owner_id"], receipt_id)
     except ReceiptError as exc:
         raise HTTPException(exc.status_code, exc.message)
 
@@ -67,7 +67,7 @@ async def receipt_file(receipt_id: str, authorization: Optional[str] = Header(No
 @router.delete("/{receipt_id}")
 async def remove_receipt(receipt_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    deleted = await delete_receipt(u["user_id"], receipt_id)
+    deleted = await delete_receipt(u["owner_id"], receipt_id)
     if not deleted:
         raise HTTPException(404, "Receipt not found")
     return {"success": True, "data": None}

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import math
 from datetime import timedelta
@@ -52,7 +52,7 @@ def _budget_window(period: Optional[str], now) -> tuple[str, str]:
 async def list_budgets(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     home_ccy = u.get("currency", "USD")
-    items = await budgets_repo.find_by_user(u["user_id"])
+    items = await budgets_repo.find_by_user(u["owner_id"])
     now = now_utc()
 
     # Budgets can mix periods, so each distinct period needs its own window.
@@ -65,7 +65,7 @@ async def list_budgets(authorization: Optional[str] = Header(None)):
         windows[period] = (start, end)
         pipeline = [
             {"$match": {
-                "user_id": u["user_id"],
+                "user_id": u["owner_id"],
                 "type": "expense",
                 # Aggregations bypass BaseRepository's soft-delete filter, so
                 # deleted transactions must be excluded explicitly or the budget
@@ -97,7 +97,7 @@ async def list_budgets(authorization: Optional[str] = Header(None)):
 @budgets_router.post("")
 async def create_budget(payload: BudgetCreate, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    doc = {"id": new_id("bud"), "user_id": u["user_id"], "currency": payload.currency or u.get("currency", "USD"),
+    doc = {"id": new_id("bud"), "user_id": u["owner_id"], "currency": payload.currency or u.get("currency", "USD"),
            **payload.model_dump(exclude={"currency"}), "created_at": now_utc()}
     await budgets_repo.insert_one(doc)
     return {"success": True, "data": {"budget": {k: v for k, v in doc.items() if k != "_id"}}}
@@ -119,8 +119,8 @@ async def update_budget(budget_id: str, body: dict[str, Any], authorization: Opt
     if "period" in allowed and allowed["period"] not in {"weekly", "monthly", "yearly"}:
         raise HTTPException(400, "Invalid period")
     if allowed:
-        await budgets_repo.update_one({"id": budget_id, "user_id": u["user_id"]}, {"$set": allowed})
-    b = await budgets_repo.find_one({"id": budget_id, "user_id": u["user_id"]})
+        await budgets_repo.update_one({"id": budget_id, "user_id": u["owner_id"]}, {"$set": allowed})
+    b = await budgets_repo.find_one({"id": budget_id, "user_id": u["owner_id"]})
     if not b:
         raise HTTPException(404, "Not found")
     return {"success": True, "data": {"budget": b}}
@@ -129,7 +129,7 @@ async def update_budget(budget_id: str, body: dict[str, Any], authorization: Opt
 @budgets_router.delete("/{budget_id}")
 async def delete_budget(budget_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    await budgets_repo.delete_one({"id": budget_id, "user_id": u["user_id"]})
+    await budgets_repo.delete_one({"id": budget_id, "user_id": u["owner_id"]})
     return {"success": True, "data": None}
 
 
@@ -141,7 +141,7 @@ goals_repo = GoalRepository()
 @goals_router.get("")
 async def list_goals(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    items = await goals_repo.find_by_user(u["user_id"])
+    items = await goals_repo.find_by_user(u["owner_id"])
     await FxService.convert_items(items, u.get("currency", "USD"), ["saved_amount", "target_amount"])
     return {"success": True, "data": {"goals": items}}
 
@@ -149,7 +149,7 @@ async def list_goals(authorization: Optional[str] = Header(None)):
 @goals_router.post("")
 async def create_goal(payload: GoalCreate, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    doc = {"id": new_id("goal"), "user_id": u["user_id"], "currency": payload.currency or u.get("currency", "USD"),
+    doc = {"id": new_id("goal"), "user_id": u["owner_id"], "currency": payload.currency or u.get("currency", "USD"),
            **payload.model_dump(exclude={"currency"}), "created_at": now_utc()}
     await goals_repo.insert_one(doc)
     return {"success": True, "data": {"goal": {k: v for k, v in doc.items() if k != "_id"}}}
@@ -170,8 +170,8 @@ async def update_goal(goal_id: str, body: dict[str, Any], authorization: Optiona
                 raise HTTPException(400, f"{money_key} must be zero or greater")
             allowed[money_key] = value
     if allowed:
-        await goals_repo.update_one({"id": goal_id, "user_id": u["user_id"]}, {"$set": allowed})
-    g = await goals_repo.find_one({"id": goal_id, "user_id": u["user_id"]})
+        await goals_repo.update_one({"id": goal_id, "user_id": u["owner_id"]}, {"$set": allowed})
+    g = await goals_repo.find_one({"id": goal_id, "user_id": u["owner_id"]})
     if not g:
         raise HTTPException(404, "Not found")
     return {"success": True, "data": {"goal": g}}
@@ -194,28 +194,28 @@ async def contribute_goal(
         "POST /goals/contribute", goal_id, {"amount": body.amount},
     )
     db = await get_database()
-    found, result = await _find_idempotency_result(db, u["user_id"], x_client_mutation_id, fingerprint)
+    found, result = await _find_idempotency_result(db, u["owner_id"], x_client_mutation_id, fingerprint)
     if found:
         return {"success": True, "data": result}
 
     amount = float(body.amount)
     if not math.isfinite(amount) or amount <= 0:
         raise HTTPException(400, "amount must be greater than 0")
-    existing = await goals_repo.find_one({"id": goal_id, "user_id": u["user_id"]})
+    existing = await goals_repo.find_one({"id": goal_id, "user_id": u["owner_id"]})
     if not existing:
         raise HTTPException(404, "Not found")
-    await goals_repo.update_one({"id": goal_id, "user_id": u["user_id"]}, {"$inc": {"saved_amount": amount}})
-    g = await goals_repo.find_one({"id": goal_id, "user_id": u["user_id"]})
+    await goals_repo.update_one({"id": goal_id, "user_id": u["owner_id"]}, {"$inc": {"saved_amount": amount}})
+    g = await goals_repo.find_one({"id": goal_id, "user_id": u["owner_id"]})
     payload = {"goal": g}
     if x_client_mutation_id:
         try:
             await db.idempotency.insert_one({
-                "user_id": u["user_id"], "client_mutation_id": x_client_mutation_id,
+                "user_id": u["owner_id"], "client_mutation_id": x_client_mutation_id,
                 "operation": "POST /goals/contribute", "resource_type": "goal", "resource_id": goal_id,
                 "fingerprint": fingerprint, "status": "completed", "result": payload, "created_at": now_utc(),
             })
         except DuplicateKeyError:
-            found, result = await _find_idempotency_result(db, u["user_id"], x_client_mutation_id, fingerprint)
+            found, result = await _find_idempotency_result(db, u["owner_id"], x_client_mutation_id, fingerprint)
             if found:
                 return {"success": True, "data": result}
     return {"success": True, "data": payload}
@@ -224,7 +224,7 @@ async def contribute_goal(
 @goals_router.delete("/{goal_id}")
 async def delete_goal(goal_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    await goals_repo.delete_one({"id": goal_id, "user_id": u["user_id"]})
+    await goals_repo.delete_one({"id": goal_id, "user_id": u["owner_id"]})
     return {"success": True, "data": None}
 
 
@@ -244,7 +244,7 @@ _PLAN_TEMPLATES = {
 async def list_plans(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     home_ccy = u.get("currency", "USD")
-    items = await plans_repo.find_by_user(u["user_id"])
+    items = await plans_repo.find_by_user(u["owner_id"])
     for p in items:
         await FxService.convert_item(p, home_ccy, ["total_budget"])
         p_ccy = p.get("currency") or home_ccy
@@ -259,7 +259,7 @@ async def create_plan(payload: PlanCreate, authorization: Optional[str] = Header
     u = await auth_service.get_current_user(authorization)
     items = [{"id": new_id("it"), "label": lbl, "amount": 0.0, "paid": 0.0, "done": False}
              for lbl in _PLAN_TEMPLATES.get(payload.kind, [])]
-    doc = {"id": new_id("plan"), "user_id": u["user_id"], "currency": payload.currency or u.get("currency", "USD"),
+    doc = {"id": new_id("plan"), "user_id": u["owner_id"], "currency": payload.currency or u.get("currency", "USD"),
            **payload.model_dump(exclude={"currency"}), "items": items, "created_at": now_utc()}
     await plans_repo.insert_one(doc)
     return {"success": True, "data": {"plan": {k: v for k, v in doc.items() if k != "_id"}}}
@@ -269,15 +269,15 @@ async def create_plan(payload: PlanCreate, authorization: Optional[str] = Header
 async def update_plan(plan_id: str, body: dict[str, Any], authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     allowed = {k: v for k, v in body.items() if k in {"name", "total_budget", "target_date", "notes", "items"}}
-    await plans_repo.update_one({"id": plan_id, "user_id": u["user_id"]}, {"$set": allowed})
-    p = await plans_repo.find_one({"id": plan_id, "user_id": u["user_id"]})
+    await plans_repo.update_one({"id": plan_id, "user_id": u["owner_id"]}, {"$set": allowed})
+    p = await plans_repo.find_one({"id": plan_id, "user_id": u["owner_id"]})
     return {"success": True, "data": {"plan": p}}
 
 
 @plans_router.delete("/{plan_id}")
 async def delete_plan(plan_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    await plans_repo.delete_one({"id": plan_id, "user_id": u["user_id"]})
+    await plans_repo.delete_one({"id": plan_id, "user_id": u["owner_id"]})
     return {"success": True, "data": None}
 
 
@@ -290,7 +290,7 @@ wallets_repo = WalletRepository()
 @debts_router.get("")
 async def list_debts(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    items = await debts_repo.find_by_user(u["user_id"])
+    items = await debts_repo.find_by_user(u["owner_id"])
     await FxService.convert_items(items, u.get("currency", "USD"), ["remaining", "principal"])
     return {"success": True, "data": {"debts": items}}
 
@@ -298,7 +298,7 @@ async def list_debts(authorization: Optional[str] = Header(None)):
 @debts_router.post("")
 async def create_debt(payload: DebtCreate, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    doc = {"id": new_id("debt"), "user_id": u["user_id"], "currency": payload.currency or u.get("currency", "USD"),
+    doc = {"id": new_id("debt"), "user_id": u["owner_id"], "currency": payload.currency or u.get("currency", "USD"),
            **payload.model_dump(exclude={"currency"}), "created_at": now_utc()}
     await debts_repo.insert_one(doc)
     return {"success": True, "data": {"debt": {k: v for k, v in doc.items() if k != "_id"}}}
@@ -308,11 +308,11 @@ async def create_debt(payload: DebtCreate, authorization: Optional[str] = Header
 async def update_debt(debt_id: str, body: dict[str, Any], authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     allowed_keys = {"name", "principal", "remaining", "interest_rate", "monthly_payment", "due_day", "kind"}
-    old = await debts_repo.find_one({"id": debt_id, "user_id": u["user_id"]})
+    old = await debts_repo.find_one({"id": debt_id, "user_id": u["owner_id"]})
     allowed = {k: v for k, v in body.items() if k in allowed_keys}
     if allowed:
-        await debts_repo.update_one({"id": debt_id, "user_id": u["user_id"]}, {"$set": allowed})
-    d = await debts_repo.find_one({"id": debt_id, "user_id": u["user_id"]})
+        await debts_repo.update_one({"id": debt_id, "user_id": u["owner_id"]}, {"$set": allowed})
+    d = await debts_repo.find_one({"id": debt_id, "user_id": u["owner_id"]})
     if not d:
         raise HTTPException(404, "Not found")
     just_paid = old and float(old.get("remaining", 0)) > 0 and float(d.get("remaining", 0)) <= 0
@@ -322,7 +322,7 @@ async def update_debt(debt_id: str, body: dict[str, Any], authorization: Optiona
 @debts_router.delete("/{debt_id}")
 async def delete_debt(debt_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    await debts_repo.delete_one({"id": debt_id, "user_id": u["user_id"]})
+    await debts_repo.delete_one({"id": debt_id, "user_id": u["owner_id"]})
     return {"success": True, "data": None}
 
 
@@ -330,7 +330,7 @@ async def delete_debt(debt_id: str, authorization: Optional[str] = Header(None))
 async def debts_payoff_plan(extra_monthly: float = 0.0, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
     home_ccy = u.get("currency", "USD")
-    debts = await debts_repo.find_by_user(u["user_id"])
+    debts = await debts_repo.find_by_user(u["owner_id"])
     svc = DebtService()
     if not debts:
         return {"success": True, "data": {"avalanche": None, "snowball": None, "has_debts": False}}
@@ -362,9 +362,9 @@ investments_repo = InvestmentRepository()
 @investments_router.get("")
 async def list_investments(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    items = await investments_repo.find_by_user(u["user_id"])
+    items = await investments_repo.find_by_user(u["owner_id"])
     # Bond and cash holdings are valued from these fields, so they need the
-    # same home-currency conversion as quantity × price holdings — otherwise
+    # same home-currency conversion as quantity Ã— price holdings â€” otherwise
     # the portfolio total silently mixes currencies.
     await FxService.convert_items(
         items, u.get("currency", "USD"),
@@ -376,7 +376,7 @@ async def list_investments(authorization: Optional[str] = Header(None)):
 @investments_router.post("")
 async def create_investment(payload: InvestmentCreate, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    doc = {"id": new_id("inv"), "user_id": u["user_id"], "currency": payload.currency or u.get("currency", "USD"),
+    doc = {"id": new_id("inv"), "user_id": u["owner_id"], "currency": payload.currency or u.get("currency", "USD"),
            **payload.model_dump(exclude={"currency"}), "created_at": now_utc()}
     await investments_repo.insert_one(doc)
     return {"success": True, "data": {"investment": {k: v for k, v in doc.items() if k != "_id"}}}
@@ -390,8 +390,8 @@ async def update_investment(inv_id: str, body: dict[str, Any], authorization: Op
                     "broker", "purchase_date", "notes"}
     allowed = {k: v for k, v in body.items() if k in allowed_keys}
     if allowed:
-        await investments_repo.update_one({"id": inv_id, "user_id": u["user_id"]}, {"$set": allowed})
-    inv = await investments_repo.find_one({"id": inv_id, "user_id": u["user_id"]})
+        await investments_repo.update_one({"id": inv_id, "user_id": u["owner_id"]}, {"$set": allowed})
+    inv = await investments_repo.find_one({"id": inv_id, "user_id": u["owner_id"]})
     if not inv:
         raise HTTPException(404, "Not found")
     return {"success": True, "data": {"investment": inv}}
@@ -400,7 +400,7 @@ async def update_investment(inv_id: str, body: dict[str, Any], authorization: Op
 @investments_router.delete("/{inv_id}")
 async def delete_investment(inv_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    await investments_repo.delete_one({"id": inv_id, "user_id": u["user_id"]})
+    await investments_repo.delete_one({"id": inv_id, "user_id": u["owner_id"]})
     return {"success": True, "data": None}
 
 
@@ -412,7 +412,7 @@ assets_repo = AssetRepository()
 @assets_router.get("")
 async def list_assets(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    items = await assets_repo.find_by_user(u["user_id"])
+    items = await assets_repo.find_by_user(u["owner_id"])
     await FxService.convert_items(items, u.get("currency", "USD"), ["value"])
     return {"success": True, "data": {"assets": items}}
 
@@ -420,7 +420,7 @@ async def list_assets(authorization: Optional[str] = Header(None)):
 @assets_router.post("")
 async def create_asset(payload: AssetCreate, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    doc = {"id": new_id("as"), "user_id": u["user_id"], "currency": payload.currency or u.get("currency", "USD"),
+    doc = {"id": new_id("as"), "user_id": u["owner_id"], "currency": payload.currency or u.get("currency", "USD"),
            **payload.model_dump(exclude={"currency"}), "created_at": now_utc()}
     await assets_repo.insert_one(doc)
     return {"success": True, "data": {"asset": {k: v for k, v in doc.items() if k != "_id"}}}
@@ -440,8 +440,8 @@ async def update_asset(asset_id: str, body: dict[str, Any], authorization: Optio
             raise HTTPException(400, "value must be zero or greater")
         allowed["value"] = value
     if allowed:
-        await assets_repo.update_one({"id": asset_id, "user_id": u["user_id"]}, {"$set": allowed})
-    a = await assets_repo.find_one({"id": asset_id, "user_id": u["user_id"]})
+        await assets_repo.update_one({"id": asset_id, "user_id": u["owner_id"]}, {"$set": allowed})
+    a = await assets_repo.find_one({"id": asset_id, "user_id": u["owner_id"]})
     if not a:
         raise HTTPException(404, "Not found")
     return {"success": True, "data": {"asset": a}}
@@ -450,7 +450,7 @@ async def update_asset(asset_id: str, body: dict[str, Any], authorization: Optio
 @assets_router.delete("/{asset_id}")
 async def delete_asset(asset_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    await assets_repo.delete_one({"id": asset_id, "user_id": u["user_id"]})
+    await assets_repo.delete_one({"id": asset_id, "user_id": u["owner_id"]})
     return {"success": True, "data": None}
 
 
@@ -462,7 +462,7 @@ recurring_repo = RecurringRepository()
 @recurring_router.get("")
 async def list_recurring(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    items = await recurring_repo.find_by_user(u["user_id"])
+    items = await recurring_repo.find_by_user(u["owner_id"])
     await FxService.convert_items(items, u.get("currency", "USD"), ["amount"])
     today = now_utc().date()
     for r in items:
@@ -477,7 +477,7 @@ async def list_recurring(authorization: Optional[str] = Header(None)):
 @recurring_router.post("")
 async def create_recurring(payload: RecurringCreate, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    doc = {"id": new_id("rec"), "user_id": u["user_id"], "currency": payload.currency or u.get("currency", "USD"),
+    doc = {"id": new_id("rec"), "user_id": u["owner_id"], "currency": payload.currency or u.get("currency", "USD"),
            **payload.model_dump(exclude={"currency"}), "created_at": now_utc()}
     await recurring_repo.insert_one(doc)
     return {"success": True, "data": {"recurring": {k: v for k, v in doc.items() if k != "_id"}}}
@@ -489,8 +489,8 @@ async def update_recurring(rec_id: str, body: dict[str, Any], authorization: Opt
     allowed_keys = {"name", "amount", "type", "category", "wallet_id", "frequency", "next_date", "note", "active"}
     allowed = {k: v for k, v in body.items() if k in allowed_keys}
     if allowed:
-        await recurring_repo.update_one({"id": rec_id, "user_id": u["user_id"]}, {"$set": allowed})
-    r = await recurring_repo.find_one({"id": rec_id, "user_id": u["user_id"]})
+        await recurring_repo.update_one({"id": rec_id, "user_id": u["owner_id"]}, {"$set": allowed})
+    r = await recurring_repo.find_one({"id": rec_id, "user_id": u["owner_id"]})
     if not r:
         raise HTTPException(404, "Not found")
     return {"success": True, "data": {"recurring": r}}
@@ -499,7 +499,7 @@ async def update_recurring(rec_id: str, body: dict[str, Any], authorization: Opt
 @recurring_router.delete("/{rec_id}")
 async def delete_recurring(rec_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    await recurring_repo.delete_one({"id": rec_id, "user_id": u["user_id"]})
+    await recurring_repo.delete_one({"id": rec_id, "user_id": u["owner_id"]})
     return {"success": True, "data": None}
 
 
@@ -513,9 +513,9 @@ async def _apply_recurring_occurrence(u: dict, r: dict, occurrence_date: str, se
     Returns the created transaction document and the advanced next_date.
     """
     tx_doc = {
-        "id": new_id("tx"), "user_id": u["user_id"], "wallet_id": r["wallet_id"],
+        "id": new_id("tx"), "user_id": u["owner_id"], "wallet_id": r["wallet_id"],
         "to_wallet_id": None, "type": r["type"], "amount": r["amount"], "category": r["category"],
-        # Canonical YYYY-MM-DD — full-ISO dates here were the original source of
+        # Canonical YYYY-MM-DD â€” full-ISO dates here were the original source of
         # the mixed-format ordering bug (migrated 2026-08-22); never regress it.
         "note": r.get("note") or f"{r['name']} (recurring)",
         "date": to_canonical_date(occurrence_date),
@@ -524,9 +524,9 @@ async def _apply_recurring_occurrence(u: dict, r: dict, occurrence_date: str, se
     next_date = advance_date(r["next_date"], r["frequency"])
     delta = r["amount"] if r["type"] == "income" else -r["amount"]
     await tx_repo.insert_one(tx_doc, session)
-    await wallets_repo.adjust_balance(r["wallet_id"], u["user_id"], delta, session)
+    await wallets_repo.adjust_balance(r["wallet_id"], u["owner_id"], delta, session)
     await recurring_repo.update_one(
-        {"id": r["id"], "user_id": u["user_id"]}, {"$set": {"next_date": next_date}}, session=session,
+        {"id": r["id"], "user_id": u["owner_id"]}, {"$set": {"next_date": next_date}}, session=session,
     )
     return tx_doc, next_date
 
@@ -545,16 +545,16 @@ async def mark_recurring_paid(
 
     fingerprint = _idempotency_fingerprint("POST /recurring/mark-paid", rec_id, {})
     db = await get_database()
-    found, result = await _find_idempotency_result(db, u["user_id"], x_client_mutation_id, fingerprint)
+    found, result = await _find_idempotency_result(db, u["owner_id"], x_client_mutation_id, fingerprint)
     if found:
         return {"success": True, "data": result}
 
-    r = await recurring_repo.find_one({"id": rec_id, "user_id": u["user_id"]})
+    r = await recurring_repo.find_one({"id": rec_id, "user_id": u["owner_id"]})
     if not r:
         raise HTTPException(404, "Not found")
     if r.get("active") is False:
         raise HTTPException(400, "Recurring item is paused")
-    wallet = await wallets_repo.find_one({"id": r["wallet_id"], "user_id": u["user_id"]})
+    wallet = await wallets_repo.find_one({"id": r["wallet_id"], "user_id": u["owner_id"]})
     if not wallet:
         raise HTTPException(400, "Wallet not found")
     # Atomic: transaction + balance + next_date update together, or nothing.
@@ -569,14 +569,14 @@ async def mark_recurring_paid(
                 # The replay record must commit with the money so a retry can
                 # never observe a charged wallet without a replayable receipt.
                 await db.idempotency.insert_one({
-                    "user_id": u["user_id"], "client_mutation_id": x_client_mutation_id,
+                    "user_id": u["owner_id"], "client_mutation_id": x_client_mutation_id,
                     "operation": "POST /recurring/mark-paid", "resource_type": "recurring", "resource_id": rec_id,
                     "fingerprint": fingerprint, "status": "completed",
                     "result": {"recurring": {k: v for k, v in r.items() if k != "_id"},
                                "transaction": {k: v for k, v in tx_doc.items() if k != "_id"}},
                     "created_at": now_utc(),
                 }, session=session)
-    updated = await recurring_repo.find_one({"id": rec_id, "user_id": u["user_id"]})
+    updated = await recurring_repo.find_one({"id": rec_id, "user_id": u["owner_id"]})
     return {"success": True, "data": {"recurring": updated, "transaction": tx_doc}}
 
 
@@ -603,7 +603,7 @@ async def catch_up_recurring(
     u = await auth_service.get_current_user(authorization)
     max_per_item = max(1, min(max_per_item, 60))
     today = to_canonical_date(now_utc().isoformat())
-    items = await recurring_repo.find_by_user(u["user_id"])
+    items = await recurring_repo.find_by_user(u["owner_id"])
     db = await get_database()
 
     posted: list[dict] = []
@@ -616,7 +616,7 @@ async def catch_up_recurring(
         scheduled = to_canonical_date(r.get("next_date") or "")
         if not scheduled or scheduled > today:
             continue
-        wallet = await wallets_repo.find_one({"id": r["wallet_id"], "user_id": u["user_id"]})
+        wallet = await wallets_repo.find_one({"id": r["wallet_id"], "user_id": u["owner_id"]})
         if not wallet:
             skipped.append({"id": r["id"], "reason": "wallet_not_found"})
             continue
@@ -650,7 +650,7 @@ categories_repo = CategoryRepository()
 @categories_router.get("")
 async def list_categories(authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    items = await categories_repo.find_by_user(u["user_id"])
+    items = await categories_repo.find_by_user(u["owner_id"])
     return {"success": True, "data": {"categories": items}}
 
 
@@ -660,10 +660,10 @@ async def create_category(payload: CategoryCreate, authorization: Optional[str] 
     label = payload.label.strip()
     if not label:
         raise HTTPException(400, "Category label is required")
-    existing = await categories_repo.find_one({"user_id": u["user_id"], "label": label, "type": payload.type})
+    existing = await categories_repo.find_one({"user_id": u["owner_id"], "label": label, "type": payload.type})
     if existing:
         raise HTTPException(400, "Category already exists")
-    doc = {"id": new_id("cat"), "user_id": u["user_id"], **payload.model_dump(exclude={"label"}), "label": label, "created_at": now_utc()}
+    doc = {"id": new_id("cat"), "user_id": u["owner_id"], **payload.model_dump(exclude={"label"}), "label": label, "created_at": now_utc()}
     await categories_repo.insert_one(doc)
     return {"success": True, "data": {"category": {k: v for k, v in doc.items() if k != "_id"}}}
 
@@ -675,7 +675,7 @@ async def update_category(
     authorization: Optional[str] = Header(None),
 ):
     u = await auth_service.get_current_user(authorization)
-    cat = await categories_repo.find_one({"id": category_id, "user_id": u["user_id"]})
+    cat = await categories_repo.find_one({"id": category_id, "user_id": u["owner_id"]})
     if not cat:
         raise HTTPException(404, "Not found")
 
@@ -686,7 +686,7 @@ async def update_category(
 
     # Same duplicate check create_category performs (per user+type).
     if new_label != cat["label"] or new_type != cat.get("type"):
-        dup = await categories_repo.find_one({"user_id": u["user_id"], "label": new_label, "type": new_type})
+        dup = await categories_repo.find_one({"user_id": u["owner_id"], "label": new_label, "type": new_type})
         if dup and dup["id"] != category_id:
             raise HTTPException(400, "Category already exists")
 
@@ -707,11 +707,11 @@ async def update_category(
     # name instead of silently losing their category.
     if "label" in allowed and allowed["label"] != cat["label"]:
         await tx_repo.update_category_for_user(
-            u["user_id"], cat["label"], allowed["label"]
+            u["owner_id"], cat["label"], allowed["label"]
         )
 
-    await categories_repo.update_one({"id": category_id, "user_id": u["user_id"]}, {"$set": allowed})
-    updated = await categories_repo.find_one({"id": category_id, "user_id": u["user_id"]})
+    await categories_repo.update_one({"id": category_id, "user_id": u["owner_id"]}, {"$set": allowed})
+    updated = await categories_repo.find_one({"id": category_id, "user_id": u["owner_id"]})
     return {"success": True, "data": {"category": updated}}
 
 
@@ -728,26 +728,26 @@ async def delete_category(
       the same user, those transactions are bulk-reassigned first, then the
       category is deleted.
     - If transactions reference it and no `reassign_to` is given, return
-      409 Conflict with the usage count — never silently drop transaction data.
+      409 Conflict with the usage count â€” never silently drop transaction data.
     """
     u = await auth_service.get_current_user(authorization)
-    cat = await categories_repo.find_one({"id": category_id, "user_id": u["user_id"]})
+    cat = await categories_repo.find_one({"id": category_id, "user_id": u["owner_id"]})
     if not cat:
         raise HTTPException(404, "Not found")
 
-    usage = await tx_repo.count_by_category(u["user_id"], cat["label"])
+    usage = await tx_repo.count_by_category(u["owner_id"], cat["label"])
 
     if usage > 0:
         if not reassign_to:
             raise HTTPException(409, detail={"message": "in_use", "count": usage})
         target = await categories_repo.find_one({
-            "id": reassign_to, "user_id": u["user_id"],
+            "id": reassign_to, "user_id": u["owner_id"],
         })
         if not target:
             raise HTTPException(400, "Reassign target category not found")
         if target["id"] == category_id:
             raise HTTPException(400, "Reassign target must be a different category")
-        await tx_repo.update_category_for_user(u["user_id"], cat["label"], target["label"])
+        await tx_repo.update_category_for_user(u["owner_id"], cat["label"], target["label"])
 
-    await categories_repo.delete_one({"id": category_id, "user_id": u["user_id"]})
+    await categories_repo.delete_one({"id": category_id, "user_id": u["owner_id"]})
     return {"success": True, "data": None}

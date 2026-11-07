@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Any, Dict, Optional
 from datetime import datetime, timezone, timedelta
@@ -16,7 +16,7 @@ _fx_cache: Dict[str, Any] = {}
 
 # Cross-request signal that the last rate lookup had to fall back. The old
 # behaviour returned the *unconverted* amount with no marker at all, so a
-# network blip silently misstated every converted total in the app — the worst
+# network blip silently misstated every converted total in the app â€” the worst
 # possible failure mode for a money product.
 _fx_state: Dict[str, Any] = {"last_failure_at": None}
 
@@ -119,14 +119,14 @@ def investment_value(item: dict) -> float:
 
     Mirrors `computeInvestmentMetrics` on the client so the portfolio screen
     and the net-worth figure can never disagree. Bond and cash holdings do not
-    follow a quantity × price model:
+    follow a quantity Ã— price model:
 
     - bond: worth `current_value`, falling back to what was actually paid
       (`purchase_price`). The old code multiplied quantity (usually 0) by
       `current_price`, so every bond silently contributed nothing to net worth.
     - cash: worth its `current_price` (the cash balance itself).
 
-    Everything else uses quantity × current price.
+    Everything else uses quantity Ã— current price.
     """
     kind = item.get("kind")
     if kind == "bond":
@@ -150,7 +150,7 @@ class AnalyticsService:
 
     async def summary(self, authorization: Optional[str]) -> dict:
         u = await self.auth.get_current_user(authorization)
-        uid = u["user_id"]
+        uid = u["owner_id"]
         home_ccy = u.get("currency", "USD")
 
         import asyncio
@@ -161,7 +161,7 @@ class AnalyticsService:
             self.assets.find_by_user(uid),
         )
 
-        # Parallelize FX conversions — sequential 20×8s on cold cache is slow.
+        # Parallelize FX conversions â€” sequential 20Ã—8s on cold cache is slow.
         # Capture the rate alongside each value: a missing rate means the
         # figure below is unconverted, and the client must be told rather than
         # shown a confidently wrong total.
@@ -320,10 +320,10 @@ class AnalyticsService:
         }
 
     async def monthly_spending(self, authorization: Optional[str]) -> list[dict]:
-        """Current-month expense totals by category. Lightweight — used by the
+        """Current-month expense totals by category. Lightweight â€” used by the
         home-screen widget chart. Returns [{category, amount}] sorted desc."""
         u = await self.auth.get_current_user(authorization)
-        uid = u["user_id"]
+        uid = u["owner_id"]
         # Compare from the 1st of the month (not today), otherwise most of the
         # month's expenses fall outside the {date >= today} window and the chart
         # renders empty / a single slice.
@@ -354,7 +354,7 @@ class AnalyticsService:
         u = await self.auth.get_current_user(authorization)
         days = max(7, min(int(days), 3650))
         since = (now_utc() - timedelta(days=days)).strftime("%Y-%m-%d")
-        rows = await self.snapshots.history(u["user_id"], since)
+        rows = await self.snapshots.history(u["owner_id"], since)
         return {
             "currency": u.get("currency", "USD"),
             "days": days,
@@ -445,7 +445,7 @@ class CoachService:
     async def build_context(self, authorization: Optional[str]) -> str:
         try:
             u = await self.auth.get_current_user(authorization)
-            uid = u["user_id"]
+            uid = u["owner_id"]
             cur = u.get("currency", "USD")
             wallets = await self.wallets.find_by_user(uid)
             debts = await self.debts.find_by_user(uid)

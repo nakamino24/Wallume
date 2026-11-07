@@ -1,4 +1,4 @@
-"""Transaction list query building: search, filters, pagination.
+﻿"""Transaction list query building: search, filters, pagination.
 
 The repository composes several independent clauses that each need their own
 `$or` (wallet membership and text search). A naive `q["$or"] = ...` assignment
@@ -146,7 +146,7 @@ def test_list_endpoint_clamps_limit_and_returns_total(monkeypatch):
     find = AsyncMock(return_value=[])
     count = AsyncMock(return_value=0)
     monkeypatch.setattr(api_module.auth_service, "get_current_user",
-                        AsyncMock(return_value={"user_id": "user-1", "currency": "USD"}))
+                        AsyncMock(return_value={"user_id": "user-1", "owner_id": "user-1", "currency": "USD"}))
     monkeypatch.setattr(api_module.txs, "find_by_user", find)
     monkeypatch.setattr(api_module.txs, "count_by_user", count)
     monkeypatch.setattr(api_module.wallets, "find_by_user", AsyncMock(return_value=[]))

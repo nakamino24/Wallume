@@ -1,4 +1,4 @@
-"""Validation guards for the budget/goal/asset edit endpoints.
+﻿"""Validation guards for the budget/goal/asset edit endpoints.
 
 These three resources were create-and-delete only, so a wrong amount meant
 deleting the record and re-creating it. The PATCH handlers added here must
@@ -20,7 +20,7 @@ from app.api import resources as api
 def _auth(monkeypatch):
     monkeypatch.setattr(
         api.auth_service, "get_current_user",
-        AsyncMock(return_value={"user_id": "user-1", "currency": "USD"}),
+        AsyncMock(return_value={"user_id": "user-1", "owner_id": "user-1", "currency": "USD"}),
     )
 
 

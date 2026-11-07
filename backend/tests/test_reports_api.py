@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 from unittest.mock import AsyncMock, patch
 
 from fastapi import HTTPException
@@ -15,7 +15,7 @@ class ReportSummaryApiTests(unittest.IsolatedAsyncioTestCase):
             "net_total": -100000.0,
             "expense_by_category": [{"category": "Food", "amount": 100000.0}],
         })
-        with patch.object(reports.auth_service, "get_current_user", AsyncMock(return_value={"user_id": "user-a"})) as current_user, \
+        with patch.object(reports.auth_service, "get_current_user", AsyncMock(return_value={"user_id": "user-a", "owner_id": "user-a"})) as current_user, \
              patch.object(reports.txs, "aggregate_report_summary", aggregate):
             response = await reports.report_summary("2026-08-01", "2026-08-24", "Bearer token")
 
@@ -44,7 +44,7 @@ class ReportSummaryApiTests(unittest.IsolatedAsyncioTestCase):
             "net_total": 0.0,
             "expense_by_category": [],
         })
-        with patch.object(reports.auth_service, "get_current_user", AsyncMock(return_value={"user_id": "user-a"})), \
+        with patch.object(reports.auth_service, "get_current_user", AsyncMock(return_value={"user_id": "user-a", "owner_id": "user-a"})), \
              patch.object(reports.txs, "aggregate_report_summary", aggregate):
             await reports.report_summary("2026-08-24", "2026-08-24", "Bearer token")
 
