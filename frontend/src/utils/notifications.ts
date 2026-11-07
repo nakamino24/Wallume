@@ -149,14 +149,17 @@ export async function syncNotifications(opts: {
   }
 }
 
-export async function showLocalNotification(title: string, body: string, data?: Record<string, any>) {
+/** Returns whether the notification was actually scheduled. */
+export async function showLocalNotification(title: string, body: string, data?: Record<string, any>): Promise<boolean> {
   try {
     await Notifications.scheduleNotificationAsync({
       content: { title, body, data: data ?? {} },
       trigger: null,
     });
+    return true;
   } catch {
     // Ignore: notifications are best-effort.
+    return false;
   }
 }
 
@@ -165,5 +168,131 @@ export async function cancelAllNotifications() {
     await Notifications.cancelAllScheduledNotificationsAsync();
   } catch {
     // Ignore: notifications are best-effort.
+  }
+}
+
+// --- Budget threshold alerts ---------------------------------------------
+
+const BUDGET_ALERT_KEY = 'mf.notif.budgetAlerted';
+
+export type BudgetUsage = {
+  id: string;
+  category: string;
+  spent: number;
+  amount: number;
+  period?: string;
+};
+
+export type BudgetAlert = {
+  budgetId: string;
+  category: string;
+  threshold: 80 | 100;
+  spent: number;
+  amount: number;
+};
+
+type AlertedMap = Record<string, string>;
+
+/**
+ * Which thresholds have already fired.
+ *
+ * Keyed by budget + threshold and stamped with the budget's period window, so
+ * the alert re-arms when the period rolls over. Without the stamp a budget
+ * would stay silent forever after crossing 100% once.
+ */
+async function readAlerted(): Promise<AlertedMap> {
+  // The storage layer only accepts scalars, so this is JSON in a string —
+  // the same convention as merchant-engine's mapping store.
+  const raw = await storage.getItem<string>(BUDGET_ALERT_KEY, '{}');
+  if (typeof raw !== 'string') return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? (parsed as AlertedMap) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function evaluateBudgetAlerts(budgets: BudgetUsage[]): BudgetAlert[] {
+  const alerts: BudgetAlert[] = [];
+  for (const budget of budgets) {
+    const amount = Number(budget.amount) || 0;
+    const spent = Number(budget.spent) || 0;
+    if (amount <= 0) continue;
+    const pct = (spent / amount) * 100;
+    if (pct >= 100) {
+      alerts.push({ budgetId: budget.id, category: budget.category, threshold: 100, spent, amount });
+    } else if (pct >= 80) {
+      alerts.push({ budgetId: budget.id, category: budget.category, threshold: 80, spent, amount });
+    }
+  }
+  return alerts;
+}
+
+/**
+ * Fire a local notification for budgets that newly crossed 80% or 100%.
+ * Returns the alerts that fired so the caller can also surface them in-app.
+ */
+export async function checkBudgetAlerts(opts: {
+  budgets: BudgetUsage[];
+  settings: NotifSettings;
+  t: (key: string, params?: Record<string, string | number>) => string;
+  formatMoney: (amount: number) => string;
+  periodKey?: string;
+}): Promise<BudgetAlert[]> {
+  const { budgets, settings, t, formatMoney, periodKey = '' } = opts;
+  if (!settings.budgetAlert) return [];
+
+  try {
+    const alerted = await readAlerted();
+    const fired: BudgetAlert[] = [];
+    const next: AlertedMap = { ...alerted };
+
+    for (const alert of evaluateBudgetAlerts(budgets)) {
+      const key = `${alert.budgetId}:${alert.threshold}`;
+      // The stored value is the period stamp this threshold last fired in.
+      const stamp = periodKey || String(new Date().getMonth() + 1);
+      if (next[key] === stamp) continue;
+
+      const over = alert.threshold >= 100;
+      const delivered = await showLocalNotification(
+        t(over ? 'notif.budget.over.title' : 'notif.budget.near.title'),
+        t(over ? 'notif.budget.over.body' : 'notif.budget.near.body', {
+          category: alert.category,
+          spent: formatMoney(alert.spent),
+          amount: formatMoney(alert.amount),
+        }),
+        { type: 'budget', budgetId: alert.budgetId },
+      );
+      // Only mark as alerted once it was actually delivered; otherwise a
+      // denied-then-granted permission would silence the alert forever.
+      if (delivered) next[key] = stamp;
+      // But always surface it in-app: the OS notification may be blocked or
+      // unnoticeable even when the user asked for budget alerts.
+      fired.push(alert);
+    }
+
+    // Drop entries for budgets that no longer exist so the map cannot grow
+    // unbounded as budgets are deleted.
+    const live = new Set(budgets.map((b) => b.id));
+    for (const key of Object.keys(next)) {
+      if (!live.has(key.split(':')[0])) delete next[key];
+    }
+
+    // Persist only when the state actually changed. Writing an identical map
+    // back on every check would be a pointless disk round trip.
+    const changed = JSON.stringify(next) !== JSON.stringify(alerted);
+    if (changed) await storage.setItem(BUDGET_ALERT_KEY, JSON.stringify(next));
+    return fired;
+  } catch {
+    return [];
+  }
+}
+
+export async function resetBudgetAlertState(): Promise<void> {
+  try {
+    await storage.removeItem(BUDGET_ALERT_KEY);
+  } catch {
+    // Ignore: best-effort.
   }
 }
