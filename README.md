@@ -26,9 +26,21 @@ Wallume/
 
 ## Versions
 
-- **Backend:** `v1.0.5c` (`backend/app/main.py`)
-- **Frontend:** `v1.0.6c` (`frontend/app.json`)
-- **v1.0.7:** HELD — not created, no tag/release/production deploy. Current work targets **EAS Android PREVIEW** only.
+Single source of truth, enforced by `backend/tests/test_version_consistency.py`:
+
+- **Backend:** `backend/app/version.py` → `__version__`
+- **Frontend:** `frontend/app.json` → `expo.version` (mirrored in `package.json`)
+- Both are currently **`1.0.7a`** — the held `1.0.7` line, shipped as a preview.
+
+The health endpoint reports build identity, so a deploy can be verified:
+
+```bash
+curl -s https://<backend>/api/ | jq .data
+# { "version": "1.0.7a", "commit": "bae3569", "branch": "main", "environment": "production" }
+```
+
+If `commit` still shows an old SHA after a push, the deploy did not land —
+that is the signal, rather than guessing from a version string.
 
 ## Quick Start
 
@@ -54,14 +66,14 @@ npx tsc --noEmit
 
 ## Release Status
 
-- Frontend `1.0.6c` and backend `1.0.5c` are the current version sources of truth.
-- `v1.0.7` remains held and has not been created.
+- Backend `backend/app/version.py` and frontend `app.json` are the version sources of truth; they must match (a test enforces it).
+- Current line is `1.0.7a` — a preview iteration, not a tagged release. No git tags exist.
 - Historical preview APKs are not advertised as current builds. Create and distribute a new internal preview only after the validation gate passes.
-- CI performs validation only; it does not deploy to EAS or Railway.
+- CI performs validation only; it does not deploy to EAS or Railway. Railway deploys automatically from `main`.
 
 ## Documentation
 
-- `CHANGELOG.md` — full release notes (1.0.6c)
+- `CHANGELOG.md` — full release notes
 - `ENGINEERING_BIBLE.md` — principles, architecture, standards
 - `docs/` — additional product docs
 

@@ -12,6 +12,7 @@ from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.telemetry import init_sentry
 from app.database.mongo import get_database, create_indexes, close_database
+from app.version import __version__, build_info
 from app.middleware.logging import RequestLoggingMiddleware
 from app.api.router import register_routers
 from app.utils.money import register_decimal_encoder
@@ -38,7 +39,7 @@ def create_app() -> FastAPI:
     init_sentry(settings.sentry_dsn, settings.environment, settings.sentry_release or None)
     app = FastAPI(
         title="Wallume API",
-        version="1.0.5c",
+        version=__version__,
         docs_url="/docs",
         lifespan=lifespan,
     )
@@ -60,7 +61,13 @@ def create_app() -> FastAPI:
 
     @app.get("/api/")
     async def root():
-        return {"success": True, "data": {"app": "Wallume", "status": "ok", "version": "1.0.5c"}}
+        # Includes commit/branch/environment so a deploy can be verified by
+        # asking the running instance what it is, instead of inferring from a
+        # version string that used to go stale.
+        return {
+            "success": True,
+            "data": {"app": "Wallume", "status": "ok", **build_info()},
+        }
 
     return app
 
