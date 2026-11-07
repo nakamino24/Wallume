@@ -8,7 +8,7 @@ import { Body, Label, Button, Input, Card } from '@/src/components/ui';
 import { useI18n } from '@/src/lib/I18nProvider';
 import { api } from '@/src/api/client';
 
-type Member = { user_id: string; role: string; joined_at?: string };
+type Member = { user_id: string; name?: string; role: string; joined_at?: string };
 type Household = {
   id: string;
   name: string;
@@ -73,6 +73,20 @@ export function HouseholdSection({ currentUserId }: { currentUserId?: string }) 
       { text: t('household.leave'), style: 'destructive', onPress: () => act(() => api.leaveHousehold()) },
     ]);
   };
+
+  const confirmTransfer = (member: Member) => {
+    Alert.alert(t('household.transferTitle'), t('household.transferMessage', { name: memberDisplayName(member) }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('household.transfer'),
+        style: 'default',
+        onPress: () => act(() => api.transferHouseholdOwnership(member.user_id)),
+      },
+    ]);
+  };
+
+  const memberDisplayName = (member: Member) =>
+    member.user_id === currentUserId ? t('household.you') : (member.name || t('household.untitled'));
 
   const confirmRemove = (member: Member) => {
     Alert.alert(t('household.removeTitle'), t('household.removeMessage'), [
@@ -157,20 +171,31 @@ export function HouseholdSection({ currentUserId }: { currentUserId?: string }) 
               <Body style={{ fontFamily: font.textBold, fontSize: 13 }}>{t('household.members')}</Body>
               {household.members.map((member) => (
                 <View key={member.user_id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}>
-                  <Body style={{ fontSize: 13 }}>
-                    {member.user_id === currentUserId ? t('household.you') : member.user_id}
+                  <Body style={{ fontSize: 13 }} numberOfLines={1}>
+                    {memberDisplayName(member)}
                     {member.role === 'owner' ? ` · ${t('household.owner')}` : ''}
                   </Body>
                   {isOwner && member.user_id !== currentUserId && (
-                    <TouchableOpacity
-                      testID={`household-remove-${member.user_id}`}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('household.remove')}
-                      hitSlop={8}
-                      onPress={() => confirmRemove(member)}
-                    >
-                      <Ionicons name="close-circle-outline" size={18} color={colors.muted} />
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                      <TouchableOpacity
+                        testID={`household-transfer-${member.user_id}`}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('household.transfer')}
+                        hitSlop={8}
+                        onPress={() => confirmTransfer(member)}
+                      >
+                        <Ionicons name="key-outline" size={18} color={colors.muted} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        testID={`household-remove-${member.user_id}`}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('household.remove')}
+                        hitSlop={8}
+                        onPress={() => confirmRemove(member)}
+                      >
+                        <Ionicons name="close-circle-outline" size={18} color={colors.muted} />
+                      </TouchableOpacity>
+                    </View>
                   )}
                 </View>
               ))}
