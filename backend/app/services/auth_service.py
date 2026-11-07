@@ -130,8 +130,13 @@ class AuthService:
             "wallets", "transactions", "budgets", "goals", "plans",
             "debts", "investments", "assets", "chat_messages",
             "recurring", "user_sessions", "categories",
+            # Per-user auxiliary records: without these the delete leaves
+            # replayable idempotency results and reset challenges behind.
+            "idempotency", "password_reset_challenges",
         ]
         db: AsyncIOMotorDatabase = await get_database()
         for coll in collections:
+            # Hard delete: an account deletion must not leave soft-deleted
+            # shells behind, and these collections are purge-on-delete.
             await db[coll].delete_many({"user_id": uid})
-        await self.users.delete_account(uid)
+        await self.users.hard_delete(uid)

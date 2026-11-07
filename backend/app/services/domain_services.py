@@ -99,8 +99,10 @@ class AnalyticsService:
         six_months_ago = month_start - timedelta(days=180)
 
         pipeline = [
-            # Compare date-prefix so both full-ISO and date-only stored dates match.
-            {"$match": {"user_id": uid, "$expr": {"$gte": [{"$substr": ["$date", 0, 10]}, six_months_ago.strftime("%Y-%m-%d")]}}},
+            # Aggregations bypass BaseRepository's soft-delete filter: deleted
+            # transactions would otherwise keep inflating income, expense and
+            # the category breakdown.
+            {"$match": {"user_id": uid, "deleted_at": None, "$expr": {"$gte": [{"$substr": ["$date", 0, 10]}, six_months_ago.strftime("%Y-%m-%d")]}}},
             {"$addFields": {
                 "month_key": {"$substr": ["$date", 0, 7]},
                 "month_label": {"$substr": ["$date", 5, 3]},
@@ -225,6 +227,7 @@ class AnalyticsService:
             {"$match": {
                 "user_id": uid,
                 "type": "expense",
+                "deleted_at": None,
                 "$expr": {"$gte": [{"$substr": ["$date", 0, 10]}, month_key]},
             }},
             # Normalize missing categories so no single giant "null" bucket appears.
@@ -325,9 +328,18 @@ class CoachService:
                     float(w.get("balance", 0.0)), w.get("currency", cur), cur
                 )
             debt_total = sum(float(d.get("remaining", 0.0)) for d in debts)
-            month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+            month_key = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime("%Y-%m-%d")
             inc_exp = await self.transactions.aggregate([
-                {"$match": {"user_id": uid, "date": {"$gte": month_start}}},
+                # `date` is stored as a canonical YYYY-MM-DD string, so compare
+                # against the same shape. Comparing it to an .isoformat()
+                # value excluded the 1st of the month ("2026-08-01" sorts
+                # before "2026-08-01T00:00:00+00:00"). Also exclude soft-deleted
+                # rows, which aggregations do not filter for us.
+                {"$match": {
+                    "user_id": uid,
+                    "deleted_at": None,
+                    "$expr": {"$gte": [{"$substr": ["$date", 0, 10]}, month_key]},
+                }},
                 {"$group": {"_id": "$type", "total": {"$sum": {"$toDouble": "$amount"}}}},
             ])
             income = next((r["total"] for r in inc_exp if r["_id"] == "income"), 0.0)

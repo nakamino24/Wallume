@@ -33,6 +33,10 @@ async def list_budgets(authorization: Optional[str] = Header(None)):
         {"$match": {
             "user_id": u["user_id"],
             "type": "expense",
+            # Aggregations bypass BaseRepository's soft-delete filter, so
+            # deleted transactions must be excluded explicitly or the budget
+            # "spent" total keeps counting money the user removed.
+            "deleted_at": None,
             # Compare the date-prefix (YYYY-MM-DD) so both full-ISO and
             # date-only stored transaction dates are matched correctly.
             "$expr": {"$gte": [{"$substr": ["$date", 0, 10]}, month_key]},
