@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ScrollView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
@@ -9,7 +10,8 @@ import { spacing, radius, font, currencySymbol } from '@/src/theme/tokens';
 import { Button, Body, Label, Chip, Input } from '@/src/components/ui';
 import { useUserCategories } from '@/src/hooks/use-user-categories';
 import { useWallets } from '@/src/hooks/use-wallets';
-import { useTransactions } from '@/src/hooks/use-transactions';
+import { useTransactions, invalidateTransactionsCache } from '@/src/hooks/use-transactions';
+import { api } from '@/src/api/client';
 import { DateField } from '@/src/components/DateField';
 import { CategorySelector } from '@/src/components/CategorySelector';
 import { SplitEditor } from '@/src/components/SplitEditor';
@@ -41,6 +43,22 @@ export default function NewTransaction() {
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const [splits, setSplits] = useState<SplitPart[] | null>(null);
+  const [pickedReceipt, setPickedReceipt] = useState<{ uri: string; name: string; type: string } | null>(null);
+
+  const pickReceipt = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { setErr(t('receipt.permissionDenied')); return; }
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'], quality: 0.8, allowsMultipleSelection: false,
+    });
+    if (picked.canceled || !picked.assets?.[0]) return;
+    const asset = picked.assets[0];
+    setPickedReceipt({
+      uri: asset.uri,
+      name: asset.fileName || 'receipt.jpg',
+      type: asset.mimeType || 'image/jpeg',
+    });
+  };
 
   // Auto-select first wallets when cache populates
   useEffect(() => {
@@ -118,6 +136,25 @@ export default function NewTransaction() {
         ? { splits: splits.map((part) => ({ category: part.category, amount: parseFloat(part.amount) || 0 })) }
         : {}),
     };
+
+    // A receipt needs the real transaction id, which only exists after the
+    // server responds — so receipt-attached creates bypass the optimistic
+    // path and wait. Everyone else keeps the instant save.
+    if (pickedReceipt) {
+      try {
+        const result: any = await api.createTransaction(optimisticTx);
+        const realId = result?.transaction?.id;
+        if (!realId) throw new Error(t('receipt.uploadFailed'));
+        await api.uploadReceipt(realId, pickedReceipt);
+        invalidateTransactionsCache();
+        router.back();
+      } catch (cause: any) {
+        setErr(cause?.message || t('common.error'));
+        setLoading(false);
+      }
+      return;
+    }
+
     create(optimisticTx);
 
     // Learn the merchant → category association so future entries with the
@@ -267,6 +304,38 @@ export default function NewTransaction() {
             )}
 
             <Input testID="tx-note" label={t('transaction.note.label')} value={note} onChangeText={setNote} placeholder={t('transaction.note.placeholder')} />
+
+            {/* Receipt (create): attached locally now, uploaded once the
+                transaction has a real id. */}
+            <View style={{ alignSelf: 'stretch', marginBottom: spacing.lg }}>
+              <TouchableOpacity
+                testID="tx-receipt-pick"
+                accessibilityRole="button"
+                accessibilityLabel={pickedReceipt ? t('receipt.replace') : t('receipt.add')}
+                onPress={pickReceipt}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+                  padding: spacing.md, borderRadius: radius.md,
+                  borderWidth: 1, borderColor: pickedReceipt ? colors.brandPrimary : colors.border,
+                  backgroundColor: pickedReceipt ? colors.brandPrimary + '11' : colors.surface2,
+                }}
+              >
+                <Ionicons
+                  name={pickedReceipt ? 'checkmark-circle' : 'camera-outline'}
+                  size={18}
+                  color={pickedReceipt ? colors.brandPrimary : colors.muted}
+                />
+                <Body style={{ flex: 1, fontSize: 13, color: pickedReceipt ? colors.brandPrimary : colors.onSurface2 }}>
+                  {pickedReceipt ? t('receipt.attached') : t('receipt.add')}
+                </Body>
+                {pickedReceipt && (
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('common.dismiss')} hitSlop={8}
+                    onPress={() => setPickedReceipt(null)}>
+                    <Ionicons name="close" size={16} color={colors.muted} />
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            </View>
 
             {!!err && <Body style={{ color: colors.error, marginBottom: spacing.md }}>{err}</Body>}
 
