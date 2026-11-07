@@ -122,8 +122,29 @@ export default function Transactions() {
           </View>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: spacing.sm, paddingVertical: spacing.md }}>
+        {/*
+          Layout invariants (regression: chips stretched into giant vertical
+          capsules when the filter state or loading state changed):
+
+          - `flexGrow: 0` — RN's ScrollView applies `flexGrow: 1` for BOTH
+            orientations (ScrollView.js baseHorizontal), so a horizontal
+            ScrollView inside a column parent absorbs all leftover vertical
+            space. The toolbar must size to its content.
+          - `flexShrink: 0` — it must not be squeezed when the transaction list
+            below it grows.
+          - `alignItems: 'center'` on the content container — flexbox defaults
+            to `stretch` on the cross axis, which is vertical in a row, so each
+            Chip was stretched to the flexible container's full height. This is
+            what produced the tall capsules.
+
+          Every other horizontal chip row in the app already carries these
+          constraints; this screen was the outlier.
+        */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ flexGrow: 0, flexShrink: 0 }}
+          contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xl, gap: spacing.sm, paddingVertical: spacing.md }}>
           {TYPES.map((f) => (
             <Chip key={f} testID={`tx-filter-${f}`} label={f === 'all' ? t('common.all') ?? 'All' : t(`transactions.type.${f}`)} active={filter === f} onPress={() => setFilter(f)} />
           ))}

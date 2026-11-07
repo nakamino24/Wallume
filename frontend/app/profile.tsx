@@ -146,7 +146,9 @@ export default function Profile() {
 
           <Card>
             <Label>{t('profile.currency')}</Label>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              style={{ flexGrow: 0, flexShrink: 0 }}
+              contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md }}>
               {CURRENCIES.map((c) => (
                 <Chip
                   key={c.code}
