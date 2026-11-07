@@ -15,6 +15,7 @@ def test_transaction_list_preserves_raw_amount_and_adds_home_currency_value(monk
         "find_by_user",
         AsyncMock(return_value=[{"id": "tx-1", "wallet_id": "wallet-usd", "amount": 20_000.0}]),
     )
+    monkeypatch.setattr(transactions.txs, "count_by_user", AsyncMock(return_value=1))
     monkeypatch.setattr(
         transactions.wallets,
         "find_by_user",

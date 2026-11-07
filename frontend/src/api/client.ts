@@ -143,6 +143,18 @@ export const api = {
     const qs = params.toString();
     return req(qs ? `/transactions?${qs}` : '/transactions');
   },
+  searchTransactions: (query: {
+    type?: string; limit?: number; offset?: number;
+    wallet_id?: string; category?: string; search?: string;
+    from_date?: string; to_date?: string;
+  }) => {
+    const params = new URLSearchParams();
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') params.append(key, String(value));
+    });
+    const qs = params.toString();
+    return req(qs ? `/transactions?${qs}` : '/transactions');
+  },
   createTransaction: (body: any, mutationId = generateMutationId()) => {
     const mid = mutationId;
     const b = { ...body, client_mutation_id: body.client_mutation_id || mid };

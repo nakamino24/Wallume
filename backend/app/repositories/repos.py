@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Optional
 from bson import Decimal128
 from pymongo import ReturnDocument
@@ -212,12 +213,26 @@ class TransactionRepository(BaseRepository):
 
     async def find_by_user(self, user_id: str, type_filter: Optional[str] = None,
                            wallet_id: Optional[str] = None, limit: int = 100,
-                           from_date: Optional[str] = None, to_date: Optional[str] = None) -> list[dict]:
-        q = self._active_filter({"user_id": user_id})
+                           from_date: Optional[str] = None, to_date: Optional[str] = None,
+                           search: Optional[str] = None, category: Optional[str] = None,
+                           offset: int = 0) -> list[dict]:
+        clauses: list[dict] = [self._active_filter({"user_id": user_id})]
         if type_filter in {"income", "expense", "transfer"}:
-            q["type"] = type_filter
+            clauses.append({"type": type_filter})
         if wallet_id:
-            q["$or"] = [{"wallet_id": wallet_id}, {"to_wallet_id": wallet_id}]
+            clauses.append({"$or": [{"wallet_id": wallet_id}, {"to_wallet_id": wallet_id}]})
+        if category:
+            clauses.append({"category": category})
+        if search and search.strip():
+            # Case-insensitive substring match across the free-text fields a
+            # user would actually search by. The pattern is escaped so a query
+            # like "a+b" or "(" can't become a malformed/expensive regex.
+            pattern = re.escape(search.strip())
+            clauses.append({"$or": [
+                {"merchant": {"$regex": pattern, "$options": "i"}},
+                {"category": {"$regex": pattern, "$options": "i"}},
+                {"note": {"$regex": pattern, "$options": "i"}},
+            ]})
         if from_date or to_date:
             date_q: dict[str, str] = {}
             if from_date:
@@ -235,12 +250,51 @@ class TransactionRepository(BaseRepository):
                     date_q["$lt"] = next_day
                 except ValueError:
                     date_q["$lte"] = to_date
-            q["date"] = date_q
+            clauses.append({"date": date_q})
+        # $and keeps independently-built $or clauses from overwriting each
+        # other (wallet filter + text search both need $or).
+        q = clauses[0] if len(clauses) == 1 else {"$and": clauses}
         cursor = (await self._collection()).find(q, {"_id": 0}).sort([
             ("date", -1), ("created_at", -1), ("id", -1)
-        ]).limit(limit)
+        ])
+        if offset > 0:
+            cursor = cursor.skip(offset)
+        cursor = cursor.limit(limit)
         docs = await cursor.to_list(limit)
         return self._compat_out(docs)
+
+    async def count_by_user(self, user_id: str, type_filter: Optional[str] = None,
+                            wallet_id: Optional[str] = None,
+                            from_date: Optional[str] = None, to_date: Optional[str] = None,
+                            search: Optional[str] = None, category: Optional[str] = None) -> int:
+        """Total matching rows, so clients can tell whether more pages exist."""
+        clauses: list[dict] = [self._active_filter({"user_id": user_id})]
+        if type_filter in {"income", "expense", "transfer"}:
+            clauses.append({"type": type_filter})
+        if wallet_id:
+            clauses.append({"$or": [{"wallet_id": wallet_id}, {"to_wallet_id": wallet_id}]})
+        if category:
+            clauses.append({"category": category})
+        if search and search.strip():
+            pattern = re.escape(search.strip())
+            clauses.append({"$or": [
+                {"merchant": {"$regex": pattern, "$options": "i"}},
+                {"category": {"$regex": pattern, "$options": "i"}},
+                {"note": {"$regex": pattern, "$options": "i"}},
+            ]})
+        if from_date or to_date:
+            date_q: dict[str, str] = {}
+            if from_date:
+                date_q["$gte"] = from_date
+            if to_date:
+                try:
+                    from datetime import datetime, timedelta
+                    date_q["$lt"] = (datetime.fromisoformat(to_date) + timedelta(days=1)).strftime("%Y-%m-%d")
+                except ValueError:
+                    date_q["$lte"] = to_date
+            clauses.append({"date": date_q})
+        q = clauses[0] if len(clauses) == 1 else {"$and": clauses}
+        return await (await self._collection()).count_documents(q)
 
     async def aggregate_report_summary(self, user_id: str, from_date: str, to_date_exclusive: str) -> dict:
         """Return complete cash-flow aggregates for one user's date range.

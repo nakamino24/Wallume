@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,23 +7,52 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { spacing, font, radius } from '@/src/theme/tokens';
-import { Screen, H2, Body, Chip, EmptyState } from '@/src/components/ui';
+import { Screen, H2, Body, Chip, EmptyState, Button } from '@/src/components/ui';
 import { ErrorBanner } from '@/src/components/ErrorBanner';
 import { useTransactions } from '@/src/hooks/use-transactions';
+import { useTransactionQuery } from '@/src/hooks/use-transaction-query';
+import { useWallets } from '@/src/hooks/use-wallets';
 import { groupTransactionsByDate, TransactionDayGroup } from '@/src/components/transactions/TransactionDayGroup';
 import { useI18n } from '@/src/lib/I18nProvider';
+
+const TYPES = ['all', 'income', 'expense', 'transfer'] as const;
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function Transactions() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
   const { t } = useI18n();
-  const { transactions: txs, loading, error, failed, refresh, retry, dismissFailed, remove: removeTransaction } = useTransactions();
-  const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
+  const { transactions: recent, failed, retry, dismissFailed, remove: removeTransaction } = useTransactions();
+  const { wallets } = useWallets();
 
-  useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+  const [filter, setFilter] = useState<typeof TYPES[number]>('all');
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [walletId, setWalletId] = useState('');
 
-  const shown = filter === 'all' ? txs : txs.filter((t) => t.type === filter);
+  // Debounce keystrokes so a query fires after typing settles, not per letter.
+  useEffect(() => {
+    const handle = setTimeout(() => setSearch(searchInput), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [searchInput]);
+
+  const isFiltered = filter !== 'all' || !!search.trim() || !!walletId;
+
+  const query = useTransactionQuery(
+    { type: filter, search, wallet_id: walletId },
+    true,
+  );
+  const { transactions: fetched, loading, loadingMore, error, hasMore, reload, loadMore } = query;
+
+  // Unfiltered view keeps using the optimistic store so a just-created
+  // transaction appears instantly; filtered views must be server-driven.
+  const shown = isFiltered ? fetched : recent;
+
+  useFocusEffect(useCallback(() => {
+    if (isFiltered) { void reload(); }
+  }, [isFiltered, reload]));
+
   const dayGroups = groupTransactionsByDate(shown);
   const cur = user?.currency || 'USD';
 
@@ -34,6 +63,13 @@ export default function Transactions() {
         removeTransaction(tx.id);
       } },
     ]);
+  };
+
+  const clearFilters = () => {
+    setFilter('all');
+    setSearchInput('');
+    setSearch('');
+    setWalletId('');
   };
 
   return (
@@ -48,11 +84,49 @@ export default function Transactions() {
           </TouchableOpacity>
         </View>
 
+        <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+            backgroundColor: colors.surface3, borderRadius: radius.md, paddingHorizontal: spacing.md,
+          }}>
+            <Ionicons name="search" size={16} color={colors.onSurface3} />
+            <TextInput
+              testID="tx-search"
+              accessibilityLabel={t('transactions.search')}
+              placeholder={t('transactions.search')}
+              placeholderTextColor={colors.onSurface3}
+              value={searchInput}
+              onChangeText={setSearchInput}
+              style={{ flex: 1, paddingVertical: 10, color: colors.onSurface, fontFamily: font.text, fontSize: font.sizes.base }}
+            />
+            {searchInput.length > 0 && (
+              <TouchableOpacity testID="tx-search-clear" accessibilityRole="button" accessibilityLabel={t('transactions.clearFilters')} hitSlop={8} onPress={() => { setSearchInput(''); setSearch(''); }}>
+                <Ionicons name="close-circle" size={16} color={colors.onSurface3} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: spacing.sm, paddingVertical: spacing.md }}>
-          {(['all', 'income', 'expense', 'transfer'] as const).map((f) => (
+          {TYPES.map((f) => (
             <Chip key={f} testID={`tx-filter-${f}`} label={f === 'all' ? t('common.all') ?? 'All' : t(`transactions.type.${f}`)} active={filter === f} onPress={() => setFilter(f)} />
           ))}
+          {wallets.length > 0 && (
+            <Chip
+              testID="tx-filter-wallet-toggle"
+              label={walletId ? (wallets.find((w: any) => w.id === walletId)?.name || t('transaction.wallet')) : t('transaction.wallet')}
+              active={!!walletId}
+              onPress={() => {
+                if (!walletId) { setWalletId(wallets[0]?.id || ''); return; }
+                const idx = wallets.findIndex((w: any) => w.id === walletId);
+                setWalletId(idx === wallets.length - 1 ? '' : wallets[idx + 1].id);
+              }}
+            />
+          )}
+          {isFiltered && (
+            <Chip testID="tx-clear-filters" label={t('transactions.clearFilters')} active={false} onPress={clearFilters} />
+          )}
         </ScrollView>
 
         <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: 60, gap: spacing.sm }}>
@@ -70,13 +144,34 @@ export default function Transactions() {
           ) : error ? (
             <View style={{ gap: spacing.md, alignItems: 'center', paddingVertical: spacing.xl }}>
               <Body style={{ color: colors.error, textAlign: 'center' }}>{error}</Body>
-              <TouchableOpacity onPress={refresh} style={{ paddingVertical: 10, paddingHorizontal: spacing.lg, backgroundColor: colors.brandPrimary, borderRadius: 8 }}>
+              <TouchableOpacity onPress={reload} style={{ paddingVertical: 10, paddingHorizontal: spacing.lg, backgroundColor: colors.brandPrimary, borderRadius: 8 }}>
                 <Body style={{ color: colors.onBrand, fontFamily: font.textBold }}>{t('common.retry')}</Body>
               </TouchableOpacity>
             </View>
           ) : shown.length === 0 ? (
-            <EmptyState testID="tx-empty" title={t('transactions.empty.title')} subtitle={t('transactions.empty.subtitle')} actionLabel={t('transactions.empty.action')} onAction={() => router.push('/transaction/new')} />
-          ) : dayGroups.map((group) => <TransactionDayGroup key={group.key} group={group} currency={cur} onRemove={remove} onOpen={(t) => router.push({ pathname: '/transaction/[id]', params: { id: t.id, wallet_id: t.wallet_id, to_wallet_id: t.to_wallet_id || '', type: t.type, amount: String(t.amount), converted_amount: String(t.converted_amount ?? t.amount), category: t.category, note: t.note || '', date: (t.date || '').split('T')[0] } })} />)}
+            isFiltered ? (
+              <EmptyState
+                testID="tx-empty-filtered"
+                title={t('transactions.noResults')}
+                subtitle={t('transactions.noResults.subtitle')}
+                actionLabel={t('transactions.clearFilters')}
+                onAction={clearFilters}
+              />
+            ) : (
+              <EmptyState testID="tx-empty" title={t('transactions.empty.title')} subtitle={t('transactions.empty.subtitle')} actionLabel={t('transactions.empty.action')} onAction={() => router.push('/transaction/new')} />
+            )
+          ) : dayGroups.map((group) => <TransactionDayGroup key={group.key} group={group} currency={cur} onRemove={remove} onOpen={(tx) => router.push({ pathname: '/transaction/[id]', params: { id: tx.id, wallet_id: tx.wallet_id, to_wallet_id: tx.to_wallet_id || '', type: tx.type, amount: String(tx.amount), converted_amount: String(tx.converted_amount ?? tx.amount), category: tx.category, merchant: tx.merchant || '', note: tx.note || '', date: (tx.date || '').split('T')[0] } })} />)}
+
+          {isFiltered && hasMore && (
+            <Button
+              testID="tx-load-more"
+              variant="secondary"
+              label={loadingMore ? t('transactions.loadingMore') : t('transactions.loadMore')}
+              loading={loadingMore}
+              onPress={loadMore}
+              style={{ marginTop: spacing.md }}
+            />
+          )}
         </ScrollView>
       </SafeAreaView>
     </Screen>

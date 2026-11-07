@@ -145,13 +145,26 @@ async def _apply_effect(user_id: str, wallet_id: str, to_wallet_id: Optional[str
 async def list_transactions(
     authorization: Optional[str] = Header(None),
     limit: int = 100,
+    offset: int = 0,
     type: Optional[str] = None,
     wallet_id: Optional[str] = None,
+    category: Optional[str] = None,
+    search: Optional[str] = None,
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
 ):
     u = await auth_service.get_current_user(authorization)
-    items = await txs.find_by_user(u["user_id"], type, wallet_id, limit, from_date, to_date)
+    # Clamp rather than reject: a malformed limit should degrade to a sane
+    # page size, not 500 the whole list screen.
+    limit = max(1, min(limit, 500))
+    offset = max(0, offset)
+    items = await txs.find_by_user(
+        u["user_id"], type, wallet_id, limit, from_date, to_date,
+        search=search, category=category, offset=offset,
+    )
+    total = await txs.count_by_user(
+        u["user_id"], type, wallet_id, from_date, to_date, search=search, category=category,
+    )
     home_currency = u.get("currency", "USD")
     wallet_items = await wallets.find_by_user(u["user_id"])
     wallet_currencies = {wallet["id"]: wallet.get("currency") or home_currency for wallet in wallet_items}
@@ -166,7 +179,7 @@ async def list_transactions(
 
     if items:
         await asyncio.gather(*(_convert_one(item) for item in items))
-    return {"success": True, "data": {"transactions": items}}
+    return {"success": True, "data": {"transactions": items, "total": total, "limit": limit, "offset": offset}}
 
 
 @router.post("")
