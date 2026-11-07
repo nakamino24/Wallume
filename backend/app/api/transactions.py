@@ -588,6 +588,14 @@ async def delete_transaction(tx_id: str, authorization: Optional[str] = Header(N
 
     try:
         await run_in_txn(txn)
+        # Receipts live in GridFS, outside the Mongo session, so they are
+        # cleaned up after commit. Leaving them would orphan blobs forever
+        # while the owning transaction no longer exists.
+        try:
+            from app.services.receipt_service import delete_receipts_for_transaction
+            await delete_receipts_for_transaction(u["user_id"], tx_id)
+        except Exception:
+            pass
     except DuplicateKeyError:
         found, result = await _find_idempotency_result(db, u["user_id"], x_client_mutation_id, fingerprint)
         if found:

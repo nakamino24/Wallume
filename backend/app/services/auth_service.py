@@ -132,8 +132,16 @@ class AuthService:
             "recurring", "user_sessions", "categories",
             # Per-user auxiliary records: without these the delete leaves
             # replayable idempotency results and reset challenges behind.
-            "idempotency", "password_reset_challenges",
+            "idempotency", "password_reset_challenges", "receipts",
         ]
+        # Receipt bytes live in GridFS, not a plain collection, so they need an
+        # explicit purge — otherwise account deletion leaves the user's images
+        # in the database forever.
+        try:
+            from app.services.receipt_service import delete_all_receipts
+            await delete_all_receipts(uid)
+        except Exception:
+            pass
         db: AsyncIOMotorDatabase = await get_database()
         for coll in collections:
             # Hard delete: an account deletion must not leave soft-deleted

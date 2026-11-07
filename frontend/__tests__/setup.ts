@@ -64,6 +64,11 @@ jest.mock('expo-linking', () => ({
   createURL: jest.fn(() => 'wallume://'),
 }));
 
+jest.mock('expo-image-picker', () => ({
+  requestMediaLibraryPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
+  launchImageLibraryAsync: jest.fn(() => Promise.resolve({ canceled: true, assets: [] })),
+}));
+
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
   const Actual = jest.requireActual('react-native-safe-area-context');

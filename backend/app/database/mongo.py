@@ -36,7 +36,8 @@ async def create_indexes() -> None:
     await db.token_blacklist.create_index("expires_at", expireAfterSeconds=0)
     await _create_password_reset_indexes(db)
     for coll in ("wallets", "transactions", "budgets", "goals", "plans",
-                 "debts", "investments", "assets", "chat_messages", "recurring", "categories"):
+                 "debts", "investments", "assets", "chat_messages", "recurring", "categories",
+                 "receipts"):
         await db[coll].create_index("user_id")
     # Compound indexes for hot paths: wallet lookup by id+user, transaction
     # filtering by user+date (Reports, Home recent) and direct id lookup.
@@ -47,6 +48,8 @@ async def create_indexes() -> None:
     await db.transactions.create_index([("user_id", 1), ("to_wallet_id", 1)])
     # Exactly one net-worth point per user per day; the dashboard upserts here.
     await db.net_worth_snapshots.create_index([("user_id", 1), ("date", 1)], unique=True)
+    # Receipts are always queried by owner + transaction.
+    await db.receipts.create_index([("user_id", 1), ("transaction_id", 1)])
     await _ensure_obsolete_transaction_mutation_index_removed(db)
     # Dedicated idempotency collection for PATCH/DELETE which need to store
     # multiple sequential mutation IDs per resource (a single client_mutation_id
