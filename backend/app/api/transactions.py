@@ -8,7 +8,7 @@ import random
 from typing import Any, Awaitable, Callable, Optional
 from fastapi import APIRouter, Header, HTTPException
 from pymongo.errors import OperationFailure
-from app.schemas.models import TransactionCreate
+from app.schemas.models import TransactionCreate, TransactionImportRequest
 from app.repositories.repos import WalletRepository, TransactionRepository
 from app.services.auth_service import AuthService
 from app.services.domain_services import FxService
@@ -243,6 +243,140 @@ async def create_transaction(payload: TransactionCreate, authorization: Optional
         if found:
             return {"success": True, "data": result}
         raise HTTPException(409, "Duplicate transaction")
+
+    return {"success": True, "data": result}
+
+
+@router.post("/import")
+async def import_transactions(
+    payload: TransactionImportRequest,
+    authorization: Optional[str] = Header(None),
+    x_client_mutation_id: Optional[str] = Header(None, alias="X-Client-Mutation-Id"),
+):
+    """Bulk-create transactions from a parsed bank statement.
+
+    Manual entry is the main reason people abandon a finance app, so import is
+    a retention feature rather than a convenience. Safety properties:
+
+    - `dry_run` returns exactly what would be imported without writing.
+    - Re-importing the same statement is a no-op: rows are deduplicated against
+      existing transactions on (date, amount, merchant).
+    - The whole batch commits in one MongoDB transaction, so a partial import
+      can never leave half a statement in the ledger with the balance applied.
+    """
+    u = await auth_service.get_current_user(authorization)
+    if not payload.rows:
+        raise HTTPException(400, "No rows to import")
+    if len(payload.rows) > 1000:
+        raise HTTPException(400, "Too many rows (max 1000 per import)")
+
+    wallet = await wallets.find_one({"id": payload.wallet_id, "user_id": u["user_id"]})
+    if not wallet:
+        raise HTTPException(400, "Wallet not found")
+
+    client_mid = x_client_mutation_id or payload.client_mutation_id
+    fingerprint = _idempotency_fingerprint(
+        "POST /transactions/import", payload.wallet_id, payload.model_dump(),
+    )
+    db = await get_database()
+    if not payload.dry_run:
+        found, result = await _find_idempotency_result(db, u["user_id"], client_mid, fingerprint)
+        if found:
+            return {"success": True, "data": result}
+
+    today = now_utc().strftime("%Y-%m-%d")
+    errors: list[dict] = []
+    cleaned: list[dict] = []
+    for index, row in enumerate(payload.rows):
+        amount = float(row.amount)
+        if not math.isfinite(amount) or amount <= 0:
+            errors.append({"index": index, "reason": "invalid_amount"})
+            continue
+        date = strict_canonical_date(row.date) if row.date else today
+        if not date:
+            errors.append({"index": index, "reason": "invalid_date"})
+            continue
+        cleaned.append({
+            "date": date,
+            "amount": amount,
+            "type": row.type,
+            "category": (row.category or "").strip() or ("Salary" if row.type == "income" else "Other"),
+            "merchant": (row.merchant or "").strip()[:120],
+            "note": (row.note or "").strip()[:500],
+        })
+
+    # Dedupe against what is already in the ledger for the same wallet and the
+    # imported date span. Fetched per-batch rather than per-row to keep the
+    # import O(1) round trips.
+    duplicates: list[dict] = []
+    accepted: list[dict] = []
+    if cleaned:
+        dates = sorted({c["date"] for c in cleaned})
+        existing = await txs.find_by_user(
+            u["user_id"], None, payload.wallet_id, 5000, dates[0], dates[-1],
+        )
+        def _key(date: str, amount: float, merchant: str) -> tuple:
+            return (date, round(float(amount), 2), (merchant or "").strip().lower())
+        seen = {_key(e.get("date", ""), e.get("amount", 0), e.get("merchant", "")) for e in existing}
+        for c in cleaned:
+            key = _key(c["date"], c["amount"], c["merchant"])
+            if key in seen:
+                duplicates.append(c)
+                continue
+            seen.add(key)
+            accepted.append(c)
+
+    if payload.dry_run:
+        return {"success": True, "data": {
+            "dry_run": True,
+            "rows": accepted,
+            "count": len(accepted),
+            "duplicates": duplicates,
+            "duplicate_count": len(duplicates),
+            "errors": errors,
+        }}
+
+    currency = u.get("currency", "USD")
+    created: list[dict] = []
+    async with await db.client.start_session() as session:
+        async with session.start_transaction():
+            for c in accepted:
+                doc = {
+                    "id": new_id("tx"),
+                    "user_id": u["user_id"],
+                    "wallet_id": payload.wallet_id,
+                    "to_wallet_id": None,
+                    "type": c["type"],
+                    "amount": c["amount"],
+                    "category": c["category"],
+                    "merchant": c["merchant"],
+                    "note": c["note"] or c["merchant"],
+                    "date": c["date"],
+                    "currency": currency,
+                    "created_at": now_utc(),
+                }
+                wallet_amount, _ = await _apply_effect(
+                    u["user_id"], payload.wallet_id, None, c["type"],
+                    c["amount"], session, reverse=False, tx_currency=currency,
+                )
+                doc["wallet_amount"] = float(wallet_amount)
+                await txs.insert_one(doc, session)
+                created.append({k: v for k, v in doc.items() if k != "_id"})
+            result = {
+                "imported": len(created),
+                "transactions": created,
+                "duplicates": duplicates,
+                "duplicate_count": len(duplicates),
+                "errors": errors,
+            }
+            if client_mid:
+                await db.idempotency.insert_one({
+                    "user_id": u["user_id"], "client_mutation_id": client_mid,
+                    "operation": "POST /transactions/import", "resource_type": "transaction",
+                    "resource_id": payload.wallet_id,
+                    "fingerprint": fingerprint, "status": "completed", "result": result,
+                    "created_at": now_utc(),
+                }, session=session)
 
     return {"success": True, "data": result}
 
