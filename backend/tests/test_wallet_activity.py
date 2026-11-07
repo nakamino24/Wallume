@@ -204,10 +204,14 @@ class TestCanonicalDateNormalization:
         assert 'strict_canonical_date(allowed["date"])' in src
 
     def test_recurring_mark_paid_normalizes(self):
+        """Both the manual and catch-up paths share one canonicalizing helper."""
         import inspect
         from app.api import resources as res
-        src = inspect.getsource(res.mark_recurring_paid)
-        assert "to_canonical_date(now_utc().isoformat())" in src
+        # The canonical normalization moved into the shared occurrence helper,
+        # which mark-paid and catch-up both call; assert it there.
+        helper = inspect.getsource(res._apply_recurring_occurrence)
+        assert "to_canonical_date(occurrence_date)" in helper
+        assert inspect.getsource(res.mark_recurring_paid).count("_apply_recurring_occurrence") >= 1
 
 
 class TestApiBoundaryHardening:

@@ -69,6 +69,7 @@ export default function RecurringDetail() {
   const editParams = {
     id: item.id, name: item.name, type: item.type, amount: String(item.amount), category: item.category,
     wallet_id: item.wallet_id, frequency: item.frequency, next_date: item.next_date?.slice(0, 10) || '', note: item.note || '',
+    active: item.active === false ? '0' : '1',
   };
 
   const onMarkPaid = () => {

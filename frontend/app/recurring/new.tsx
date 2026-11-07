@@ -32,6 +32,9 @@ export default function RecurringForm() {
   const [note, setNote] = useState(params.note || '');
   const [wallets, setWallets] = useState<any[]>([]);
   const [walletId, setWalletId] = useState(params.wallet_id || '');
+  // Paused items are skipped by the automatic catch-up, so this is the
+  // difference between "temporarily stop this bill" and deleting it.
+  const [active, setActive] = useState(params.active !== '0');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
   const [walletError, setWalletError] = useState('');
@@ -59,7 +62,7 @@ export default function RecurringForm() {
 
     setLoading(true);
     try {
-      const body = { name: name.trim(), type, amount: amt, category, wallet_id: walletId, frequency, next_date: nextDate, note };
+      const body = { name: name.trim(), type, amount: amt, category, wallet_id: walletId, frequency, next_date: nextDate, note, active };
       if (isEdit) await api.updateRecurring(params.id, body);
       else await api.createRecurring(body);
       router.back();
@@ -91,6 +94,16 @@ export default function RecurringForm() {
       </View>
 
       <DateField testID="recurring-next-date" label={t('recurring.form.nextDate')} value={nextDate} onChange={setNextDate} />
+
+      {isEdit && (
+        <>
+          <Label>{t('recurring.status')}</Label>
+          <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+            <Chip testID="recurring-active" label={t('recurring.active')} active={active} onPress={() => setActive(true)} />
+            <Chip testID="recurring-paused" label={t('recurring.paused')} active={!active} onPress={() => setActive(false)} />
+          </View>
+        </>
+      )}
 
       <Label>{t('recurring.form.category')}</Label>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.md, alignItems: 'center' }}>

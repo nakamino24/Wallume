@@ -7,7 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { usePayday } from '@/src/hooks/use-payday';
-import { spacing, radius, font, cv } from '@/src/theme/tokens';
+import { spacing, radius, font, cv, formatMoney } from '@/src/theme/tokens';
 import { useI18n } from '@/src/lib/I18nProvider';
 import { intlLocale } from '@/src/lib/i18n';
 import { systemCategoryLabel } from '@/src/lib/categories';
@@ -20,6 +20,8 @@ import { ErrorBanner } from '@/src/components/ErrorBanner';
 import { refreshNetWorthWidget } from '@/src/widgets/refresh-widget';
 import { useWallets } from '@/src/hooks/use-wallets';
 import { useTransactions } from '@/src/hooks/use-transactions';
+import { useRecurringCatchUp } from '@/src/hooks/use-recurring-catch-up';
+import { getNotifSettings, syncNotifications, type NotifSettings } from '@/src/utils/notifications';
 
 const CATEGORY_ICON: Record<string, any> = {
   Food: 'restaurant', Transport: 'car', Shopping: 'bag-handle',
@@ -38,6 +40,8 @@ export default function Home() {
   const { transactions: txs, failed, retry, dismissFailed, remove: removeTransaction } = useTransactions();
   const { wallets } = useWallets();
   const [upcoming, setUpcoming] = useState<any[]>([]);
+  const [recurring, setRecurring] = useState<any[]>([]);
+  const [notifSettings, setNotifSettings] = useState<NotifSettings | null>(null);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -56,16 +60,21 @@ export default function Home() {
       setLastSyncedAt(updatedAt);
       setInitialLoading(false);
       refreshNetWorthWidget();
+      // Re-read prefs on every focus so a toggle in Profile re-schedules.
+      try { setNotifSettings(await getNotifSettings()); } catch {}
       // Upcoming bills render directly under the hero. This was previously
       // hardcoded to an empty array, so the section could never appear.
       try {
         const rec = await api.recurring();
-        const bills = (rec.recurring || [])
+        const all = rec.recurring || [];
+        setRecurring(all);
+        const bills = all
           .filter((r: any) => r.active !== false && r.days_until !== null && r.days_until !== undefined)
           .sort((a: any, b: any) => a.days_until - b.days_until)
           .slice(0, 3);
         setUpcoming(bills);
       } catch {
+        setRecurring([]);
         setUpcoming([]);
       }
     } catch (cause) {
@@ -105,6 +114,41 @@ export default function Home() {
   }, [removeTransaction, t]);
 
   const cur = user?.currency || 'USD';
+
+  // Post any recurring items that fell due since the app was last opened.
+  // The backend advances next_date atomically, so this is safe to re-run.
+  const { postedCount, clearPosted } = useRecurringCatchUp(!!user);
+  useEffect(() => {
+    if (postedCount > 0) {
+      // Balances and the ledger changed behind our back; pull fresh state.
+      void load();
+    }
+  }, [postedCount, load]);
+
+  // Reconcile scheduled reminders whenever the bill set, payday or language
+  // changes. Previously nothing imported the notification helpers at all, so
+  // the Profile toggles were purely cosmetic.
+  const notificationBills = useMemo(
+    () => recurring
+      .filter((r) => r.active !== false && r.next_date)
+      .map((r) => ({
+        id: r.id,
+        name: r.name,
+        amountLabel: formatMoney(Number(r.converted_amount ?? r.amount ?? 0), cur),
+        dueDate: String(r.next_date),
+      })),
+    [recurring, cur],
+  );
+  useEffect(() => {
+    if (!user || !notifSettings) return;
+    void syncNotifications({
+      bills: notificationBills,
+      paydayDate: payday?.nextDate ?? null,
+      settings: notifSettings,
+      t,
+    });
+  }, [notificationBills, notifSettings, payday?.nextDate, t, user]);
+
   const shownTxs = filter === 'all' ? txs : txs.filter((t) => t.type === filter);
   const walletBalance = wallets.reduce((sum: number, wallet: any) => sum + (Number(wallet.converted_balance ?? wallet.balance) || 0), 0);
   const monthIncome = txs.reduce((sum: number, tx: any) => sum + ((tx.type === 'income' && Number(tx.amount)) || 0), 0);
@@ -222,6 +266,24 @@ export default function Home() {
                 onRetry={() => failed.forEach((m) => retry(m.clientMutationId))}
                 onDismiss={() => failed.forEach((m) => dismissFailed(m.clientMutationId))}
               />
+            </View>
+          )}
+
+          {postedCount > 0 && (
+            <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+                backgroundColor: colors.success + '12', borderRadius: radius.md,
+                borderWidth: 1, borderColor: colors.success + '30', padding: spacing.md,
+              }}>
+                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                <Body style={{ flex: 1, fontSize: 13, color: colors.success }}>
+                  {t('notif.catchUp.posted', { count: postedCount })}
+                </Body>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('common.dismiss')} hitSlop={8} onPress={clearPosted}>
+                  <Ionicons name="close" size={16} color={colors.success} />
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
