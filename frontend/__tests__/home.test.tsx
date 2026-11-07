@@ -49,6 +49,10 @@ jest.mock('@/src/api/client', () => ({
     })),
     transactions: jest.fn(() => Promise.resolve({ transactions: [] })),
     recurring: jest.fn(() => Promise.resolve({ recurring: [] })),
+    // Home now triggers daily recurring catch-up and reads the net-worth
+    // trend; without these the calls hit an undefined method.
+    catchUpRecurring: jest.fn(() => Promise.resolve({ count: 0 })),
+    netWorthHistory: jest.fn(() => Promise.resolve({ points: [] })),
     wallets: jest.fn(() => Promise.resolve({
       wallets: [
         { id: 'wal1', name: 'Cash', balance: 250, currency: 'USD' },

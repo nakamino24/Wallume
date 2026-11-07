@@ -460,6 +460,47 @@ class ChatMessageRepository(BaseRepository):
     def __init__(self) -> None:
         super().__init__("chat_messages")
 
+    async def history(self, user_id: str, session_id: str, limit: int = 500) -> list[dict]:
+        """Public accessor — callers should not reach into `_collection()`."""
+        cursor = (await self._collection()).find(
+            {"user_id": user_id, "session_id": session_id}, {"_id": 0},
+        ).sort("created_at", 1).limit(limit)
+        return await cursor.to_list(limit)
+
+    async def sessions(self, user_id: str) -> list[dict]:
+        """One summary row per conversation, newest first."""
+        # motor's aggregate() returns a cursor directly (not a coroutine).
+        cursor = (await self._collection()).aggregate([
+            {"$match": {"user_id": user_id}},
+            {"$sort": {"created_at": 1}},
+            {"$group": {
+                "_id": "$session_id",
+                "message_count": {"$sum": 1},
+                "started_at": {"$first": "$created_at"},
+                "last_at": {"$last": "$created_at"},
+                # First user message doubles as a conversation title.
+                "title": {"$first": {"$cond": [
+                    {"$eq": ["$role", "user"]}, "$text", "$$REMOVE",
+                ]}},
+            }},
+            {"$sort": {"last_at": -1}},
+            {"$project": {
+                "_id": 0,
+                "session_id": "$_id",
+                "message_count": 1,
+                "started_at": 1,
+                "last_at": 1,
+                "title": {"$ifNull": ["$title", ""]},
+            }},
+        ]).to_list(200)
+        return await cursor
+
+    async def delete_session(self, user_id: str, session_id: str) -> int:
+        result = await (await self._collection()).delete_many(
+            {"user_id": user_id, "session_id": session_id},
+        )
+        return int(getattr(result, "deleted_count", 0))
+
 
 class CategoryRepository(BaseRepository):
     def __init__(self) -> None:

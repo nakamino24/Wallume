@@ -102,7 +102,24 @@ async def coach_chat(payload: CoachChatRequest, authorization: Optional[str] = H
 @router.get("/history")
 async def coach_history(session_id: str, authorization: Optional[str] = Header(None)):
     u = await auth_service.get_current_user(authorization)
-    msgs = await (await chat_repo._collection()).find(
-        {"user_id": u["user_id"], "session_id": session_id}, {"_id": 0}
-    ).sort("created_at", 1).to_list(500)
+    msgs = await chat_repo.history(u["user_id"], session_id)
     return {"success": True, "data": {"messages": msgs}}
+
+
+@router.get("/sessions")
+async def coach_sessions(authorization: Optional[str] = Header(None)):
+    """List conversations.
+
+    The client previously hardcoded a single 'default' session, so every user
+    had exactly one conversation forever and "clear" only wiped local state.
+    """
+    u = await auth_service.get_current_user(authorization)
+    sessions = await chat_repo.sessions(u["user_id"])
+    return {"success": True, "data": {"sessions": sessions}}
+
+
+@router.delete("/sessions/{session_id}")
+async def delete_coach_session(session_id: str, authorization: Optional[str] = Header(None)):
+    u = await auth_service.get_current_user(authorization)
+    deleted = await chat_repo.delete_session(u["user_id"], session_id)
+    return {"success": True, "data": {"deleted": deleted}}

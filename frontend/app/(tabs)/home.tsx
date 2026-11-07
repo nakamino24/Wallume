@@ -269,6 +269,23 @@ export default function Home() {
             </View>
           )}
 
+          {/* A pooled total that silently mixes unconverted currencies is a
+              correctness problem, not a cosmetic one. Say so explicitly. */}
+          {summary?.fx_unconverted && (
+            <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+                backgroundColor: colors.warning + '12', borderRadius: radius.md,
+                borderWidth: 1, borderColor: colors.warning + '30', padding: spacing.md,
+              }}>
+                <Ionicons name="cloud-offline-outline" size={18} color={colors.warning} />
+                <Body style={{ flex: 1, fontSize: 12, color: colors.warning }}>
+                  {t('fx.approximate', { currency: cur })}
+                </Body>
+              </View>
+            </View>
+          )}
+
           {postedCount > 0 && (
             <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
               <View style={{

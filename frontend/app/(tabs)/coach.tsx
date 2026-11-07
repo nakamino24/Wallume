@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, StyleSheet, Animated } from 'react-native';
+import { View, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, StyleSheet, Animated, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
@@ -13,8 +13,14 @@ import { CoachMarkdown } from '@/src/components/CoachMarkdown';
 import { useI18n } from '@/src/lib/I18nProvider';
 
 type Msg = { id: string; role: 'user' | 'assistant'; text: string; pending?: boolean };
+type Session = { session_id: string; title: string; message_count: number; last_at?: string };
 
-const SESSION_ID = 'default';
+// A new conversation gets a fresh id. Previously this was the literal
+// 'default', so every user had exactly one thread forever and "clear" only
+// wiped local state — the history came straight back on the next focus.
+function newSessionId(): string {
+  return `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
 
 // Parses one or more "data: {...}" SSE lines out of a raw text blob and
 // concatenates every delta it finds. Ignores [DONE] and malformed lines
@@ -43,6 +49,9 @@ export default function Coach() {
   const { user } = useAuth();
   const { t } = useI18n();
   const [messages, setMessages] = useState<Msg[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionId, setSessionId] = useState<string>(() => newSessionId());
+  const [showSessions, setShowSessions] = useState(false);
   const [historyError, setHistoryError] = useState('');
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -51,14 +60,65 @@ export default function Coach() {
   const loadHistory = useCallback(async () => {
     setHistoryError('');
     try {
-      const r = await api.coachHistory(SESSION_ID);
-      setMessages((r.messages || []).map((m: any) => ({ id: m.id, role: m.role, text: m.text })));
+      const r = await api.coachHistory(sessionId);
+      const loaded = (r.messages || []).map((m: any) => ({ id: m.id, role: m.role, text: m.text }));
+      setMessages(loaded);
+      // A brand-new session has no stored messages yet; don't clobber the
+      // optimistic thread the user is mid-way through.
+      return loaded;
     } catch (cause) {
       console.error('[Coach] failed to load history', cause);
       setHistoryError(t('coach.historyError'));
+      return null;
     }
-  }, [t]);
-  useFocusEffect(useCallback(() => { loadHistory(); }, [loadHistory]));
+  }, [sessionId, t]);
+
+  const loadSessions = useCallback(async () => {
+    try {
+      const r = await api.coachSessions();
+      setSessions(r.sessions || []);
+    } catch {
+      setSessions([]);
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    void loadHistory();
+    void loadSessions();
+  }, [loadHistory, loadSessions]));
+
+  const startNewSession = () => {
+    setSessionId(newSessionId());
+    setMessages([]);
+    setShowSessions(false);
+    setHistoryError('');
+  };
+
+  const openSession = (id: string) => {
+    setSessionId(id);
+    setMessages([]);
+    setShowSessions(false);
+    setHistoryError('');
+  };
+
+  const deleteSession = (id: string) => {
+    Alert.alert(t('coach.deleteTitle'), t('coach.deleteMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.deleteCoachSession(id);
+          } catch {
+            // Deleting locally is still better than leaving a vanished thread.
+          }
+          setSessions((prev) => prev.filter((s) => s.session_id !== id));
+          if (id === sessionId) startNewSession();
+        },
+      },
+    ]);
+  };
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -83,7 +143,7 @@ export default function Coach() {
           Authorization: `Bearer ${token}`,
           Accept: 'text/event-stream',
         },
-        body: JSON.stringify({ session_id: SESSION_ID, message: msg }),
+        body: JSON.stringify({ session_id: sessionId, message: msg }),
       });
 
       if (!res.ok) {
@@ -136,6 +196,9 @@ export default function Coach() {
       setMessages((m) => m.map((mm) => mm.id === aiMsgId ? { ...mm, text: t('coach.error'), pending: false } : mm));
     } finally {
       setSending(false);
+      // A new conversation only gets persisted once the first message lands,
+      // so refresh the list so it appears in history.
+      void loadSessions();
     }
   };
 
@@ -158,13 +221,56 @@ export default function Coach() {
                   <Body muted style={{ fontSize: 12 }}>{t('coach.subtitle')}</Body>
                 </View>
               </View>
-              {messages.length > 0 && (
-                <TouchableOpacity testID="coach-clear" accessibilityRole="button" accessibilityLabel={t('coach.clear')} onPress={() => setMessages([])}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <TouchableOpacity testID="coach-sessions-btn" accessibilityRole="button" accessibilityLabel={t('coach.sessions')} onPress={() => setShowSessions((v) => !v)}
                   style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="trash-outline" size={16} color={colors.muted} />
+                  <Ionicons name="chatbubbles-outline" size={16} color={colors.muted} />
                 </TouchableOpacity>
-              )}
+                <TouchableOpacity testID="coach-new" accessibilityRole="button" accessibilityLabel={t('coach.newChat')} onPress={startNewSession}
+                  style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="add" size={18} color={colors.onBrand} />
+                </TouchableOpacity>
+                {messages.length > 0 && (
+                  <TouchableOpacity testID="coach-clear" accessibilityRole="button" accessibilityLabel={t('coach.clear')} onPress={startNewSession}
+                    style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="trash-outline" size={16} color={colors.muted} />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
+
+            {showSessions && (
+              <View testID="coach-sessions-panel" style={{ marginTop: spacing.md, gap: spacing.xs, borderRadius: radius.lg, backgroundColor: colors.surface2, padding: spacing.sm }}>
+                {sessions.length === 0 ? (
+                  <Body muted style={{ fontSize: 12, padding: spacing.sm }}>{t('coach.noSessions')}</Body>
+                ) : sessions.map((s) => (
+                  <View key={s.session_id} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                    <TouchableOpacity
+                      testID={`coach-session-${s.session_id}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={s.title || t('coach.untitled')}
+                      onPress={() => openSession(s.session_id)}
+                      style={{ flex: 1, padding: spacing.sm, borderRadius: radius.md, backgroundColor: s.session_id === sessionId ? colors.surface3 : 'transparent' }}
+                    >
+                      <Body numberOfLines={1} style={{ fontSize: 13, fontFamily: s.session_id === sessionId ? font.textBold : font.text }}>
+                        {s.title || t('coach.untitled')}
+                      </Body>
+                      <Body muted style={{ fontSize: 11, marginTop: 2 }}>{t('coach.messageCount', { count: s.message_count })}</Body>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      testID={`coach-session-delete-${s.session_id}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('common.delete')}
+                      hitSlop={8}
+                      onPress={() => deleteSession(s.session_id)}
+                      style={{ padding: spacing.sm }}
+                    >
+                      <Ionicons name="trash-outline" size={14} color={colors.muted} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
 
           <ScrollView

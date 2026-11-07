@@ -239,7 +239,10 @@ export const api = {
   summary: () => req('/analytics/summary'),
   netWorthHistory: (days = 90) => req(`/analytics/net-worth-history?days=${days}`),
 
-  coachHistory: (session_id: string) => req(`/coach/history?session_id=${session_id}`),
+  coachHistory: (session_id: string) => req(`/coach/history?session_id=${encodeURIComponent(session_id)}`),
+  coachSessions: () => req('/coach/sessions'),
+  deleteCoachSession: (session_id: string) =>
+    req(`/coach/sessions/${encodeURIComponent(session_id)}`, { method: 'DELETE' }),
   // coach chat uses fetch directly for streaming
   coachChatUrl: () => `${BASE}/api/coach/chat`,
 };

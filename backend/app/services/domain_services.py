@@ -14,6 +14,12 @@ from app.utils.helpers import now_utc
 
 _fx_cache: Dict[str, Any] = {}
 
+# Cross-request signal that the last rate lookup had to fall back. The old
+# behaviour returned the *unconverted* amount with no marker at all, so a
+# network blip silently misstated every converted total in the app — the worst
+# possible failure mode for a money product.
+_fx_state: Dict[str, Any] = {"last_failure_at": None}
+
 
 class FxService:
     @staticmethod
@@ -31,29 +37,63 @@ class FxService:
                     return rates
         except Exception:
             pass
+        # Note the fallback so responses can flag approximate values instead of
+        # presenting them as authoritative.
+        _fx_state["last_failure_at"] = now_utc()
         return cached["rates"] if cached else {}
 
     @staticmethod
-    async def convert(amount: float, from_ccy: Optional[str], to_ccy: Optional[str]) -> float:
+    def status() -> dict:
+        """Whether conversions in this request were all at real rates."""
+        last = _fx_state.get("last_failure_at")
+        stale = bool(last and (now_utc() - last).total_seconds() < 60)
+        return {"fx_stale": stale, "fx_last_failure_at": last.isoformat() if last else None}
+
+    @staticmethod
+    async def convert_with_rate(
+        amount: float, from_ccy: Optional[str], to_ccy: Optional[str],
+    ) -> tuple[float, Optional[float]]:
+        """Return (converted_amount, rate_used).
+
+        `rate_used` is None when no rate was available, making the fallback
+        detectable instead of indistinguishable from a genuine 1:1 conversion.
+        """
         if not from_ccy or not to_ccy or from_ccy == to_ccy:
-            return amount
+            return amount, 1.0
         rates = await FxService.get_rates(to_ccy)
         rate = rates.get(from_ccy)
-        return amount / rate if rate else amount
+        if not rate:
+            return amount, None
+        return amount / rate, rate
+
+    @staticmethod
+    async def convert(amount: float, from_ccy: Optional[str], to_ccy: Optional[str]) -> float:
+        converted, _ = await FxService.convert_with_rate(amount, from_ccy, to_ccy)
+        return converted
 
     @staticmethod
     async def convert_item(item: dict, home_ccy: str, fields: list[str]) -> dict:
         """Convert monetary `fields` on a single doc from its own currency to
-        the user's home currency. Adds `converted_<field>` + `home_currency`."""
+        the user's home currency. Adds `converted_<field>` + `home_currency`,
+        plus `fx_rate` and `fx_unconverted` so the UI can show the rate and
+        flag approximate totals."""
         from app.utils.money import round_money
         item_ccy = item.get("currency") or home_ccy
+        rate: Optional[float] = 1.0 if item_ccy == home_ccy else None
+        unconverted = False
         for f in fields:
             val = item.get(f)
             if val is not None:
-                item[f"converted_{f}"] = round_money(
-                    await FxService.convert(float(val), item_ccy, home_ccy)
-                )
+                converted, used = await FxService.convert_with_rate(float(val), item_ccy, home_ccy)
+                if used is None:
+                    unconverted = True
+                elif used != 1.0:
+                    rate = used
+                item[f"converted_{f}"] = round_money(converted)
         item["home_currency"] = home_ccy
+        if item_ccy != home_ccy:
+            item["fx_rate"] = rate
+            item["fx_unconverted"] = unconverted
         return item
 
     @staticmethod
@@ -119,10 +159,22 @@ class AnalyticsService:
         )
 
         # Parallelize FX conversions — sequential 20×8s on cold cache is slow.
-        wallet_vals = await asyncio.gather(*[FxService.convert(float(w.get("balance", 0.0)), w.get("currency", home_ccy), home_ccy) for w in wallets])
-        debt_vals = await asyncio.gather(*[FxService.convert(float(d.get("remaining", 0.0)), d.get("currency", home_ccy), home_ccy) for d in debts_list])
-        inv_vals = await asyncio.gather(*[FxService.convert(investment_value(i), i.get("currency", home_ccy), home_ccy) for i in investments])
-        asset_vals = await asyncio.gather(*[FxService.convert(float(a.get("value", 0.0)), a.get("currency", home_ccy), home_ccy) for a in assets_list])
+        # Capture the rate alongside each value: a missing rate means the
+        # figure below is unconverted, and the client must be told rather than
+        # shown a confidently wrong total.
+        wallet_res = await asyncio.gather(*[FxService.convert_with_rate(float(w.get("balance", 0.0)), w.get("currency", home_ccy), home_ccy) for w in wallets])
+        debt_res = await asyncio.gather(*[FxService.convert_with_rate(float(d.get("remaining", 0.0)), d.get("currency", home_ccy), home_ccy) for d in debts_list])
+        inv_res = await asyncio.gather(*[FxService.convert_with_rate(investment_value(i), i.get("currency", home_ccy), home_ccy) for i in investments])
+        asset_res = await asyncio.gather(*[FxService.convert_with_rate(float(a.get("value", 0.0)), a.get("currency", home_ccy), home_ccy) for a in assets_list])
+
+        fx_unconverted = any(
+            rate is None
+            for _value, rate in (*wallet_res, *debt_res, *inv_res, *asset_res)
+        )
+        wallet_vals = [value for value, _ in wallet_res]
+        debt_vals = [value for value, _ in debt_res]
+        inv_vals = [value for value, _ in inv_res]
+        asset_vals = [value for value, _ in asset_res]
         wallet_total = sum(wallet_vals)
         debt_total = sum(debt_vals)
         inv_total = sum(inv_vals)
@@ -253,6 +305,9 @@ class AnalyticsService:
             "spending_alerts": spending_alerts,
             "category_breakdown": category_breakdown,
             "trend": trend,
+            # True when at least one holding could not be converted, meaning the
+            # totals above mix currencies. The UI shows "approximate".
+            "fx_unconverted": fx_unconverted,
             "counts": {
                 "wallets": len(wallets),
                 "debts": len(debts_list),
