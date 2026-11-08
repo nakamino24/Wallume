@@ -464,7 +464,7 @@ export default function Home() {
             <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.xl }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
                 <H2>{t('home.upcoming')}</H2>
-                <TouchableOpacity testID="home-recurring-see-all" onPress={() => router.push('/recurring')}>
+                <TouchableOpacity testID="home-recurring-see-all" accessibilityRole="button" accessibilityLabel={t('home.seeAll')} onPress={() => router.push('/recurring')}>
                   <Body style={{ color: colors.brandPrimary, fontFamily: font.textBold }}>{t('home.seeAll')}</Body>
                 </TouchableOpacity>
               </View>
@@ -499,7 +499,7 @@ export default function Home() {
           {/* Filter chips */}
           <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <H2>{t('home.recent')}</H2>
-            <TouchableOpacity onPress={() => router.push('/transactions')}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('home.recent')} onPress={() => router.push('/transactions')}>
               <Body style={{ color: colors.brandPrimary, fontFamily: font.textBold }}>{t('home.seeAll')}</Body>
             </TouchableOpacity>
           </View>

@@ -86,7 +86,7 @@ export default function Wallets() {
                     <Ionicons name="flag-outline" size={16} color={colors.onSurface} />
                     <Body style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 12, marginLeft: 6 }}>{t('goals.empty.action')}</Body>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => router.push('/budget/new')} style={[styles.actionBtn, { backgroundColor: colors.surface3 }]}> 
+                  <TouchableOpacity onPress={() => router.push('/budget/new')} accessibilityRole="button" accessibilityLabel={t('budgets.empty.action')} style={[styles.actionBtn, { backgroundColor: colors.surface3 }]}>
                     <Ionicons name="pie-chart-outline" size={16} color={colors.onSurface} />
                     <Body style={{ color: colors.onSurface, fontFamily: font.textBold, fontSize: 12, marginLeft: 6 }}>{t('budgets.empty.action')}</Body>
                   </TouchableOpacity>
