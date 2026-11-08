@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { File, Paths } from 'expo-file-system';
 
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { spacing, radius, font } from '@/src/theme/tokens';
+import { spacing, radius } from '@/src/theme/tokens';
 import { Body, Label, Button } from '@/src/components/ui';
 import { useI18n } from '@/src/lib/I18nProvider';
 import { api, getToken } from '@/src/api/client';

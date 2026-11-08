@@ -160,7 +160,7 @@ export function BudgetsSection({ budgets, currency, onAdd, onEdit, onReload }: a
     <>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }}>
         <H2 style={{ flex: 1, minWidth: 0 }}>{t('budgets.monthly')}</H2>
-        <TouchableOpacity testID="budget-add-btn" onPress={onAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        <TouchableOpacity testID="budget-add-btn" accessibilityRole="button" accessibilityLabel={t('budgets.empty.action')} onPress={onAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name="add" size={16} color={colors.onBrand} />
         </TouchableOpacity>
